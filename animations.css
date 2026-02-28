@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  @keyframes wave {
+    0% { background-position-x: 0; }
+    100% { background-position-x: 1000px; }
+  }
+
+  @keyframes bubble-rise {
+    0% {
+      transform: translateY(100%) scale(1);
+      opacity: 0.8;
+    }
+    50% {
+      transform: translateY(50%) scale(1.2);
+    }
+    100% {
+      transform: translateY(-100%) scale(0.5);
+      opacity: 0;
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  .animate-wave {
+    animation: wave 20s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+  }
+
+  .animate-bubble-rise {
+    animation: bubble-rise linear infinite;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+}

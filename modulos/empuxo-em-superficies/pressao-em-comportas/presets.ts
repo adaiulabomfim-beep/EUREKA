@@ -1,0 +1,50 @@
+import { SimulationConfig, DamType, GateShape, HingePosition } from './types';
+
+export const PRESETS: Record<string, SimulationConfig> = {
+  default: {
+    damType: DamType.GRAVITY,
+    damHeight: 15,
+    damBaseWidth: 12,
+    damCrestWidth: 4,
+    inclinationAngle: 90,
+    upstreamLevel: 12,
+    downstreamLevel: 0,
+    density: 1000,
+    gravity: 9.81,
+    hasGate: true,
+    gateShape: GateShape.RECTANGULAR,
+    gateWidth: 2,
+    gateLength: 3,
+    gateDepthFromCrest: 4,
+    gateInclination: 90,
+    gateWeight: 500,
+    gateWeightEnabled: false,
+    hingePosition: HingePosition.NONE,
+    hasTieRod: false,
+    tieRodPosRel: 1,
+    tieRodAngle: 0
+  },
+  exercise30: {
+    damType: DamType.EMBANKMENT,
+    damHeight: 10,
+    damBaseWidth: 20,
+    damCrestWidth: 4,
+    inclinationAngle: 30,
+    upstreamLevel: 8,
+    downstreamLevel: 0,
+    density: 1000,
+    gravity: 9.81,
+    hasGate: true,
+    gateShape: GateShape.RECTANGULAR,
+    gateWidth: 2,
+    gateLength: 3,
+    gateDepthFromCrest: 2,
+    gateInclination: 30,
+    gateWeight: 1000,
+    gateWeightEnabled: true,
+    hingePosition: HingePosition.TOP,
+    hasTieRod: true,
+    tieRodPosRel: 1,
+    tieRodAngle: 90
+  }
+};
