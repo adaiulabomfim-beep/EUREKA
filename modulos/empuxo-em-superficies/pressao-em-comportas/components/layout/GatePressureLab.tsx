@@ -7,6 +7,7 @@ import { PRESETS } from '../../presets';
 
 interface GatePressureLabProps {
     onContextUpdate?: (ctx: string) => void;
+    isDamMode?: boolean;
 }
 
 const NumberInput: React.FC<{
@@ -90,7 +91,7 @@ const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ ico
     </div>
 );
 
-export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdate }) => {
+export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdate, isDamMode = false }) => {
   // STATE
   const [damType, setDamType] = useState<DamType>(DamType.GRAVITY);
   const [damHeight, setDamHeight] = useState<number>(15);
@@ -181,7 +182,17 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
 
   const effectiveDownstreamLevel = hasDownstream ? downstreamLevel : 0;
   
-  const config: SimulationConfig = {
+  const config: SimulationConfig = isDamMode ? {
+      damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
+      upstreamLevel, downstreamLevel: effectiveDownstreamLevel, density, gravity,
+      hasGate: false, gateShape: GateShape.RECTANGULAR, 
+      gateWidth: 1, // 1 meter width for dam analysis
+      gateLength: damHeight / Math.max(0.001, Math.sin(inclinationAngle * Math.PI / 180)), 
+      gateDepthFromCrest: 0, 
+      gateInclination: inclinationAngle,
+      hingePosition: HingePosition.NONE, hasTieRod: false, tieRodPosRel: 0, tieRodAngle: 0,
+      gateWeight: 0, gateWeightEnabled: false
+  } : {
       damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
       upstreamLevel, downstreamLevel: effectiveDownstreamLevel, density, gravity,
       hasGate, gateShape, gateWidth, gateLength: gateHeight, gateDepthFromCrest, gateInclination,
@@ -195,10 +206,14 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
   const handleCalculate = () => { setAnalyzedResults(liveResults); };
 
   useEffect(() => {
-      if (onContextUpdate && analyzedResults) {
-          onContextUpdate(`LABORATÓRIO DE HIDROSTÁTICA: Comporta: ${gateShape}, H=${gateHeight}m, Larg=${gateWidth}m, θ=${gateInclination}°, Força Hidrostática Resultante: ${(analyzedResults.forceData.FR_net/1000).toFixed(2)} kN, CP ao longo da comporta: ${(analyzedResults.forceData.s_cp_net).toFixed(2)}m`);
+      if (onContextUpdate) {
+          if (isDamMode) {
+              onContextUpdate(`LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${damBaseWidth}m, Largura Crista=${damCrestWidth}m, θ=${inclinationAngle}°, Nível Montante=${upstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m`);
+          } else if (analyzedResults) {
+              onContextUpdate(`LABORATÓRIO DE HIDROSTÁTICA: Comporta: ${gateShape}, H=${gateHeight}m, Larg=${gateWidth}m, θ=${gateInclination}°, Força Hidrostática Resultante: ${(analyzedResults.forceData.FR_net/1000).toFixed(2)} kN, CP ao longo da comporta: ${(analyzedResults.forceData.s_cp_net).toFixed(2)}m`);
+          }
       }
-  }, [analyzedResults, onContextUpdate, gateHeight, gateWidth, gateInclination, gateShape]);
+  }, [analyzedResults, onContextUpdate, gateHeight, gateWidth, gateInclination, gateShape, isDamMode, damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, effectiveDownstreamLevel]);
 
   // Handle Dimensions based on shape
   const handleHeightChange = (val: number) => {
@@ -224,42 +239,55 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
         <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
              
              {/* Exercise Card */}
-             <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> Aula Prática</h3>
-                </div>
-                <div className="space-y-2">
-                    <button onClick={loadExercise6} className="w-full group bg-white/50 hover:bg-blue-50 border border-blue-100 hover:border-blue-200 text-slate-600 p-3 rounded-xl shadow-sm hover:shadow-md transition-all text-left flex items-center gap-3 active:scale-95">
-                        <div className="bg-blue-600 text-white p-2 rounded-lg font-mono text-xs font-bold group-hover:scale-110 transition-transform shadow-lg shadow-blue-200">#06</div>
-                        <div>
-                            <div className="text-sm font-black text-slate-800 group-hover:text-blue-700 tracking-tight">Exercício 30°</div>
-                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Comporta Articulada</div>
-                        </div>
-                    </button>
-                    <button onClick={() => {
-                        const preset = PRESETS.default;
-                        setDamType(preset.damType); setDamHeight(preset.damHeight); setUpstreamLevel(preset.upstreamLevel); 
-                        setInclinationAngle(preset.inclinationAngle); setDamCrestWidth(preset.damCrestWidth);
-                        setHasGate(preset.hasGate); setGateShape(preset.gateShape);
-                        setGateWidth(preset.gateWidth); setGateHeight(preset.gateLength); setGateDepthFromCrest(preset.gateDepthFromCrest);
-                        setSyncGateAngle(true); setGateInclination(preset.gateInclination);
-                        setHasDownstream(preset.downstreamLevel > 0); setDownstreamLevel(preset.downstreamLevel);
-                        setHingePosition(preset.hingePosition);
-                        setHasTieRod(preset.hasTieRod);
-                        setTieRodPosRel(preset.tieRodPosRel);
-                        setTieRodAngle(preset.tieRodAngle);
-                        setGateWeight(preset.gateWeight);
-                        setGateWeightEnabled(preset.gateWeightEnabled);
-                    }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 p-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <RotateCw className="w-3 h-3" /> Resetar Cenário
-                    </button>
-                </div>
-             </div>
+             {!isDamMode && (
+                 <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> Aula Prática</h3>
+                    </div>
+                    <div className="space-y-2">
+                        <button onClick={loadExercise6} className="w-full group bg-white/50 hover:bg-blue-50 border border-blue-100 hover:border-blue-200 text-slate-600 p-3 rounded-xl shadow-sm hover:shadow-md transition-all text-left flex items-center gap-3 active:scale-95">
+                            <div className="bg-blue-600 text-white p-2 rounded-lg font-mono text-xs font-bold group-hover:scale-110 transition-transform shadow-lg shadow-blue-200">#06</div>
+                            <div>
+                                <div className="text-sm font-black text-slate-800 group-hover:text-blue-700 tracking-tight">Exercício 30°</div>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Comporta Articulada</div>
+                            </div>
+                        </button>
+                        <button onClick={() => {
+                            const preset = PRESETS.default;
+                            setDamType(preset.damType); setDamHeight(preset.damHeight); setUpstreamLevel(preset.upstreamLevel); 
+                            setInclinationAngle(preset.inclinationAngle); setDamCrestWidth(preset.damCrestWidth);
+                            setHasGate(preset.hasGate); setGateShape(preset.gateShape);
+                            setGateWidth(preset.gateWidth); setGateHeight(preset.gateLength); setGateDepthFromCrest(preset.gateDepthFromCrest);
+                            setSyncGateAngle(true); setGateInclination(preset.gateInclination);
+                            setHasDownstream(preset.downstreamLevel > 0); setDownstreamLevel(preset.downstreamLevel);
+                            setHingePosition(preset.hingePosition);
+                            setHasTieRod(preset.hasTieRod);
+                            setTieRodPosRel(preset.tieRodPosRel);
+                            setTieRodAngle(preset.tieRodAngle);
+                            setGateWeight(preset.gateWeight);
+                            setGateWeightEnabled(preset.gateWeightEnabled);
+                        }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 p-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <RotateCw className="w-3 h-3" /> Resetar Cenário
+                        </button>
+                    </div>
+                 </div>
+             )}
 
              {/* Dam Properties */}
              <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
                  <SectionHeader icon={<Construction className="w-4 h-4" />} title="Estrutura" />
                  <div className="space-y-4">
+                     {isDamMode && (
+                         <div>
+                             <label className={labelClass}>Tipo de Barragem</label>
+                             <select className={selectClass} value={damType} onChange={(e) => setDamType(e.target.value as DamType)}>
+                                 <option value={DamType.GRAVITY}>Gravidade</option>
+                                 <option value={DamType.EMBANKMENT}>Terra / Enrocamento</option>
+                                 <option value={DamType.ARCH}>Arco</option>
+                                 <option value={DamType.BUTTRESS}>Contraforte</option>
+                             </select>
+                         </div>
+                     )}
                      <div>
                         <label className={labelClass}>Inclinação da Parede (θ)</label>
                         <NumberInput value={inclinationAngle} min={1} max={160} onChange={setInclinationAngle} />
@@ -269,110 +297,124 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                             <label className={labelClass}>Altura Total (m)</label>
                             <NumberInput value={damHeight} min={1} max={200} onChange={setDamHeight} />
                         </div>
+                        {isDamMode && (
+                            <>
+                                <div>
+                                    <label className={labelClass}>Largura da Base (m)</label>
+                                    <NumberInput value={damBaseWidth} min={1} max={200} onChange={setDamBaseWidth} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Largura da Crista (m)</label>
+                                    <NumberInput value={damCrestWidth} min={1} max={100} onChange={setDamCrestWidth} />
+                                </div>
+                            </>
+                        )}
                      </div>
                  </div>
              </div>
 
              {/* Gate Properties */}
-             <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-blue-50 cursor-pointer hover:bg-blue-50/50 -mx-5 px-5 pt-2 transition-colors" onClick={() => toggleGate(!hasGate)}>
-                     <div className="flex items-center gap-2 text-blue-700">
-                         <div className="p-1 bg-blue-100 rounded-lg"><Square className="w-3.5 h-3.5" /></div>
-                         <h3 className="text-[10px] font-black uppercase tracking-widest">Comporta</h3>
+             {!isDamMode && (
+                 <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+                     <div className="flex items-center justify-between mb-4 pb-3 border-b border-blue-50 cursor-pointer hover:bg-blue-50/50 -mx-5 px-5 pt-2 transition-colors" onClick={() => toggleGate(!hasGate)}>
+                         <div className="flex items-center gap-2 text-blue-700">
+                             <div className="p-1 bg-blue-100 rounded-lg"><Square className="w-3.5 h-3.5" /></div>
+                             <h3 className="text-[10px] font-black uppercase tracking-widest">Comporta</h3>
+                         </div>
+                         <input type="checkbox" checked={hasGate} onChange={(e) => toggleGate(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" onClick={(e) => e.stopPropagation()} />
                      </div>
-                     <input type="checkbox" checked={hasGate} onChange={(e) => toggleGate(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" onClick={(e) => e.stopPropagation()} />
-                 </div>
-                 
-                 {hasGate && (
-                     <div className="space-y-5 animate-in slide-in-from-top-2 fade-in">
-                         <div className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/50 space-y-3">
-                             <div>
-                                <label className={labelClass}>Formato</label>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleShapeChange(GateShape.RECTANGULAR)} className={`flex-1 p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${gateShape === GateShape.RECTANGULAR ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-blue-100 text-slate-400 hover:bg-blue-50'}`}><Square className="w-4 h-4" /><span className="text-[9px] font-black uppercase tracking-wider">Retâng.</span></button>
-                                    <button onClick={() => handleShapeChange(GateShape.CIRCULAR)} className={`flex-1 p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${gateShape === GateShape.CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-blue-100 text-slate-400 hover:bg-blue-50'}`}><Circle className="w-4 h-4" /><span className="text-[9px] font-black uppercase tracking-wider">Circular</span></button>
-                                    <button onClick={() => handleShapeChange(GateShape.SEMI_CIRCULAR)} className={`flex-1 p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${gateShape === GateShape.SEMI_CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-blue-100 text-slate-400 hover:bg-blue-50'}`}><CircleDashed className="w-4 h-4 rotate-180" /><span className="text-[9px] font-black uppercase tracking-wider">Semi-Circ.</span></button>
+                     
+                     {hasGate && (
+                         <div className="space-y-5 animate-in slide-in-from-top-2 fade-in">
+                             <div className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/50 space-y-3">
+                                 <div>
+                                    <label className={labelClass}>Formato</label>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleShapeChange(GateShape.RECTANGULAR)} className={`flex-1 p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${gateShape === GateShape.RECTANGULAR ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-blue-100 text-slate-400 hover:bg-blue-50'}`}><Square className="w-4 h-4" /><span className="text-[9px] font-black uppercase tracking-wider">Retâng.</span></button>
+                                        <button onClick={() => handleShapeChange(GateShape.CIRCULAR)} className={`flex-1 p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${gateShape === GateShape.CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-blue-100 text-slate-400 hover:bg-blue-50'}`}><Circle className="w-4 h-4" /><span className="text-[9px] font-black uppercase tracking-wider">Circular</span></button>
+                                        <button onClick={() => handleShapeChange(GateShape.SEMI_CIRCULAR)} className={`flex-1 p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${gateShape === GateShape.SEMI_CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-blue-100 text-slate-400 hover:bg-blue-50'}`}><CircleDashed className="w-4 h-4 rotate-180" /><span className="text-[9px] font-black uppercase tracking-wider">Semi-Circ.</span></button>
+                                    </div>
+                                 </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className={labelClass}>
+                                            {gateShape === GateShape.CIRCULAR ? 'Diâmetro (m)' : gateShape === GateShape.SEMI_CIRCULAR ? 'Raio (m)' : 'Altura/Comp. (m)'}
+                                        </label>
+                                        <NumberInput value={gateHeight} onChange={handleHeightChange} min={0.1} max={maxGateHeight} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Largura (m)</label>
+                                        <NumberInput value={gateWidth} min={0.1} max={100} onChange={setGateWidth} disabled={gateShape !== GateShape.RECTANGULAR} />
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className={labelClass}>Profundidade do Topo (da crista)</label>
+                                    <NumberInput value={gateDepthFromCrest} min={0} max={damHeight} onChange={setGateDepthFromCrest} />
+                                </div>
+                             </div>
+                             
+                             <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/60 space-y-4">
+                                <h4 className="text-[9px] font-black text-blue-800/70 uppercase tracking-widest flex items-center gap-1 mb-2"><RotateCw className="w-3 h-3" /> Inclinação da Comporta</h4>
+                                
+                                <div>
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Acompanhar Barragem?</label>
+                                        <button onClick={() => setSyncGateAngle(!syncGateAngle)} className={`text-[9px] px-2 py-1 rounded-lg border font-black transition-all uppercase tracking-wider ${syncGateAngle ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-400 border-blue-100'}`}>{syncGateAngle ? 'Sim' : 'Manual'}</button>
+                                    </div>
+                                    <NumberInput value={gateInclination} min={1} max={160} onChange={setGateInclination} disabled={syncGateAngle} />
                                 </div>
                              </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                             <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/60 space-y-4">
+                                <h4 className="text-[9px] font-black text-blue-800/70 uppercase tracking-widest flex items-center gap-1 mb-2"><RotateCw className="w-3 h-3" /> Apoio e Tirante</h4>
+                                
                                 <div>
-                                    <label className={labelClass}>
-                                        {gateShape === GateShape.CIRCULAR ? 'Diâmetro (m)' : gateShape === GateShape.SEMI_CIRCULAR ? 'Raio (m)' : 'Altura/Comp. (m)'}
-                                    </label>
-                                    <NumberInput value={gateHeight} onChange={handleHeightChange} min={0.1} max={maxGateHeight} />
+                                    <label className={labelClass}>Posição da Dobradiça (Hinge)</label>
+                                    <select className={selectClass} value={hingePosition} onChange={(e) => setHingePosition(e.target.value as HingePosition)}>
+                                        <option value={HingePosition.NONE}>Sem Dobradiça</option>
+                                        <option value={HingePosition.TOP}>Topo da Comporta</option>
+                                        <option value={HingePosition.BOTTOM}>Base da Comporta</option>
+                                    </select>
                                 </div>
-                                <div>
-                                    <label className={labelClass}>Largura (m)</label>
-                                    <NumberInput value={gateWidth} min={0.1} max={100} onChange={setGateWidth} disabled={gateShape !== GateShape.RECTANGULAR} />
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label className={labelClass}>Profundidade do Topo (da crista)</label>
-                                <NumberInput value={gateDepthFromCrest} min={0} max={damHeight} onChange={setGateDepthFromCrest} />
-                            </div>
-                         </div>
-                         
-                         <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/60 space-y-4">
-                            <h4 className="text-[9px] font-black text-blue-800/70 uppercase tracking-widest flex items-center gap-1 mb-2"><RotateCw className="w-3 h-3" /> Inclinação da Comporta</h4>
-                            
-                            <div>
-                                <div className="flex justify-between items-center mb-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Acompanhar Barragem?</label>
-                                    <button onClick={() => setSyncGateAngle(!syncGateAngle)} className={`text-[9px] px-2 py-1 rounded-lg border font-black transition-all uppercase tracking-wider ${syncGateAngle ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-400 border-blue-100'}`}>{syncGateAngle ? 'Sim' : 'Manual'}</button>
-                                </div>
-                                <NumberInput value={gateInclination} min={1} max={160} onChange={setGateInclination} disabled={syncGateAngle} />
-                            </div>
-                         </div>
-
-                         <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/60 space-y-4">
-                            <h4 className="text-[9px] font-black text-blue-800/70 uppercase tracking-widest flex items-center gap-1 mb-2"><RotateCw className="w-3 h-3" /> Apoio e Tirante</h4>
-                            
-                            <div>
-                                <label className={labelClass}>Posição da Dobradiça (Hinge)</label>
-                                <select className={selectClass} value={hingePosition} onChange={(e) => setHingePosition(e.target.value as HingePosition)}>
-                                    <option value={HingePosition.NONE}>Sem Dobradiça</option>
-                                    <option value={HingePosition.TOP}>Topo da Comporta</option>
-                                    <option value={HingePosition.BOTTOM}>Base da Comporta</option>
-                                </select>
-                            </div>
-                            
-                            <div className="pt-2 border-t border-blue-100/50">
-                                <div className="flex items-center justify-between cursor-pointer mb-2" onClick={() => setHasTieRod(!hasTieRod)}>
-                                    <label className={`${labelClass} cursor-pointer mb-0`}>Força Externa (Tirante)</label>
-                                    <input type="checkbox" checked={hasTieRod} onChange={(e) => setHasTieRod(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" onClick={(e) => e.stopPropagation()} />
-                                </div>
-                                {hasTieRod && (
-                                    <div className="grid grid-cols-2 gap-3 mt-3 animate-in fade-in">
-                                        <div>
-                                            <label className={labelClass}>Posição Relativa (0 a 1)</label>
-                                            <NumberInput value={tieRodPosRel} min={0} max={1} step="0.1" onChange={setTieRodPosRel} />
-                                        </div>
-                                        <div>
-                                            <label className={labelClass}>Ângulo da Força (°)</label>
-                                            <NumberInput value={tieRodAngle} min={0} max={360} onChange={setTieRodAngle} />
-                                        </div>
+                                
+                                <div className="pt-2 border-t border-blue-100/50">
+                                    <div className="flex items-center justify-between cursor-pointer mb-2" onClick={() => setHasTieRod(!hasTieRod)}>
+                                        <label className={`${labelClass} cursor-pointer mb-0`}>Força Externa (Tirante)</label>
+                                        <input type="checkbox" checked={hasTieRod} onChange={(e) => setHasTieRod(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" onClick={(e) => e.stopPropagation()} />
                                     </div>
-                                )}
-                            </div>
-
-                            <div className="pt-2 border-t border-blue-100/50">
-                                <div className="flex items-center justify-between cursor-pointer mb-2" onClick={() => setGateWeightEnabled(!gateWeightEnabled)}>
-                                    <label className={`${labelClass} cursor-pointer mb-0`}>Peso Próprio da Comporta</label>
-                                    <input type="checkbox" checked={gateWeightEnabled} onChange={(e) => setGateWeightEnabled(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" onClick={(e) => e.stopPropagation()} />
+                                    {hasTieRod && (
+                                        <div className="grid grid-cols-2 gap-3 mt-3 animate-in fade-in">
+                                            <div>
+                                                <label className={labelClass}>Posição Relativa (0 a 1)</label>
+                                                <NumberInput value={tieRodPosRel} min={0} max={1} step="0.1" onChange={setTieRodPosRel} />
+                                            </div>
+                                            <div>
+                                                <label className={labelClass}>Ângulo da Força (°)</label>
+                                                <NumberInput value={tieRodAngle} min={0} max={360} onChange={setTieRodAngle} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                {gateWeightEnabled && (
-                                    <div className="mt-3 animate-in fade-in">
-                                        <label className={labelClass}>Peso (N)</label>
-                                        <NumberInput value={gateWeight} min={0} max={100000} onChange={setGateWeight} />
+
+                                <div className="pt-2 border-t border-blue-100/50">
+                                    <div className="flex items-center justify-between cursor-pointer mb-2" onClick={() => setGateWeightEnabled(!gateWeightEnabled)}>
+                                        <label className={`${labelClass} cursor-pointer mb-0`}>Peso Próprio da Comporta</label>
+                                        <input type="checkbox" checked={gateWeightEnabled} onChange={(e) => setGateWeightEnabled(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" onClick={(e) => e.stopPropagation()} />
                                     </div>
-                                )}
-                            </div>
+                                    {gateWeightEnabled && (
+                                        <div className="mt-3 animate-in fade-in">
+                                            <label className={labelClass}>Peso (N)</label>
+                                            <NumberInput value={gateWeight} min={0} max={100000} onChange={setGateWeight} />
+                                        </div>
+                                    )}
+                                </div>
+                             </div>
                          </div>
-                     </div>
-                 )}
-             </div>
+                     )}
+                 </div>
+             )}
 
              {/* Water Levels */}
              <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 flex-1">
@@ -406,7 +448,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
             <GatePressureScene
                 damType={damType} damHeight={damHeight} damBaseWidth={damBaseWidth} damCrestWidth={damCrestWidth}
                 inclinationAngle={inclinationAngle} upstreamLevel={upstreamLevel} downstreamLevel={effectiveDownstreamLevel}
-                hasGate={hasGate} gateShape={gateShape}
+                hasGate={isDamMode ? false : hasGate} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}
                 gateInclination={gateInclination}
                 force={analyzedResults ? analyzedResults.forceData.FR_net : 0} 
@@ -418,6 +460,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                 gateWeight={gateWeight}
                 gateWeightEnabled={gateWeightEnabled}
                 onCalculate={handleCalculate}
+                isDamMode={isDamMode}
             />
              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-200/50 to-transparent pointer-events-none"></div>
         </div>
@@ -436,7 +479,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 group-hover:bg-blue-600 transition-colors"></div>
                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Força Hidrostática Resultante</div>
                              <div className="text-2xl font-mono font-black text-slate-800 flex items-center gap-2">
-                                 {(Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2)} <span className="text-sm font-sans font-black text-slate-400 self-end mb-1">kN</span>
+                                 {(Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2)} <span className="text-sm font-sans font-black text-slate-400 self-end mb-1">kN{isDamMode && '/m'}</span>
                              </div>
                          </div>
 
@@ -444,14 +487,14 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                          <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
                              <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Centro de Pressão (CP)</span><MoveVertical className="w-3 h-3 text-blue-400" /></div>
                              <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100 flex justify-between items-center">
-                                 <div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Posição ao longo da comporta</div>
+                                 <div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Posição ao longo da face</div>
                                  <div className="font-mono font-black text-blue-700 text-sm mt-0.5">{analyzedResults.forceData.s_cp_net.toFixed(2)} m</div>
                              </div>
                              <div className="text-[9px] text-slate-400 mt-2 text-right font-bold uppercase">Medido a partir do topo</div>
                          </div>
 
                          {/* Equilibrium (NEW) */}
-                         {(hingePosition !== HingePosition.NONE || hasTieRod) && (
+                         {!isDamMode && (hingePosition !== HingePosition.NONE || hasTieRod) && (
                              <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
                                  <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Equilíbrio Estático</span><RotateCw className="w-3 h-3 text-blue-400" /></div>
                                  <div className="grid grid-cols-1 gap-3">
@@ -475,8 +518,8 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                          <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
                              <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Propriedades Geométricas</span><Maximize className="w-3 h-3 text-blue-400" /></div>
                              <div className="grid grid-cols-2 gap-3">
-                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (M)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.up.area.toFixed(2)} m²</div></div>
-                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (J)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.down.area.toFixed(2)} m²</div></div>
+                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (M)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.up.area.toFixed(2)} m²{isDamMode && '/m'}</div></div>
+                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (J)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.down.area.toFixed(2)} m²{isDamMode && '/m'}</div></div>
                              </div>
                          </div>
                     </div>
@@ -513,10 +556,10 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                    <section>
                        <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2"><div className="w-6 h-px bg-blue-100"></div> Geometria da Área Molhada (Montante) <div className="flex-1 h-px bg-blue-50"></div></h4>
                        <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
-                           <CalculationLine label="Ângulo da Comporta (θ)" symbol="θ" result={gateInclination.toString()} unit="°" />
-                           <CalculationLine label="Formato" symbol="Shape" result={gateShape} unit="" />
+                           <CalculationLine label={isDamMode ? "Inclinação da Face (θ)" : "Ângulo da Comporta (θ)"} symbol="θ" result={isDamMode ? inclinationAngle.toString() : gateInclination.toString()} unit="°" />
+                           {!isDamMode && <CalculationLine label="Formato" symbol="Shape" result={gateShape} unit="" />}
                            <CalculationLine label="Comprimento Molhado (L)" symbol={<>L<sub>wet</sub></>} result={analyzedResults.forceData.up.wetLength.toFixed(3)} unit="m" />
-                           <CalculationLine label="Área (A)" symbol="A" result={analyzedResults.forceData.up.area.toFixed(3)} unit="m²" />
+                           <CalculationLine label="Área (A)" symbol="A" result={analyzedResults.forceData.up.area.toFixed(3)} unit={`m²${isDamMode ? '/m' : ''}`} />
                        </div>
                    </section>
 
@@ -528,7 +571,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                                 label="Força Resultante" symbol={<>F<sub>R</sub></>} 
                                 formula={<>P<sub>cg</sub> · A</>} 
                                 substitution={`${((analyzedResults.forceData.up.h_cg * 9810)/1000).toFixed(2)} · ${analyzedResults.forceData.up.area.toFixed(2)}`} 
-                                result={(analyzedResults.forceData.up.FR/1000).toFixed(3)} unit="kN" isSubHeader
+                                result={(analyzedResults.forceData.up.FR/1000).toFixed(3)} unit={`kN${isDamMode ? '/m' : ''}`} isSubHeader
                            />
                        </div>
                    </section>

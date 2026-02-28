@@ -50,12 +50,12 @@ interface GatePressureSceneProps {
   gateWeightEnabled: boolean;
 
   onCalculate: () => void;
+  isDamMode?: boolean;
 }
 
 const TANK_BORDER_COLOR = '#22d3ee';
 const OBJECT_BORDER_COLOR = '#0f172a';
 const WATER_COLOR_TOP = '#60a5fa';
-const WATER_COLOR_BOT = '#1e3a8a';
 
 export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
   const {
@@ -67,7 +67,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     up, down,
     hingePosition, hasTieRod, tieRodPosRel, tieRodAngle,
     gateWeight, gateWeightEnabled,
-    onCalculate,
+    onCalculate, isDamMode,
   } = props;
 
   // ===== VIEW =====
@@ -341,57 +341,169 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       const ny = Math.cos(th) * thickness;
       const gateFill = "url(#goldGradient)";
       const zGate = Math.min(gateWidth, CHANNEL_WIDTH);
-      const profile = [
-        { x: xBot, y: yBot },
-        { x: xTop, y: yTop },
-        { x: xTop + nx, y: yTop + ny },
-        { x: xBot + nx, y: yBot + ny },
-      ];
-      if (is3D) {
-        gateFaces.push(...prism(profile, zGate, gateFill, 1, OBJECT_BORDER_COLOR, 1.2, 'GATE'));
+      
+      if (gateShape === GateShape.RECTANGULAR) {
+        const profile = [
+          { x: xBot, y: yBot },
+          { x: xTop, y: yTop },
+          { x: xTop + nx, y: yTop + ny },
+          { x: xBot + nx, y: yBot + ny },
+        ];
+        if (is3D) {
+          gateFaces.push(...prism(profile, zGate, gateFill, 1, OBJECT_BORDER_COLOR, 1.2, 'GATE'));
+        } else {
+          gateFaces.push(face(profile.map(p => ({ ...p, z: 0 })), gateFill, 1, OBJECT_BORDER_COLOR, 1.5, { x: 0, y: 0, z: 1 }, 'GATE'));
+        }
       } else {
-        gateFaces.push(face(profile.map(p => ({ ...p, z: 0 })), gateFill, 1, OBJECT_BORDER_COLOR, 1.5, { x: 0, y: 0, z: 1 }, 'GATE'));
+        // Circular or Semi-Circular
+        const segments = 32;
+        const ptsFront: Point3D[] = [];
+        const ptsBack: Point3D[] = [];
+        
+        const R = gateHeight / (gateShape === GateShape.CIRCULAR ? 2 : 1);
+        const u_x = Math.cos(th);
+        const u_y = Math.sin(th);
+        
+        const u_center = gateShape === GateShape.CIRCULAR ? R : 0;
+        
+        for (let i = 0; i <= segments; i++) {
+          let alpha = 0;
+          let u_local = 0;
+          let v_local = 0;
+          
+          if (gateShape === GateShape.CIRCULAR) {
+            alpha = (i / segments) * Math.PI * 2;
+            u_local = u_center + R * Math.cos(alpha);
+            v_local = R * Math.sin(alpha);
+          } else {
+            // Semi-circular
+            alpha = (i / segments) * Math.PI;
+            u_local = R * Math.sin(alpha);
+            v_local = R * Math.cos(alpha);
+          }
+          
+          // Limit v_local to channel width
+          v_local = clamp(v_local, -CHANNEL_WIDTH / 2, CHANNEL_WIDTH / 2);
+          
+          const x_base = xBot + u_local * u_x;
+          const y_base = yBot + u_local * u_y;
+          
+          ptsBack.push({ x: x_base, y: y_base, z: v_local });
+          ptsFront.push({ x: x_base + nx, y: y_base + ny, z: v_local });
+        }
+        
+        if (is3D) {
+          // Front face
+          gateFaces.push(face(ptsFront, gateFill, 1, OBJECT_BORDER_COLOR, 1.2, { x: nx, y: ny, z: 0 }, 'GATE'));
+          // Back face
+          gateFaces.push(face([...ptsBack].reverse(), gateFill, 1, OBJECT_BORDER_COLOR, 1.2, { x: -nx, y: -ny, z: 0 }, 'GATE'));
+          
+          // Side faces
+          for (let i = 0; i < ptsFront.length - 1; i++) {
+            const p1F = ptsFront[i];
+            const p2F = ptsFront[i + 1];
+            const p1B = ptsBack[i];
+            const p2B = ptsBack[i + 1];
+            
+            const dx = p2F.x - p1F.x;
+            const dy = p2F.y - p1F.y;
+            const dz = p2F.z - p1F.z;
+            
+            // Approximate normal for the side face
+            // Vector 1: along the edge (dx, dy, dz)
+            // Vector 2: front to back (-nx, -ny, 0)
+            // Cross product
+            const normX = dy * 0 - dz * (-ny);
+            const normY = dz * (-nx) - dx * 0;
+            const normZ = dx * (-ny) - dy * (-nx);
+            const mag = Math.sqrt(normX*normX + normY*normY + normZ*normZ) || 1;
+            
+            gateFaces.push(face(
+              [p1F, p2F, p2B, p1B],
+              gateFill, 1, OBJECT_BORDER_COLOR, 1.2,
+              { x: normX/mag, y: normY/mag, z: normZ/mag },
+              'GATE'
+            ));
+          }
+          
+          // If semi-circular, add the straight base face
+          if (gateShape === GateShape.SEMI_CIRCULAR) {
+            const p1F = ptsFront[ptsFront.length - 1];
+            const p2F = ptsFront[0];
+            const p1B = ptsBack[ptsBack.length - 1];
+            const p2B = ptsBack[0];
+            
+            // Normal is pointing downwards along the dam face
+            const normX = -u_x;
+            const normY = -u_y;
+            
+            gateFaces.push(face(
+              [p1F, p2F, p2B, p1B],
+              gateFill, 1, OBJECT_BORDER_COLOR, 1.2,
+              { x: normX, y: normY, z: 0 },
+              'GATE'
+            ));
+          }
+        } else {
+          // 2D view - just draw the side profile
+          // The side profile is the projection of the gate on the XY plane.
+          // For circular/semi-circular, it's just a line segment with thickness.
+          const profile = [
+            { x: xBot, y: yBot },
+            { x: xTop, y: yTop },
+            { x: xTop + nx, y: yTop + ny },
+            { x: xBot + nx, y: yBot + ny },
+          ];
+          gateFaces.push(face(profile.map(p => ({ ...p, z: 0 })), gateFill, 1, OBJECT_BORDER_COLOR, 1.5, { x: 0, y: 0, z: 1 }, 'GATE'));
+        }
       }
     }
 
     // 3. Water Upstream
     if (upstreamLevel > 0) {
       const resFarX = -120;
-      const xContact = getDamFaceX(upstreamLevel);
-      const xFaceBotW = getDamFaceX(0);
-      const waterProfile = [
-        { x: resFarX, y: 0 },
-        { x: xFaceBotW, y: 0 },
-        { x: xContact, y: upstreamLevel },
-        { x: resFarX, y: upstreamLevel },
-      ];
+      const waterProfile = [];
+      waterProfile.push({ x: resFarX, y: 0 });
+      
+      const steps = 10;
+      const contactPts = [];
+      for (let i = 0; i <= steps; i++) {
+        const y = (i / steps) * upstreamLevel;
+        const x = getDamFaceX(y);
+        contactPts.push({ x, y });
+        waterProfile.push({ x, y });
+      }
+      waterProfile.push({ x: resFarX, y: upstreamLevel });
+
       if (is3D) {
         const zF = CHANNEL_WIDTH / 2;
         const zB = -CHANNEL_WIDTH / 2;
         
         // Front face
-        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#fluidDepthA)", 0.35, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
+        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#fluidDepthA)", 1, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
         // Back face
-        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 0.25, 'none', 0, { x: 0, y: 0, z: -1 }, 'WATER'));
+        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: 0, z: -1 }, 'WATER'));
         
         // Top surface
+        const xContact = contactPts[contactPts.length - 1].x;
         const surfacePts = [
           { x: resFarX, y: upstreamLevel, z: zF },
           { x: xContact, y: upstreamLevel, z: zF },
           { x: xContact, y: upstreamLevel, z: zB },
           { x: resFarX, y: upstreamLevel, z: zB },
         ];
-        waterUpFaces.push(face(surfacePts, "url(#surfaceGradientA)", 0.40, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
-        waterUpFaces.push(face(surfacePts, "url(#ripplePattern)", 0.5, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+        waterUpFaces.push(face(surfacePts, "url(#surfaceGradientA)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+        waterUpFaces.push(face(surfacePts, "url(#ripplePattern)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
         
         // Bottom surface
+        const xFaceBotW = contactPts[0].x;
         const bottomPts = [
           { x: resFarX, y: 0, z: zB },
           { x: xFaceBotW, y: 0, z: zB },
           { x: xFaceBotW, y: 0, z: zF },
           { x: resFarX, y: 0, z: zF },
         ];
-        waterUpFaces.push(face(bottomPts, WATER_COLOR_BOT, 0.30, 'none', 0, { x: 0, y: -1, z: 0 }, 'WATER'));
+        waterUpFaces.push(face(bottomPts, "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: -1, z: 0 }, 'WATER'));
 
         // Left surface
         const leftPts = [
@@ -400,26 +512,31 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: resFarX, y: upstreamLevel, z: zB },
           { x: resFarX, y: upstreamLevel, z: zF },
         ];
-        waterUpFaces.push(face(leftPts, WATER_COLOR_TOP, 0.30, 'none', 0, { x: -1, y: 0, z: 0 }, 'WATER'));
+        waterUpFaces.push(face(leftPts, "url(#fluidDepthA)", 1, 'none', 0, { x: -1, y: 0, z: 0 }, 'WATER'));
 
         // Right surface (contact with dam)
-        const dxU = xContact - xFaceBotW;
-        const dyU = upstreamLevel;
-        const magU = Math.sqrt(dxU*dxU + dyU*dyU) || 1;
-        const nxU = dyU / magU;
-        const nyU = -dxU / magU;
-        const rightPts = [
-          { x: xFaceBotW, y: 0, z: zF },
-          { x: xContact, y: upstreamLevel, z: zF },
-          { x: xContact, y: upstreamLevel, z: zB },
-          { x: xFaceBotW, y: 0, z: zB },
-        ];
-        waterUpFaces.push(face(rightPts, WATER_COLOR_TOP, 0.30, 'none', 0, { x: nxU, y: nyU, z: 0 }, 'WATER'));
+        for (let i = 0; i < contactPts.length - 1; i++) {
+          const p1 = contactPts[i];
+          const p2 = contactPts[i+1];
+          const dxU = p2.x - p1.x;
+          const dyU = p2.y - p1.y;
+          const magU = Math.sqrt(dxU*dxU + dyU*dyU) || 1;
+          const nxU = dyU / magU;
+          const nyU = -dxU / magU;
+          const rightPts = [
+            { x: p1.x, y: p1.y, z: zF },
+            { x: p2.x, y: p2.y, z: zF },
+            { x: p2.x, y: p2.y, z: zB },
+            { x: p1.x, y: p1.y, z: zB },
+          ];
+          waterUpFaces.push(face(rightPts, "url(#fluidDepthA)", 1, 'none', 0, { x: nxU, y: nyU, z: 0 }, 'WATER'));
+        }
 
         // Glass layer
-        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#glassGradient)", 0.8, 'none', 0, { x: 0, y: 0, z: 1 }, 'WATER'));
+        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#glassGradient)", 0.2, 'none', 0, { x: 0, y: 0, z: 1 }, 'WATER'));
       } else {
-        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: 0 })), "url(#fluidDepthA)", 0.6, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
+        const xContact = contactPts[contactPts.length - 1].x;
+        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: 0 })), "url(#fluidDepthA)", 1, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
         waterUpFaces.push(face([{ x: resFarX, y: upstreamLevel, z: 0 }, { x: xContact, y: upstreamLevel, z: 0 }], "url(#ripplePattern)", 1, 'rgba(255,255,255,0.6)', 2, { x: 0, y: 0, z: 1 }, 'WATER'));
       }
     }
@@ -427,41 +544,48 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     // 4. Water Downstream
     if (downstreamLevel > 0) {
       const resRightFarX = 140;
-      const xContactBack = getDamBackX(downstreamLevel);
-      const xBackBotW = getDamBackX(0);
-      const backProfile = [
-        { x: xBackBotW, y: 0 },
-        { x: resRightFarX, y: 0 },
-        { x: resRightFarX, y: downstreamLevel },
-        { x: xContactBack, y: downstreamLevel },
-      ];
+      const waterProfile = [];
+      const steps = 10;
+      const contactPts = [];
+      
+      for (let i = 0; i <= steps; i++) {
+        const y = (i / steps) * downstreamLevel;
+        const x = getDamBackX(y);
+        contactPts.push({ x, y });
+        waterProfile.push({ x, y });
+      }
+      waterProfile.push({ x: resRightFarX, y: downstreamLevel });
+      waterProfile.push({ x: resRightFarX, y: 0 });
+
       if (is3D) {
         const zF = CHANNEL_WIDTH / 2;
         const zB = -CHANNEL_WIDTH / 2;
         
         // Front face
-        waterDownFaces.push(face(backProfile.map(p => ({ ...p, z: zF })), "url(#fluidDepthA)", 0.35, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
+        waterDownFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#fluidDepthA)", 1, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
         // Back face
-        waterDownFaces.push(face(backProfile.map(p => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 0.25, 'none', 0, { x: 0, y: 0, z: -1 }, 'WATER'));
+        waterDownFaces.push(face(waterProfile.map(p => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: 0, z: -1 }, 'WATER'));
         
         // Top surface
+        const xContactBack = contactPts[contactPts.length - 1].x;
         const surfacePts = [
           { x: xContactBack, y: downstreamLevel, z: zF },
           { x: resRightFarX, y: downstreamLevel, z: zF },
           { x: resRightFarX, y: downstreamLevel, z: zB },
           { x: xContactBack, y: downstreamLevel, z: zB },
         ];
-        waterDownFaces.push(face(surfacePts, "url(#surfaceGradientA)", 0.40, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
-        waterDownFaces.push(face(surfacePts, "url(#ripplePattern)", 0.5, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+        waterDownFaces.push(face(surfacePts, "url(#surfaceGradientA)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+        waterDownFaces.push(face(surfacePts, "url(#ripplePattern)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
         
         // Bottom surface
+        const xBackBotW = contactPts[0].x;
         const bottomPts = [
           { x: xBackBotW, y: 0, z: zB },
           { x: resRightFarX, y: 0, z: zB },
           { x: resRightFarX, y: 0, z: zF },
           { x: xBackBotW, y: 0, z: zF },
         ];
-        waterDownFaces.push(face(bottomPts, WATER_COLOR_BOT, 0.30, 'none', 0, { x: 0, y: -1, z: 0 }, 'WATER'));
+        waterDownFaces.push(face(bottomPts, "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: -1, z: 0 }, 'WATER'));
 
         // Right surface
         const rightPts = [
@@ -470,26 +594,31 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: resRightFarX, y: downstreamLevel, z: zF },
           { x: resRightFarX, y: downstreamLevel, z: zB },
         ];
-        waterDownFaces.push(face(rightPts, WATER_COLOR_TOP, 0.30, 'none', 0, { x: 1, y: 0, z: 0 }, 'WATER'));
+        waterDownFaces.push(face(rightPts, "url(#fluidDepthA)", 1, 'none', 0, { x: 1, y: 0, z: 0 }, 'WATER'));
 
         // Left surface (contact with dam)
-        const dxD = xContactBack - xBackBotW;
-        const dyD = downstreamLevel;
-        const magD = Math.sqrt(dxD*dxD + dyD*dyD) || 1;
-        const nxD = -dyD / magD;
-        const nyD = dxD / magD;
-        const leftPts = [
-          { x: xBackBotW, y: 0, z: zB },
-          { x: xContactBack, y: downstreamLevel, z: zB },
-          { x: xContactBack, y: downstreamLevel, z: zF },
-          { x: xBackBotW, y: 0, z: zF },
-        ];
-        waterDownFaces.push(face(leftPts, WATER_COLOR_TOP, 0.30, 'none', 0, { x: nxD, y: nyD, z: 0 }, 'WATER'));
+        for (let i = 0; i < contactPts.length - 1; i++) {
+          const p1 = contactPts[i];
+          const p2 = contactPts[i+1];
+          const dxD = p2.x - p1.x;
+          const dyD = p2.y - p1.y;
+          const magD = Math.sqrt(dxD*dxD + dyD*dyD) || 1;
+          const nxD = -dyD / magD;
+          const nyD = dxD / magD;
+          const leftPts = [
+            { x: p1.x, y: p1.y, z: zB },
+            { x: p2.x, y: p2.y, z: zB },
+            { x: p2.x, y: p2.y, z: zF },
+            { x: p1.x, y: p1.y, z: zF },
+          ];
+          waterDownFaces.push(face(leftPts, "url(#fluidDepthA)", 1, 'none', 0, { x: nxD, y: nyD, z: 0 }, 'WATER'));
+        }
 
         // Glass layer
-        waterDownFaces.push(face(backProfile.map(p => ({ ...p, z: zF })), "url(#glassGradient)", 0.8, 'none', 0, { x: 0, y: 0, z: 1 }, 'WATER'));
+        waterDownFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#glassGradient)", 0.2, 'none', 0, { x: 0, y: 0, z: 1 }, 'WATER'));
       } else {
-        waterDownFaces.push(face(backProfile.map(p => ({ ...p, z: 0 })), "url(#fluidDepthA)", 0.6, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
+        const xContactBack = contactPts[contactPts.length - 1].x;
+        waterDownFaces.push(face(waterProfile.map(p => ({ ...p, z: 0 })), "url(#fluidDepthA)", 1, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
         waterDownFaces.push(face([{ x: xContactBack, y: downstreamLevel, z: 0 }, { x: resRightFarX, y: downstreamLevel, z: 0 }], "url(#ripplePattern)", 1, 'rgba(255,255,255,0.6)', 2, { x: 0, y: 0, z: 1 }, 'WATER'));
       }
     }
@@ -507,11 +636,82 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       allFaces,
       isUpstreamVisible
     };
-  }, [is3D, rotX, rotY, pan, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, damType, upstreamLevel, downstreamLevel, hasGate, gateWidth, gateHeight, gateDepthFromCrest, gateInclination, gateWorld]);
+  }, [is3D, rotX, rotY, pan, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, damType, upstreamLevel, downstreamLevel, hasGate, gateShape, gateWidth, gateHeight, gateDepthFromCrest, gateInclination, gateWorld]);
 
   // ===== Vectors =====
   const renderVectors = () => {
-    if (!hasGate || !gateWorld || !showVectors || !rendered.isUpstreamVisible) return null;
+    if (!showVectors) return null;
+
+    if (isDamMode) {
+      if (upstreamLevel <= 0) return null;
+      
+      const arrows = [];
+      const numArrows = 6;
+      const maxPressure = upstreamLevel; // Proportional to depth
+      
+      for (let i = 1; i <= numArrows; i++) {
+        const y = (i / numArrows) * upstreamLevel;
+        const x = getDamFaceX(y);
+        
+        // Normal to the face at this point
+        // Approximate by taking a small delta
+        const deltaY = 0.1;
+        const x1 = getDamFaceX(y - deltaY);
+        const x2 = getDamFaceX(y + deltaY);
+        const dx = x2 - x1;
+        const dy = 2 * deltaY;
+        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+        const nx = dy / mag;
+        const ny = -dx / mag;
+        
+        const depth = upstreamLevel - y;
+        const vecLen = (depth / upstreamLevel) * 60; // Max length 60px
+        
+        const pEnd = project({ x, y, z: 0 });
+        const pStart = project({ x: x - nx * (vecLen / SCALE), y: y - ny * (vecLen / SCALE), z: 0 });
+        
+        arrows.push(
+          <g key={`up-arrow-${i}`}>
+            <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke="#3b82f6" strokeWidth="2" markerEnd="url(#arrow-blue)" opacity="0.7" />
+          </g>
+        );
+      }
+
+      // Resultant force
+      if (force > 0) {
+        // For a vertical or inclined face, CP is at 1/3 from bottom
+        const yCP = upstreamLevel / 3;
+        const xCP = getDamFaceX(yCP);
+        
+        const deltaY = 0.1;
+        const x1 = getDamFaceX(yCP - deltaY);
+        const x2 = getDamFaceX(yCP + deltaY);
+        const dx = x2 - x1;
+        const dy = 2 * deltaY;
+        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+        const nx = dy / mag;
+        const ny = -dx / mag;
+
+        const vecLen = 80;
+        const pEnd = project({ x: xCP, y: yCP, z: 0 });
+        const pStart = project({ x: xCP - nx * (vecLen / SCALE), y: yCP - ny * (vecLen / SCALE), z: 0 });
+
+        arrows.push(
+          <g key="resultant">
+            <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke="#ef4444" strokeWidth="4" markerEnd="url(#arrow-red)" />
+            <circle cx={pEnd.x} cy={pEnd.y} r="4" fill="white" stroke="#ef4444" strokeWidth="2" />
+            <g transform={`translate(${pStart.x}, ${pStart.y - 18})`}>
+              <rect x="-25" y="-12" width="50" height="20" rx="6" fill="white" fillOpacity="0.9" stroke="#ef4444" strokeWidth="1" />
+              <text x="0" y="3" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="900">F_R</text>
+            </g>
+          </g>
+        );
+      }
+
+      return <g className="pointer-events-none">{arrows}</g>;
+    }
+
+    if (!hasGate || !gateWorld || !rendered.isUpstreamVisible) return null;
     const { xTop, yTop, th, sin, cos } = gateWorld;
     
     const pointOnGate = (s: number) => {
@@ -642,7 +842,8 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
         <defs>
           <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="white" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="white" stopOpacity="0.1" />
+            <stop offset="50%" stopColor="white" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="white" stopOpacity="0.3" />
           </linearGradient>
           <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#fef3c7" />
@@ -655,18 +856,21 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
             <rect width="64" height="64" filter="url(#concreteNoise)" opacity="0.25" />
           </pattern>
           <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={WATER_COLOR_TOP} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={WATER_COLOR_BOT} stopOpacity="0.8" />
+            <stop offset="0%" stopColor={WATER_COLOR_TOP} stopOpacity="0.15" />
+            <stop offset="100%" stopColor={WATER_COLOR_TOP} stopOpacity="0.6" />
           </linearGradient>
           <linearGradient id="surfaceGradientA" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={WATER_COLOR_TOP} stopOpacity="0.5" />
-            <stop offset="100%" stopColor={WATER_COLOR_BOT} stopOpacity="0.7" />
+            <stop offset="0%" stopColor={WATER_COLOR_TOP} stopOpacity="0.4" />
+            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.2" />
+            <stop offset="100%" stopColor={WATER_COLOR_TOP} stopOpacity="0.5" />
           </linearGradient>
           <pattern id="ripplePattern" width="120" height="40" patternUnits="userSpaceOnUse">
             <animateTransform attributeName="patternTransform" type="translate" from="0 0" to="120 20" dur="8s" repeatCount="indefinite" />
             <path d="M0,20 Q30,10 60,20 T120,20" fill="none" stroke="white" strokeWidth="1" opacity="0.4" />
+            <path d="M-60,0 Q-30,-10 0,0 T60,0" fill="none" stroke="white" strokeWidth="0.5" opacity="0.2" />
           </pattern>
           <marker id="arrow-red" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><path d="M0,0 L6,2 L0,4 Z" fill="#ef4444" /></marker>
+          <marker id="arrow-blue" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><path d="M0,0 L6,2 L0,4 Z" fill="#3b82f6" /></marker>
           <marker id="arrow-green" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><path d="M0,0 L6,2 L0,4 Z" fill="#10b981" /></marker>
           <marker id="arrow-weight" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><path d="M0,0 L6,2 L0,4 Z" fill="#64748b" /></marker>
         </defs>

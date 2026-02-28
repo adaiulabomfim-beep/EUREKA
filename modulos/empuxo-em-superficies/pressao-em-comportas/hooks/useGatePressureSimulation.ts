@@ -45,7 +45,8 @@ export const useGatePressureSimulation = (config: SimulationConfig) => {
       gateInclination,
       h_top_up,
       h_top_down,
-      gamma
+      gamma,
+      config.gateShape
     );
 
     // Equilíbrio (dobradiça, tirante e peso próprio)
@@ -72,6 +73,7 @@ export const useGatePressureSimulation = (config: SimulationConfig) => {
     gateWidth,
     gateDepthFromCrest,
     gateInclination,
+    config.gateShape,
     damHeight,
     hingePosition,
     hasTieRod,

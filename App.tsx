@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BodyFallLab } from './modulos/corpo-em-queda/components/layout/BodyFallLab';
 import { GatePressureLab } from './modulos/empuxo-em-superficies/pressao-em-comportas';
@@ -10,7 +10,7 @@ import { SimulationMode } from './types';
 
 const App: React.FC = () => {
   const [hasStarted, setHasStarted] = useState<boolean>(false);
-  const [currentMode, setCurrentMode] = useState<SimulationMode>(SimulationMode.BUOYANCY);
+  const [currentMode, setCurrentMode] = useState<SimulationMode>(SimulationMode.FALLING_BODY);
   const [simulationContext, setSimulationContext] = useState<string>('');
 
   return (
@@ -65,24 +65,36 @@ const App: React.FC = () => {
             {/* Navigation Tabs */}
             <div className="bg-white/75 backdrop-blur-md border-b border-blue-100/70 shadow-sm z-40 sticky top-16">
               <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-                <nav className="flex space-x-2 py-2" aria-label="Tabs">
+                <nav className="flex space-x-2 py-2 overflow-x-auto custom-scrollbar" aria-label="Tabs">
                   <button
-                    onClick={() => setCurrentMode(SimulationMode.BUOYANCY)}
+                    onClick={() => setCurrentMode(SimulationMode.FALLING_BODY)}
                     className={`
-                      flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300
-                      ${currentMode === SimulationMode.BUOYANCY 
+                      flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
+                      ${currentMode === SimulationMode.FALLING_BODY 
                         ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
                         : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
                     `}
                   >
                     <Anchor className="w-4 h-4" />
-                    Laboratório
+                    Corpo em Queda
                   </button>
                   <button
-                    onClick={() => setCurrentMode(SimulationMode.PRESSURE)}
+                    onClick={() => setCurrentMode(SimulationMode.DAM_HYDROLOGY)}
                     className={`
-                      flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300
-                      ${currentMode === SimulationMode.PRESSURE 
+                      flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
+                      ${currentMode === SimulationMode.DAM_HYDROLOGY 
+                        ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
+                        : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
+                    `}
+                  >
+                    <Mountain className="w-4 h-4" />
+                    Barragens
+                  </button>
+                  <button
+                    onClick={() => setCurrentMode(SimulationMode.GATE_PRESSURE)}
+                    className={`
+                      flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
+                      ${currentMode === SimulationMode.GATE_PRESSURE 
                         ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
                         : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
                     `}
@@ -93,7 +105,7 @@ const App: React.FC = () => {
                   <button
                     onClick={() => setCurrentMode(SimulationMode.THEORY)}
                     className={`
-                      flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300
+                      flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                       ${currentMode === SimulationMode.THEORY 
                         ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
                         : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
@@ -112,19 +124,22 @@ const App: React.FC = () => {
                    {/* Section Title */}
                   <div className="mb-8">
                       <h2 className="text-3xl font-black tracking-tight text-slate-800">
-                          {currentMode === SimulationMode.BUOYANCY && "Princípio de Arquimedes"}
-                          {currentMode === SimulationMode.PRESSURE && "Forças Hidrostáticas em Superfícies"}
+                          {currentMode === SimulationMode.FALLING_BODY && "Princípio de Arquimedes"}
+                          {currentMode === SimulationMode.DAM_HYDROLOGY && "Geometria e Análise de Barragens"}
+                          {currentMode === SimulationMode.GATE_PRESSURE && "Forças Hidrostáticas em Superfícies"}
                           {currentMode === SimulationMode.THEORY && "Fundamentação Teórica"}
                       </h2>
                       <p className="text-slate-500 text-sm mt-2 font-medium">
-                          {currentMode === SimulationMode.BUOYANCY && "Simule a interação entre diferentes materiais e fluidos para entender as condições de flutuação, equilíbrio e submersão."}
-                          {currentMode === SimulationMode.PRESSURE && "Analise a distribuição de pressão e forças resultantes em comportas planas e curvas."}
+                          {currentMode === SimulationMode.FALLING_BODY && "Simule flutuação, equilíbrio e submersão (Princípio de Arquimedes)."}
+                          {currentMode === SimulationMode.DAM_HYDROLOGY && "Análise do reservatório e geometria da barragem."}
+                          {currentMode === SimulationMode.GATE_PRESSURE && "Distribuição de pressão e força resultante em comportas planas/curvas."}
                           {currentMode === SimulationMode.THEORY && "Material de apoio e fórmulas essenciais para os experimentos."}
                       </p>
                   </div>
 
-                  {currentMode === SimulationMode.BUOYANCY && <BodyFallLab onContextUpdate={setSimulationContext} />}
-                  {currentMode === SimulationMode.PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} />}
+                  {currentMode === SimulationMode.FALLING_BODY && <BodyFallLab onContextUpdate={setSimulationContext} />}
+                  {currentMode === SimulationMode.DAM_HYDROLOGY && <GatePressureLab onContextUpdate={setSimulationContext} isDamMode={true} />}
+                  {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} isDamMode={false} />}
                   {currentMode === SimulationMode.THEORY && <TheoryReference />}
               </div>
             </main>

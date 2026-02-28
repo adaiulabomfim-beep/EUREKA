@@ -1,4 +1,4 @@
-// modulos/empuxo-em-superficies/pressao-em-comportas/physics/planeSurface.ts
+import { GateShape } from '../types';
 
 export type RectSurfaceResult = {
   FR: number;         // N
@@ -25,17 +25,18 @@ function clamp(val: number, min: number, max: number) {
 }
 
 /**
- * Calcula a força hidrostática em uma superfície plana retangular.
+ * Calcula a força hidrostática em uma superfície plana.
  * Implementação baseada nas fórmulas:
  * F = rho * g * h_bar * A
  * h_cp = h_bar + (I_G * sin^2(theta)) / (A * h_bar)
  */
-export function calculateRectangularSurface(
+export function calculateSurface(
   L: number,          // Comprimento total da comporta (m)
   B: number,          // Largura da comporta (m)
   theta_deg: number,  // Ângulo com a horizontal (90 = vertical)
   h_top: number,      // Profundidade vertical do topo da comporta (m)
-  gamma: number       // Peso específico (rho * g)
+  gamma: number,      // Peso específico (rho * g)
+  shape: GateShape    // Formato da comporta
 ): RectSurfaceResult {
   const Lc = Math.max(0, L);
   const Bc = Math.max(0, B);
@@ -54,24 +55,19 @@ export function calculateRectangularSurface(
   const sin2T = sinT * sinT;
 
   // 1. Determinar o trecho molhado (s1 até s2 ao longo da comporta)
-  // h(s) = h_top + s * sin(theta)
-  // Queremos h(s) > 0
   let s1 = 0;
   let s2 = Lc;
 
   if (Math.abs(sinT) < 1e-6) {
-    // Caso horizontal
     if (h_top <= 0) return empty;
     s1 = 0;
     s2 = Lc;
   } else if (sinT > 0) {
-    // Comporta descendo (padrão)
     if (h_top < 0) {
       s1 = -h_top / sinT;
     }
     if (s1 >= Lc) return empty;
   } else {
-    // Comporta subindo (raro)
     if (h_top <= 0) return empty;
     s2 = Math.min(Lc, -h_top / sinT);
   }
@@ -83,8 +79,37 @@ export function calculateRectangularSurface(
   if (wetLength <= EPS) return empty;
 
   // 2. Propriedades da área molhada
-  const area = Bc * wetLength;
-  const s_cg_wet = s1 + wetLength / 2; // CG do trecho molhado relativo ao topo da comporta
+  let area = 0;
+  let s_cg_wet = 0;
+  let IG = 0;
+
+  if (shape === GateShape.RECTANGULAR) {
+    area = Bc * wetLength;
+    s_cg_wet = s1 + wetLength / 2;
+    IG = (Bc * Math.pow(wetLength, 3)) / 12;
+  } else if (shape === GateShape.CIRCULAR) {
+    // TODO: Implementar cálculo exato para círculo parcialmente submerso.
+    // Atualmente, aproxima usando a área total se estiver molhado.
+    const R = Lc / 2;
+    area = Math.PI * R * R;
+    s_cg_wet = Lc / 2; // Centro do círculo
+    IG = (Math.PI * Math.pow(R, 4)) / 4;
+  } else if (shape === GateShape.SEMI_CIRCULAR) {
+    // TODO: Implementar cálculo exato para semicírculo parcialmente submerso.
+    // Atualmente, aproxima usando a área total se estiver molhado.
+    // Assumindo que a base reta está na parte inferior (s = Lc).
+    // O raio é Lc.
+    const R = Lc;
+    area = (Math.PI * R * R) / 2;
+    // Distância do centroide à base reta é 4R/(3π).
+    // Como o topo é s=0 e a base é s=R, o CG a partir do topo é R - 4R/(3π).
+    s_cg_wet = R - (4 * R) / (3 * Math.PI);
+    // IG em relação ao eixo centroidal paralelo à base reta:
+    // I_base = πR^4/8. I_G = I_base - A * d^2
+    const d = (4 * R) / (3 * Math.PI);
+    IG = (Math.PI * Math.pow(R, 4)) / 8 - area * d * d;
+  }
+
   const h_cg = h_top + s_cg_wet * sinT;
 
   if (h_cg <= EPS) return empty;
@@ -93,26 +118,13 @@ export function calculateRectangularSurface(
   const FR = gamma * h_cg * area;
 
   // 4. Centro de Pressão (h_cp)
-  // I_G = B * L_wet^3 / 12
-  const IG = (Bc * Math.pow(wetLength, 3)) / 12;
-  
-  // h_cp = h_cg + (IG * sin^2(theta)) / (A * h_cg)
   const h_cp = h_cg + (IG * sin2T) / (area * h_cg);
 
-  // s_cp: posição ao longo da comporta a partir do topo geométrico
-  // h_cp = h_top + s_cp * sin(theta) => s_cp = (h_cp - h_top) / sin(theta)
   let s_cp = s_cg_wet;
   if (Math.abs(sinT) > 1e-6) {
     s_cp = (h_cp - h_top) / sinT;
   }
-  s_cp = clamp(s_cp, s1, s2);
-
-  // Sanity Check (Case 1 from user request)
-  // theta=90, rho=1000, g=9.81, b=2, L=3, hTop=0
-  // A=6, h_bar=1.5 => FR = 1000*9.81*1.5*6 = 88290 N = 88.29 kN
-  // IG = 2 * 3^3 / 12 = 54/12 = 4.5
-  // h_cp = 1.5 + (4.5 * 1^2) / (6 * 1.5) = 1.5 + 4.5 / 9 = 1.5 + 0.5 = 2.0 m
-  // s_cp = (2.0 - 0) / 1 = 2.0 m
+  s_cp = clamp(s_cp, 0, Lc); // s_cp pode estar fora de [s1, s2] se parcialmente submerso e aproximado
 
   return {
     FR,
@@ -137,10 +149,11 @@ export function calculateNetForce(
   theta_deg: number,
   h_top_up: number,
   h_top_down: number,
-  gamma: number
+  gamma: number,
+  shape: GateShape
 ) {
-  const up = calculateRectangularSurface(L, B, theta_deg, h_top_up, gamma);
-  const down = calculateRectangularSurface(L, B, theta_deg, h_top_down, gamma);
+  const up = calculateSurface(L, B, theta_deg, h_top_up, gamma, shape);
+  const down = calculateSurface(L, B, theta_deg, h_top_down, gamma, shape);
 
   const FR_net = up.FR - down.FR;
 
