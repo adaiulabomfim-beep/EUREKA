@@ -145,7 +145,13 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
 
   // ===== GEOMETRY =====
   const getDamFaceX = (y: number): number => {
-    const angleRad = (inclinationAngle * Math.PI) / 180;
+    let angle = inclinationAngle;
+    if (damType === DamType.EMBANKMENT) {
+      // Force a smoother slope for embankment (e.g., 1V:2H -> ~26.5 degrees)
+      // We blend it with the user's angle but ensure it's never too steep
+      angle = Math.min(angle, 45); // Max 45 degrees (1V:1H)
+    }
+    const angleRad = (angle * Math.PI) / 180;
     const safe = Math.max(0.02, Math.min(Math.PI - 0.02, angleRad));
     return (y / Math.tan(safe));
   };
@@ -201,19 +207,19 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     }
 
     if (damType === DamType.ARCH) {
-      const midY = damHeight * 0.55;
-      const bulge = clamp(damBaseWidth * 0.25, 1, 8);
-      return [
-        { x: xFaceBot, y: 0 },
-        { x: xBackBot, y: 0 },
-        { x: xBackTop + bulge, y: midY },
-        { x: xBackTop, y: damHeight },
-        { x: xFaceTop, y: damHeight }
-      ];
+      // In 2D section, keep it simple (trapezoidal/rectangular)
+      // The 3D curvature will be handled by xOffsetFn
+      return gravity;
     }
 
     return gravity;
   };
+
+  const archRadius = Math.max(CHANNEL_WIDTH, damBaseWidth * 2);
+  const archOffsetFn = damType === DamType.ARCH ? (z: number) => {
+    // R - sqrt(R^2 - z^2)
+    return archRadius - Math.sqrt(Math.max(0, archRadius * archRadius - z * z));
+  } : undefined;
 
   const gateWorld = useMemo(() => {
     if (!hasGate) return null;
@@ -285,24 +291,64 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     };
   };
 
-  const prism = (profile: { x: number; y: number }[], zWidth: number, fill: string, opacity: number, stroke = 'none', strokeWidth = 1, kind: 'DAM' | 'GATE' | 'WATER' = 'DAM') => {
+  const prism = (profile: { x: number; y: number }[], zWidth: number, fill: string, opacity: number, stroke = 'none', strokeWidth = 1, kind: 'DAM' | 'GATE' | 'WATER' = 'DAM', xOffsetFn?: (z: number) => number) => {
     const faces: Face[] = [];
     const zF = zWidth / 2;
     const zB = -zWidth / 2;
-    faces.push(face(profile.map(p => ({ ...p, z: zF })), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: 1 }, kind));
-    faces.push(face(profile.map(p => ({ ...p, z: zB })).reverse(), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: -1 }, kind));
-    for (let i = 0; i < profile.length; i++) {
-      const p1 = profile[i];
-      const p2 = profile[(i + 1) % profile.length];
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const mag = Math.sqrt(dx * dx + dy * dy) || 1;
-      const nx = dy / mag;
-      const ny = -dx / mag;
-      faces.push(face(
-        [{ x: p1.x, y: p1.y, z: zF }, { x: p2.x, y: p2.y, z: zF }, { x: p2.x, y: p2.y, z: zB }, { x: p1.x, y: p1.y, z: zB }],
-        fill, opacity, stroke, strokeWidth, { x: nx, y: ny, z: 0 }, kind
-      ));
+
+    if (!xOffsetFn) {
+      faces.push(face(profile.map(p => ({ ...p, z: zF })), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: 1 }, kind));
+      faces.push(face(profile.map(p => ({ ...p, z: zB })).reverse(), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: -1 }, kind));
+      for (let i = 0; i < profile.length; i++) {
+        const p1 = profile[i];
+        const p2 = profile[(i + 1) % profile.length];
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const mag = Math.sqrt(dx * dx + dy * dy) || 1;
+        const nx = dy / mag;
+        const ny = -dx / mag;
+        faces.push(face(
+          [{ x: p1.x, y: p1.y, z: zF }, { x: p2.x, y: p2.y, z: zF }, { x: p2.x, y: p2.y, z: zB }, { x: p1.x, y: p1.y, z: zB }],
+          fill, opacity, stroke, strokeWidth, { x: nx, y: ny, z: 0 }, kind
+        ));
+      }
+    } else {
+      const segments = 16;
+      const dz = zWidth / segments;
+      
+      faces.push(face(profile.map(p => ({ x: p.x + xOffsetFn(zF), y: p.y, z: zF })), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: 1 }, kind));
+      faces.push(face(profile.map(p => ({ x: p.x + xOffsetFn(zB), y: p.y, z: zB })).reverse(), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: -1 }, kind));
+
+      for (let i = 0; i < profile.length; i++) {
+        const p1 = profile[i];
+        const p2 = profile[(i + 1) % profile.length];
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        
+        for (let j = 0; j < segments; j++) {
+           const z1 = zB + j * dz;
+           const z2 = zB + (j + 1) * dz;
+           const off1 = xOffsetFn(z1);
+           const off2 = xOffsetFn(z2);
+           
+           const vec1 = { x: p2.x + off1 - (p1.x + off1), y: p2.y - p1.y, z: 0 };
+           const vec2 = { x: p1.x + off2 - (p1.x + off1), y: 0, z: z2 - z1 };
+           const normX = vec1.y * vec2.z - vec1.z * vec2.y;
+           const normY = vec1.z * vec2.x - vec1.x * vec2.z;
+           const normZ = vec1.x * vec2.y - vec1.y * vec2.x;
+           const nMag = Math.sqrt(normX*normX + normY*normY + normZ*normZ) || 1;
+
+           faces.push(face(
+             [
+               { x: p1.x + off2, y: p1.y, z: z2 },
+               { x: p2.x + off2, y: p2.y, z: z2 },
+               { x: p2.x + off1, y: p2.y, z: z1 },
+               { x: p1.x + off1, y: p1.y, z: z1 }
+             ],
+             fill, opacity, stroke, strokeWidth, { x: normX/nMag, y: normY/nMag, z: normZ/nMag }, kind
+           ));
+        }
+      }
     }
     return faces;
   };
@@ -318,7 +364,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     const damProfile = getDamProfile();
     const damFill = "url(#concretePattern)";
     if (is3D) {
-      damFaces.push(...prism(damProfile, CHANNEL_WIDTH, damFill, 1, '#525252', 1.2, 'DAM'));
+      damFaces.push(...prism(damProfile, CHANNEL_WIDTH, damFill, 1, '#525252', 1.2, 'DAM', archOffsetFn));
     } else {
       damFaces.push(face(damProfile.map(p => ({ ...p, z: 0 })), damFill, 1, '#525252', 1.5, { x: 0, y: 0, z: 1 }, 'DAM'));
     }
@@ -462,48 +508,96 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     // 3. Water Upstream
     if (upstreamLevel > 0) {
       const resFarX = -120;
-      const waterProfile = [];
-      waterProfile.push({ x: resFarX, y: 0 });
-      
       const steps = 10;
-      const contactPts = [];
-      for (let i = 0; i <= steps; i++) {
-        const y = (i / steps) * upstreamLevel;
-        const x = getDamFaceX(y);
-        contactPts.push({ x, y });
-        waterProfile.push({ x, y });
-      }
-      waterProfile.push({ x: resFarX, y: upstreamLevel });
-
+      
       if (is3D) {
         const zF = CHANNEL_WIDTH / 2;
         const zB = -CHANNEL_WIDTH / 2;
         
+        const getWaterProfileForZ = (z: number) => {
+           const profile = [];
+           profile.push({ x: resFarX, y: 0 });
+           const offset = archOffsetFn ? archOffsetFn(z) : 0;
+           for (let i = 0; i <= steps; i++) {
+             const y = (i / steps) * upstreamLevel;
+             const x = getDamFaceX(y) + offset;
+             profile.push({ x, y });
+           }
+           profile.push({ x: resFarX, y: upstreamLevel });
+           return profile;
+        };
+
+        const profileF = getWaterProfileForZ(zF);
+        const profileB = getWaterProfileForZ(zB);
+        
         // Front face
-        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#fluidDepthA)", 1, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
+        waterUpFaces.push(face(profileF.map(p => ({ ...p, z: zF })), "url(#fluidDepthA)", 1, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
         // Back face
-        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: 0, z: -1 }, 'WATER'));
+        waterUpFaces.push(face(profileB.map(p => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: 0, z: -1 }, 'WATER'));
         
         // Top surface
-        const xContact = contactPts[contactPts.length - 1].x;
-        const surfacePts = [
-          { x: resFarX, y: upstreamLevel, z: zF },
-          { x: xContact, y: upstreamLevel, z: zF },
-          { x: xContact, y: upstreamLevel, z: zB },
-          { x: resFarX, y: upstreamLevel, z: zB },
-        ];
-        waterUpFaces.push(face(surfacePts, "url(#surfaceGradientA)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
-        waterUpFaces.push(face(surfacePts, "url(#ripplePattern)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+        if (archOffsetFn) {
+           const segments = 16;
+           const dz = CHANNEL_WIDTH / segments;
+           for (let j = 0; j < segments; j++) {
+              const z1 = zB + j * dz;
+              const z2 = zB + (j + 1) * dz;
+              const off1 = archOffsetFn(z1);
+              const off2 = archOffsetFn(z2);
+              const xContact1 = getDamFaceX(upstreamLevel) + off1;
+              const xContact2 = getDamFaceX(upstreamLevel) + off2;
+              
+              const surfacePts = [
+                { x: resFarX, y: upstreamLevel, z: z2 },
+                { x: xContact2, y: upstreamLevel, z: z2 },
+                { x: xContact1, y: upstreamLevel, z: z1 },
+                { x: resFarX, y: upstreamLevel, z: z1 },
+              ];
+              waterUpFaces.push(face(surfacePts, "url(#surfaceGradientA)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+              waterUpFaces.push(face(surfacePts, "url(#ripplePattern)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+           }
+        } else {
+           const xContact = getDamFaceX(upstreamLevel);
+           const surfacePts = [
+             { x: resFarX, y: upstreamLevel, z: zF },
+             { x: xContact, y: upstreamLevel, z: zF },
+             { x: xContact, y: upstreamLevel, z: zB },
+             { x: resFarX, y: upstreamLevel, z: zB },
+           ];
+           waterUpFaces.push(face(surfacePts, "url(#surfaceGradientA)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+           waterUpFaces.push(face(surfacePts, "url(#ripplePattern)", 1, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER'));
+        }
         
         // Bottom surface
-        const xFaceBotW = contactPts[0].x;
-        const bottomPts = [
-          { x: resFarX, y: 0, z: zB },
-          { x: xFaceBotW, y: 0, z: zB },
-          { x: xFaceBotW, y: 0, z: zF },
-          { x: resFarX, y: 0, z: zF },
-        ];
-        waterUpFaces.push(face(bottomPts, "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: -1, z: 0 }, 'WATER'));
+        if (archOffsetFn) {
+           const segments = 16;
+           const dz = CHANNEL_WIDTH / segments;
+           for (let j = 0; j < segments; j++) {
+              const z1 = zB + j * dz;
+              const z2 = zB + (j + 1) * dz;
+              const off1 = archOffsetFn(z1);
+              const off2 = archOffsetFn(z2);
+              const xFaceBot1 = getDamFaceX(0) + off1;
+              const xFaceBot2 = getDamFaceX(0) + off2;
+              
+              const bottomPts = [
+                { x: resFarX, y: 0, z: z1 },
+                { x: xFaceBot1, y: 0, z: z1 },
+                { x: xFaceBot2, y: 0, z: z2 },
+                { x: resFarX, y: 0, z: z2 },
+              ];
+              waterUpFaces.push(face(bottomPts, "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: -1, z: 0 }, 'WATER'));
+           }
+        } else {
+           const xFaceBotW = getDamFaceX(0);
+           const bottomPts = [
+             { x: resFarX, y: 0, z: zB },
+             { x: xFaceBotW, y: 0, z: zB },
+             { x: xFaceBotW, y: 0, z: zF },
+             { x: resFarX, y: 0, z: zF },
+           ];
+           waterUpFaces.push(face(bottomPts, "url(#fluidDepthA)", 1, 'none', 0, { x: 0, y: -1, z: 0 }, 'WATER'));
+        }
 
         // Left surface
         const leftPts = [
@@ -515,27 +609,66 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
         waterUpFaces.push(face(leftPts, "url(#fluidDepthA)", 1, 'none', 0, { x: -1, y: 0, z: 0 }, 'WATER'));
 
         // Right surface (contact with dam)
-        for (let i = 0; i < contactPts.length - 1; i++) {
-          const p1 = contactPts[i];
-          const p2 = contactPts[i+1];
-          const dxU = p2.x - p1.x;
-          const dyU = p2.y - p1.y;
-          const magU = Math.sqrt(dxU*dxU + dyU*dyU) || 1;
-          const nxU = dyU / magU;
-          const nyU = -dxU / magU;
-          const rightPts = [
-            { x: p1.x, y: p1.y, z: zF },
-            { x: p2.x, y: p2.y, z: zF },
-            { x: p2.x, y: p2.y, z: zB },
-            { x: p1.x, y: p1.y, z: zB },
-          ];
-          waterUpFaces.push(face(rightPts, "url(#fluidDepthA)", 1, 'none', 0, { x: nxU, y: nyU, z: 0 }, 'WATER'));
+        if (archOffsetFn) {
+           const segments = 16;
+           const dz = CHANNEL_WIDTH / segments;
+           for (let i = 0; i < steps; i++) {
+             const y1 = (i / steps) * upstreamLevel;
+             const y2 = ((i + 1) / steps) * upstreamLevel;
+             const x1_base = getDamFaceX(y1);
+             const x2_base = getDamFaceX(y2);
+             
+             for (let j = 0; j < segments; j++) {
+                const z1 = zB + j * dz;
+                const z2 = zB + (j + 1) * dz;
+                const off1 = archOffsetFn(z1);
+                const off2 = archOffsetFn(z2);
+                
+                const contactFace = [
+                  { x: x1_base + off1, y: y1, z: z1 },
+                  { x: x2_base + off1, y: y2, z: z1 },
+                  { x: x2_base + off2, y: y2, z: z2 },
+                  { x: x1_base + off2, y: y1, z: z2 },
+                ];
+                
+                const dx = x2_base - x1_base;
+                const dy = y2 - y1;
+                const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+                waterUpFaces.push(face(contactFace, "url(#fluidDepthA)", 1, 'none', 0, { x: -dy/mag, y: dx/mag, z: 0 }, 'WATER'));
+             }
+           }
+        } else {
+           for (let i = 0; i < steps; i++) {
+             const y1 = (i / steps) * upstreamLevel;
+             const y2 = ((i + 1) / steps) * upstreamLevel;
+             const p1 = { x: getDamFaceX(y1), y: y1 };
+             const p2 = { x: getDamFaceX(y2), y: y2 };
+             const dxU = p2.x - p1.x;
+             const dyU = p2.y - p1.y;
+             const magU = Math.sqrt(dxU*dxU + dyU*dyU) || 1;
+             const nxU = dyU / magU;
+             const nyU = -dxU / magU;
+             const rightPts = [
+               { x: p1.x, y: p1.y, z: zF },
+               { x: p2.x, y: p2.y, z: zF },
+               { x: p2.x, y: p2.y, z: zB },
+               { x: p1.x, y: p1.y, z: zB },
+             ];
+             waterUpFaces.push(face(rightPts, "url(#fluidDepthA)", 1, 'none', 0, { x: nxU, y: nyU, z: 0 }, 'WATER'));
+           }
         }
 
         // Glass layer
-        waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: zF })), "url(#glassGradient)", 0.2, 'none', 0, { x: 0, y: 0, z: 1 }, 'WATER'));
+        waterUpFaces.push(face(profileF.map(p => ({ ...p, z: zF })), "url(#glassGradient)", 0.2, 'none', 0, { x: 0, y: 0, z: 1 }, 'WATER'));
       } else {
-        const xContact = contactPts[contactPts.length - 1].x;
+        const waterProfile = [];
+        waterProfile.push({ x: resFarX, y: 0 });
+        for (let i = 0; i <= steps; i++) {
+          const y = (i / steps) * upstreamLevel;
+          waterProfile.push({ x: getDamFaceX(y), y });
+        }
+        waterProfile.push({ x: resFarX, y: upstreamLevel });
+        const xContact = getDamFaceX(upstreamLevel);
         waterUpFaces.push(face(waterProfile.map(p => ({ ...p, z: 0 })), "url(#fluidDepthA)", 1, TANK_BORDER_COLOR, 1, { x: 0, y: 0, z: 1 }, 'WATER'));
         waterUpFaces.push(face([{ x: resFarX, y: upstreamLevel, z: 0 }, { x: xContact, y: upstreamLevel, z: 0 }], "url(#ripplePattern)", 1, 'rgba(255,255,255,0.6)', 2, { x: 0, y: 0, z: 1 }, 'WATER'));
       }
@@ -646,59 +779,124 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       if (upstreamLevel <= 0) return null;
       
       const arrows = [];
-      const numArrows = 6;
-      const maxPressure = upstreamLevel; // Proportional to depth
+      const numArrows = 8;
+      const Lmin = 8;
+      const Lmax = 50;
       
+      // We will draw vectors at the front face of the dam to be visible
+      // If it's an arch dam, we need to apply the offset
+      const zPlane = is3D ? CHANNEL_WIDTH / 2 + 0.1 : 0;
+      const offset = archOffsetFn ? archOffsetFn(zPlane) : 0;
+      
+      const draw3DArrow = (start: Point3D, end: Point3D, color: string, strokeWidth: number, isResultant: boolean = false) => {
+        const pStart = project(start);
+        const pEnd = project(end);
+        
+        if (!is3D) {
+          return (
+            <g key={`${start.x}-${start.y}`}>
+              <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke={color} strokeWidth={strokeWidth} opacity={isResultant ? 1 : 0.8} markerEnd={isResultant ? "url(#arrow-red)" : "url(#arrow-blue)"} />
+            </g>
+          );
+        }
+
+        // Calculate arrow head in 3D
+        const dirX = end.x - start.x;
+        const dirY = end.y - start.y;
+        const dirZ = end.z - start.z;
+        const mag = Math.sqrt(dirX*dirX + dirY*dirY + dirZ*dirZ) || 1;
+        const ux = dirX / mag;
+        const uy = dirY / mag;
+        const uz = dirZ / mag;
+        
+        const headLen = (isResultant ? 15 : 8) / SCALE; // Physical length of arrow head
+        const headWidth = (isResultant ? 8 : 4) / SCALE;
+        
+        // Base of the arrow head
+        const baseX = end.x - ux * headLen;
+        const baseY = end.y - uy * headLen;
+        const baseZ = end.z - uz * headLen;
+        
+        // Find orthogonal vectors for the arrow head base
+        // Assume up vector is (0, 1, 0) unless the arrow is vertical
+        let upX = 0, upY = 1, upZ = 0;
+        if (Math.abs(uy) > 0.99) {
+          upX = 1; upY = 0; upZ = 0;
+        }
+        
+        // Cross product to get right vector
+        const rx = uy * upZ - uz * upY;
+        const ry = uz * upX - ux * upZ;
+        const rz = ux * upY - uy * upX;
+        const rMag = Math.sqrt(rx*rx + ry*ry + rz*rz) || 1;
+        const rightX = rx / rMag;
+        const rightY = ry / rMag;
+        const rightZ = rz / rMag;
+        
+        // We'll just draw a flat triangle for the head in the plane of the arrow and the "right" vector
+        const pHead1 = project({ x: baseX + rightX * headWidth, y: baseY + rightY * headWidth, z: baseZ + rightZ * headWidth });
+        const pHead2 = project({ x: baseX - rightX * headWidth, y: baseY - rightY * headWidth, z: baseZ - rightZ * headWidth });
+        
+        return (
+          <g key={`${start.x}-${start.y}`}>
+            <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke={color} strokeWidth={strokeWidth} opacity={isResultant ? 1 : 0.8} />
+            <polygon points={`${pEnd.x},${pEnd.y} ${pHead1.x},${pHead1.y} ${pHead2.x},${pHead2.y}`} fill={color} opacity={isResultant ? 1 : 0.8} />
+          </g>
+        );
+      };
+
       for (let i = 1; i <= numArrows; i++) {
-        const y = (i / numArrows) * upstreamLevel;
-        const x = getDamFaceX(y);
+        const h_i = (i / numArrows) * upstreamLevel; // Depth from surface
+        const y = upstreamLevel - h_i; // Physical y coordinate
+        const x = getDamFaceX(y) + offset;
         
         // Normal to the face at this point
-        // Approximate by taking a small delta
         const deltaY = 0.1;
-        const x1 = getDamFaceX(y - deltaY);
-        const x2 = getDamFaceX(y + deltaY);
+        const x1 = getDamFaceX(y - deltaY) + offset;
+        const x2 = getDamFaceX(y + deltaY) + offset;
         const dx = x2 - x1;
         const dy = 2 * deltaY;
         const mag = Math.sqrt(dx*dx + dy*dy) || 1;
-        const nx = dy / mag;
-        const ny = -dx / mag;
+        // Normal pointing OUT of the dam face (towards upstream water)
+        // Vector along the face is (dx, dy). Rotate 90 deg counter-clockwise: (-dy, dx)
+        const nx = -dy / mag;
+        const ny = dx / mag;
         
-        const depth = upstreamLevel - y;
-        const vecLen = (depth / upstreamLevel) * 60; // Max length 60px
+        // Pressure is proportional to depth h_i
+        // L_i = clamp(Lmin, Lmax, (h_i / upstreamLevel) * Lmax)
+        const L_i = clamp((h_i / upstreamLevel) * Lmax, Lmin, Lmax);
         
-        const pEnd = project({ x, y, z: 0 });
-        const pStart = project({ x: x - nx * (vecLen / SCALE), y: y - ny * (vecLen / SCALE), z: 0 });
+        const start3D = { x: x + nx * (L_i / SCALE), y: y + ny * (L_i / SCALE), z: zPlane };
+        const end3D = { x, y, z: zPlane };
         
-        arrows.push(
-          <g key={`up-arrow-${i}`}>
-            <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke="#3b82f6" strokeWidth="2" markerEnd="url(#arrow-blue)" opacity="0.7" />
-          </g>
-        );
+        arrows.push(draw3DArrow(start3D, end3D, "#3b82f6", 2));
       }
 
       // Resultant force
       if (force > 0) {
         // For a vertical or inclined face, CP is at 1/3 from bottom
         const yCP = upstreamLevel / 3;
-        const xCP = getDamFaceX(yCP);
+        const xCP = getDamFaceX(yCP) + offset;
         
         const deltaY = 0.1;
-        const x1 = getDamFaceX(yCP - deltaY);
-        const x2 = getDamFaceX(yCP + deltaY);
+        const x1 = getDamFaceX(yCP - deltaY) + offset;
+        const x2 = getDamFaceX(yCP + deltaY) + offset;
         const dx = x2 - x1;
         const dy = 2 * deltaY;
         const mag = Math.sqrt(dx*dx + dy*dy) || 1;
         const nx = dy / mag;
         const ny = -dx / mag;
 
-        const vecLen = 80;
-        const pEnd = project({ x: xCP, y: yCP, z: 0 });
-        const pStart = project({ x: xCP - nx * (vecLen / SCALE), y: yCP - ny * (vecLen / SCALE), z: 0 });
+        const vecLen = Lmax * 1.5;
+        const start3D = { x: xCP + nx * (vecLen / SCALE), y: yCP + ny * (vecLen / SCALE), z: zPlane };
+        const end3D = { x: xCP, y: yCP, z: zPlane };
+
+        const pStart = project(start3D);
+        const pEnd = project(end3D);
 
         arrows.push(
           <g key="resultant">
-            <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke="#ef4444" strokeWidth="4" markerEnd="url(#arrow-red)" />
+            {draw3DArrow(start3D, end3D, "#ef4444", 3, true)}
             <circle cx={pEnd.x} cy={pEnd.y} r="4" fill="white" stroke="#ef4444" strokeWidth="2" />
             <g transform={`translate(${pStart.x}, ${pStart.y - 18})`}>
               <rect x="-25" y="-12" width="50" height="20" rx="6" fill="white" fillOpacity="0.9" stroke="#ef4444" strokeWidth="1" />
