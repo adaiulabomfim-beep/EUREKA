@@ -70,8 +70,8 @@ export const BodyFallLab: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [dim1, setDim1] = useState<number>(100);
   const [dim2, setDim2] = useState<number>(100);
 
-  const [selectedFluid, setSelectedFluid] = useState<string>(FLUIDS[3].name);
-  const [customFluidDensity, setCustomFluidDensity] = useState<number>(FLUIDS[3].density);
+  const [selectedFluid, setSelectedFluid] = useState<string>(FLUIDS[4].name);
+  const [customFluidDensity, setCustomFluidDensity] = useState<number>(FLUIDS[4].density);
   const [depthA, setDepthA] = useState<number>(300);
 
   const [enableTwoFluids, setEnableTwoFluids] = useState<boolean>(false);

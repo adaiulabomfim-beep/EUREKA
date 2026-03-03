@@ -7,7 +7,6 @@ import { PRESETS } from '../../presets';
 
 interface GatePressureLabProps {
     onContextUpdate?: (ctx: string) => void;
-    isDamMode?: boolean;
 }
 
 const NumberInput: React.FC<{
@@ -91,7 +90,7 @@ const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ ico
     </div>
 );
 
-export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdate, isDamMode = false }) => {
+export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdate }) => {
   // STATE
   const [damType, setDamType] = useState<DamType>(DamType.GRAVITY);
   const [damHeight, setDamHeight] = useState<number>(15);
@@ -182,17 +181,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
 
   const effectiveDownstreamLevel = hasDownstream ? downstreamLevel : 0;
   
-  const config: SimulationConfig = isDamMode ? {
-      damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
-      upstreamLevel, downstreamLevel: effectiveDownstreamLevel, density, gravity,
-      hasGate: false, gateShape: GateShape.RECTANGULAR, 
-      gateWidth: 1, // 1 meter width for dam analysis
-      gateLength: damHeight / Math.max(0.001, Math.sin(inclinationAngle * Math.PI / 180)), 
-      gateDepthFromCrest: 0, 
-      gateInclination: inclinationAngle,
-      hingePosition: HingePosition.NONE, hasTieRod: false, tieRodPosRel: 0, tieRodAngle: 0,
-      gateWeight: 0, gateWeightEnabled: false
-  } : {
+  const config: SimulationConfig = {
       damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
       upstreamLevel, downstreamLevel: effectiveDownstreamLevel, density, gravity,
       hasGate, gateShape, gateWidth, gateLength: gateHeight, gateDepthFromCrest, gateInclination,
@@ -207,13 +196,11 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
 
   useEffect(() => {
       if (onContextUpdate) {
-          if (isDamMode) {
-              onContextUpdate(`LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${damBaseWidth}m, Largura Crista=${damCrestWidth}m, θ=${inclinationAngle}°, Nível Montante=${upstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m`);
-          } else if (analyzedResults) {
+          if (analyzedResults) {
               onContextUpdate(`LABORATÓRIO DE HIDROSTÁTICA: Comporta: ${gateShape}, H=${gateHeight}m, Larg=${gateWidth}m, θ=${gateInclination}°, Força Hidrostática Resultante: ${(analyzedResults.forceData.FR_net/1000).toFixed(2)} kN, CP ao longo da comporta: ${(analyzedResults.forceData.s_cp_net).toFixed(2)}m`);
           }
       }
-  }, [analyzedResults, onContextUpdate, gateHeight, gateWidth, gateInclination, gateShape, isDamMode, damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, effectiveDownstreamLevel]);
+  }, [analyzedResults, onContextUpdate, gateHeight, gateWidth, gateInclination, gateShape, damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, effectiveDownstreamLevel]);
 
   // Handle Dimensions based on shape
   const handleHeightChange = (val: number) => {
@@ -239,7 +226,6 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
         <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
              
              {/* Exercise Card */}
-             {!isDamMode && (
                  <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> Aula Prática</h3>
@@ -271,23 +257,11 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                         </button>
                     </div>
                  </div>
-             )}
 
              {/* Dam Properties */}
              <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
                  <SectionHeader icon={<Construction className="w-4 h-4" />} title="Estrutura" />
                  <div className="space-y-4">
-                     {isDamMode && (
-                         <div>
-                             <label className={labelClass}>Tipo de Barragem</label>
-                             <select className={selectClass} value={damType} onChange={(e) => setDamType(e.target.value as DamType)}>
-                                 <option value={DamType.GRAVITY}>Gravidade</option>
-                                 <option value={DamType.EMBANKMENT}>Terra / Enrocamento</option>
-                                 <option value={DamType.ARCH}>Arco</option>
-                                 <option value={DamType.BUTTRESS}>Contraforte</option>
-                             </select>
-                         </div>
-                     )}
                      <div>
                         <label className={labelClass}>Inclinação da Parede (θ)</label>
                         <NumberInput value={inclinationAngle} min={1} max={160} onChange={setInclinationAngle} />
@@ -297,24 +271,11 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                             <label className={labelClass}>Altura Total (m)</label>
                             <NumberInput value={damHeight} min={1} max={200} onChange={setDamHeight} />
                         </div>
-                        {isDamMode && (
-                            <>
-                                <div>
-                                    <label className={labelClass}>Largura da Base (m)</label>
-                                    <NumberInput value={damBaseWidth} min={1} max={200} onChange={setDamBaseWidth} />
-                                </div>
-                                <div>
-                                    <label className={labelClass}>Largura da Crista (m)</label>
-                                    <NumberInput value={damCrestWidth} min={1} max={100} onChange={setDamCrestWidth} />
-                                </div>
-                            </>
-                        )}
                      </div>
                  </div>
              </div>
 
              {/* Gate Properties */}
-             {!isDamMode && (
                  <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-blue-50 cursor-pointer hover:bg-blue-50/50 -mx-5 px-5 pt-2 transition-colors" onClick={() => toggleGate(!hasGate)}>
                          <div className="flex items-center gap-2 text-blue-700">
@@ -414,7 +375,6 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                          </div>
                      )}
                  </div>
-             )}
 
              {/* Water Levels */}
              <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 flex-1">
@@ -448,7 +408,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
             <GatePressureScene
                 damType={damType} damHeight={damHeight} damBaseWidth={damBaseWidth} damCrestWidth={damCrestWidth}
                 inclinationAngle={inclinationAngle} upstreamLevel={upstreamLevel} downstreamLevel={effectiveDownstreamLevel}
-                hasGate={isDamMode ? false : hasGate} gateShape={gateShape}
+                hasGate={hasGate} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}
                 gateInclination={gateInclination}
                 force={analyzedResults ? analyzedResults.forceData.FR_net : 0} 
@@ -460,7 +420,6 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                 gateWeight={gateWeight}
                 gateWeightEnabled={gateWeightEnabled}
                 onCalculate={handleCalculate}
-                isDamMode={isDamMode}
             />
              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-200/50 to-transparent pointer-events-none"></div>
         </div>
@@ -479,7 +438,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 group-hover:bg-blue-600 transition-colors"></div>
                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Força Hidrostática Resultante</div>
                              <div className="text-2xl font-mono font-black text-slate-800 flex items-center gap-2">
-                                 {(Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2)} <span className="text-sm font-sans font-black text-slate-400 self-end mb-1">kN{isDamMode && '/m'}</span>
+                                 {(Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2)} <span className="text-sm font-sans font-black text-slate-400 self-end mb-1">kN</span>
                              </div>
                          </div>
 
@@ -494,7 +453,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                          </div>
 
                          {/* Equilibrium (NEW) */}
-                         {!isDamMode && (hingePosition !== HingePosition.NONE || hasTieRod) && (
+                         {(hingePosition !== HingePosition.NONE || hasTieRod) && (
                              <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
                                  <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Equilíbrio Estático</span><RotateCw className="w-3 h-3 text-blue-400" /></div>
                                  <div className="grid grid-cols-1 gap-3">
@@ -518,8 +477,8 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                          <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
                              <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Propriedades Geométricas</span><Maximize className="w-3 h-3 text-blue-400" /></div>
                              <div className="grid grid-cols-2 gap-3">
-                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (M)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.up.area.toFixed(2)} m²{isDamMode && '/m'}</div></div>
-                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (J)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.down.area.toFixed(2)} m²{isDamMode && '/m'}</div></div>
+                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (M)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.up.area.toFixed(2)} m²</div></div>
+                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (J)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.down.area.toFixed(2)} m²</div></div>
                              </div>
                          </div>
                     </div>
@@ -556,10 +515,10 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                    <section>
                        <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2"><div className="w-6 h-px bg-blue-100"></div> Geometria da Área Molhada (Montante) <div className="flex-1 h-px bg-blue-50"></div></h4>
                        <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
-                           <CalculationLine label={isDamMode ? "Inclinação da Face (θ)" : "Ângulo da Comporta (θ)"} symbol="θ" result={isDamMode ? inclinationAngle.toString() : gateInclination.toString()} unit="°" />
-                           {!isDamMode && <CalculationLine label="Formato" symbol="Shape" result={gateShape} unit="" />}
+                           <CalculationLine label="Ângulo da Comporta (θ)" symbol="θ" result={gateInclination.toString()} unit="°" />
+                           <CalculationLine label="Formato" symbol="Shape" result={gateShape} unit="" />
                            <CalculationLine label="Comprimento Molhado (L)" symbol={<>L<sub>wet</sub></>} result={analyzedResults.forceData.up.wetLength.toFixed(3)} unit="m" />
-                           <CalculationLine label="Área (A)" symbol="A" result={analyzedResults.forceData.up.area.toFixed(3)} unit={`m²${isDamMode ? '/m' : ''}`} />
+                           <CalculationLine label="Área (A)" symbol="A" result={analyzedResults.forceData.up.area.toFixed(3)} unit="m²" />
                        </div>
                    </section>
 
@@ -571,7 +530,7 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                                 label="Força Resultante" symbol={<>F<sub>R</sub></>} 
                                 formula={<>P<sub>cg</sub> · A</>} 
                                 substitution={`${((analyzedResults.forceData.up.h_cg * 9810)/1000).toFixed(2)} · ${analyzedResults.forceData.up.area.toFixed(2)}`} 
-                                result={(analyzedResults.forceData.up.FR/1000).toFixed(3)} unit={`kN${isDamMode ? '/m' : ''}`} isSubHeader
+                                result={(analyzedResults.forceData.up.FR/1000).toFixed(3)} unit="kN" isSubHeader
                            />
                        </div>
                    </section>

@@ -50,7 +50,6 @@ interface GatePressureSceneProps {
   gateWeightEnabled: boolean;
 
   onCalculate: () => void;
-  isDamMode?: boolean;
 }
 
 const TANK_BORDER_COLOR = '#22d3ee';
@@ -67,7 +66,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     up, down,
     hingePosition, hasTieRod, tieRodPosRel, tieRodAngle,
     gateWeight, gateWeightEnabled,
-    onCalculate, isDamMode,
+    onCalculate,
   } = props;
 
   // ===== VIEW =====
@@ -774,140 +773,6 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
   // ===== Vectors =====
   const renderVectors = () => {
     if (!showVectors) return null;
-
-    if (isDamMode) {
-      if (upstreamLevel <= 0) return null;
-      
-      const arrows = [];
-      const numArrows = 8;
-      const Lmin = 8;
-      const Lmax = 50;
-      
-      // We will draw vectors at the front face of the dam to be visible
-      // If it's an arch dam, we need to apply the offset
-      const zPlane = is3D ? CHANNEL_WIDTH / 2 + 0.1 : 0;
-      const offset = archOffsetFn ? archOffsetFn(zPlane) : 0;
-      
-      const draw3DArrow = (start: Point3D, end: Point3D, color: string, strokeWidth: number, isResultant: boolean = false) => {
-        const pStart = project(start);
-        const pEnd = project(end);
-        
-        if (!is3D) {
-          return (
-            <g key={`${start.x}-${start.y}`}>
-              <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke={color} strokeWidth={strokeWidth} opacity={isResultant ? 1 : 0.8} markerEnd={isResultant ? "url(#arrow-red)" : "url(#arrow-blue)"} />
-            </g>
-          );
-        }
-
-        // Calculate arrow head in 3D
-        const dirX = end.x - start.x;
-        const dirY = end.y - start.y;
-        const dirZ = end.z - start.z;
-        const mag = Math.sqrt(dirX*dirX + dirY*dirY + dirZ*dirZ) || 1;
-        const ux = dirX / mag;
-        const uy = dirY / mag;
-        const uz = dirZ / mag;
-        
-        const headLen = (isResultant ? 15 : 8) / SCALE; // Physical length of arrow head
-        const headWidth = (isResultant ? 8 : 4) / SCALE;
-        
-        // Base of the arrow head
-        const baseX = end.x - ux * headLen;
-        const baseY = end.y - uy * headLen;
-        const baseZ = end.z - uz * headLen;
-        
-        // Find orthogonal vectors for the arrow head base
-        // Assume up vector is (0, 1, 0) unless the arrow is vertical
-        let upX = 0, upY = 1, upZ = 0;
-        if (Math.abs(uy) > 0.99) {
-          upX = 1; upY = 0; upZ = 0;
-        }
-        
-        // Cross product to get right vector
-        const rx = uy * upZ - uz * upY;
-        const ry = uz * upX - ux * upZ;
-        const rz = ux * upY - uy * upX;
-        const rMag = Math.sqrt(rx*rx + ry*ry + rz*rz) || 1;
-        const rightX = rx / rMag;
-        const rightY = ry / rMag;
-        const rightZ = rz / rMag;
-        
-        // We'll just draw a flat triangle for the head in the plane of the arrow and the "right" vector
-        const pHead1 = project({ x: baseX + rightX * headWidth, y: baseY + rightY * headWidth, z: baseZ + rightZ * headWidth });
-        const pHead2 = project({ x: baseX - rightX * headWidth, y: baseY - rightY * headWidth, z: baseZ - rightZ * headWidth });
-        
-        return (
-          <g key={`${start.x}-${start.y}`}>
-            <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke={color} strokeWidth={strokeWidth} opacity={isResultant ? 1 : 0.8} />
-            <polygon points={`${pEnd.x},${pEnd.y} ${pHead1.x},${pHead1.y} ${pHead2.x},${pHead2.y}`} fill={color} opacity={isResultant ? 1 : 0.8} />
-          </g>
-        );
-      };
-
-      for (let i = 1; i <= numArrows; i++) {
-        const h_i = (i / numArrows) * upstreamLevel; // Depth from surface
-        const y = upstreamLevel - h_i; // Physical y coordinate
-        const x = getDamFaceX(y) + offset;
-        
-        // Normal to the face at this point
-        const deltaY = 0.1;
-        const x1 = getDamFaceX(y - deltaY) + offset;
-        const x2 = getDamFaceX(y + deltaY) + offset;
-        const dx = x2 - x1;
-        const dy = 2 * deltaY;
-        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
-        // Normal pointing OUT of the dam face (towards upstream water)
-        // Vector along the face is (dx, dy). Rotate 90 deg counter-clockwise: (-dy, dx)
-        const nx = -dy / mag;
-        const ny = dx / mag;
-        
-        // Pressure is proportional to depth h_i
-        // L_i = clamp(Lmin, Lmax, (h_i / upstreamLevel) * Lmax)
-        const L_i = clamp((h_i / upstreamLevel) * Lmax, Lmin, Lmax);
-        
-        const start3D = { x: x + nx * (L_i / SCALE), y: y + ny * (L_i / SCALE), z: zPlane };
-        const end3D = { x, y, z: zPlane };
-        
-        arrows.push(draw3DArrow(start3D, end3D, "#3b82f6", 2));
-      }
-
-      // Resultant force
-      if (force > 0) {
-        // For a vertical or inclined face, CP is at 1/3 from bottom
-        const yCP = upstreamLevel / 3;
-        const xCP = getDamFaceX(yCP) + offset;
-        
-        const deltaY = 0.1;
-        const x1 = getDamFaceX(yCP - deltaY) + offset;
-        const x2 = getDamFaceX(yCP + deltaY) + offset;
-        const dx = x2 - x1;
-        const dy = 2 * deltaY;
-        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
-        const nx = dy / mag;
-        const ny = -dx / mag;
-
-        const vecLen = Lmax * 1.5;
-        const start3D = { x: xCP + nx * (vecLen / SCALE), y: yCP + ny * (vecLen / SCALE), z: zPlane };
-        const end3D = { x: xCP, y: yCP, z: zPlane };
-
-        const pStart = project(start3D);
-        const pEnd = project(end3D);
-
-        arrows.push(
-          <g key="resultant">
-            {draw3DArrow(start3D, end3D, "#ef4444", 3, true)}
-            <circle cx={pEnd.x} cy={pEnd.y} r="4" fill="white" stroke="#ef4444" strokeWidth="2" />
-            <g transform={`translate(${pStart.x}, ${pStart.y - 18})`}>
-              <rect x="-25" y="-12" width="50" height="20" rx="6" fill="white" fillOpacity="0.9" stroke="#ef4444" strokeWidth="1" />
-              <text x="0" y="3" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="900">F_R</text>
-            </g>
-          </g>
-        );
-      }
-
-      return <g className="pointer-events-none">{arrows}</g>;
-    }
 
     if (!hasGate || !gateWorld || !rendered.isUpstreamVisible) return null;
     const { xTop, yTop, th, sin, cos } = gateWorld;

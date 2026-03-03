@@ -282,13 +282,13 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
           stroke={color}
           strokeWidth="1"
         />
-        <g transform={`translate(${x - 12}, ${midY}) rotate(-90)`}>
-          <rect x="-40" y="-8" width="80" height="16" fill="white" opacity="0.8" />
+        <g transform={`translate(${x - 16}, ${midY}) rotate(-90)`}>
+          <rect x="-50" y="-10" width="100" height="20" fill="white" opacity="0.8" />
           <text
             x="0"
-            y="4"
+            y="5"
             textAnchor="middle"
-            fontSize="11"
+            fontSize="14"
             fontWeight="bold"
             fill={color}
             fontFamily="monospace"
@@ -449,40 +449,6 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
         className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/85 p-1.5 rounded-full shadow-xl border border-blue-100/70 backdrop-blur-md z-30 transition-all hover:scale-[1.03]"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {!isSimulating ? (
-          <button
-            onClick={onToggleSimulate}
-            className="
-              flex items-center gap-2
-              bg-gradient-to-br from-blue-600 to-blue-500
-              hover:from-blue-700 hover:to-blue-600
-              text-white px-5 py-2.5 rounded-full
-              shadow-lg shadow-blue-500/20
-              font-bold text-xs tracking-wide
-              transition-transform active:scale-95
-            "
-          >
-            <Play className="w-3.5 h-3.5 fill-current" /> SOLTAR BLOCO
-          </button>
-        ) : (
-          <button
-            onClick={onToggleSimulate}
-            className="
-              flex items-center gap-2
-              bg-white/80 hover:bg-white
-              text-slate-700 px-5 py-2.5 rounded-full
-              border border-blue-100/70
-              shadow-sm
-              font-bold text-xs tracking-wide
-              transition-transform active:scale-95
-            "
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> REINICIAR
-          </button>
-        )}
-
-        <div className="w-px h-6 bg-slate-200/70 mx-1"></div>
-
         <button
           onClick={() => {
             onToggle3D();
@@ -505,6 +471,44 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
         >
           <MoveHorizontal className="w-4 h-4" /> VETORES
         </button>
+      </div>
+
+      {/* botão soltar bloco / reiniciar no canto inferior direito */}
+      <div 
+        className="absolute bottom-20 right-6 z-30"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {!isSimulating ? (
+          <button
+            onClick={onToggleSimulate}
+            className="
+              flex items-center gap-2
+              bg-gradient-to-br from-blue-600 to-cyan-600
+              hover:from-blue-700 hover:to-cyan-600
+              text-white px-5 py-2.5 rounded-full
+              shadow-lg shadow-blue-500/20
+              font-black text-xs tracking-wide uppercase
+              transition-transform active:scale-95
+            "
+          >
+            <Play className="w-3.5 h-3.5 fill-current" /> SOLTAR BLOCO
+          </button>
+        ) : (
+          <button
+            onClick={onToggleSimulate}
+            className="
+              flex items-center gap-2
+              bg-white/80 hover:bg-white
+              text-slate-700 px-5 py-2.5 rounded-full
+              border border-blue-100/70
+              shadow-sm
+              font-black text-xs tracking-wide uppercase
+              transition-transform active:scale-95
+            "
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> REINICIAR
+          </button>
+        )}
       </div>
 
       {is3D && (
@@ -885,7 +889,7 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
           };
 
           const Dimensions = () => {
-            const rx = tankOffsetX + currentTankW + 20 + pan.x;
+            const rx = tankOffsetX - 30 + pan.x;
             const hA_dynamic_px = tankBottomY - fluidSurfaceY - effectiveHB_px;
             const hA_original_px = tankBottomY - originalFluidSurfaceY - effectiveHB_px;
 
@@ -899,7 +903,7 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
                   colorA
                 )}
                 {isSimulating && deltaH_cm > 0.01 && renderDimensionLine(
-                  rx + 40,
+                  rx - 40,
                   fluidSurfaceY + pan.y,
                   originalFluidSurfaceY + pan.y,
                   `Δh = ${deltaH_cm.toFixed(1)}cm`,

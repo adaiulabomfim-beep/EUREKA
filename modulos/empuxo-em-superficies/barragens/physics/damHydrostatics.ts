@@ -1,0 +1,130 @@
+export type RectSurfaceResult = {
+  FR: number;         // N
+  s_cp: number;       // m (ao longo da comporta, a partir do topo geométrico)
+  h_cp: number;       // m (profundidade vertical do CP a partir do nível livre)
+  s_cg: number;       // m (centróide da área molhada ao longo da comporta, a partir do topo geométrico)
+  h_cg: number;       // m (profundidade do centróide da área molhada)
+  area: number;       // m²
+  wetLength: number;  // m (comprimento molhado ao longo da comporta)
+
+  s_wet_start: number; // m (onde começa o trecho molhado, a partir do topo)
+  s_wet_end: number;   // m (onde termina o trecho molhado, a partir do topo)
+  p_top: number;       // Pa (pressão no topo do trecho molhado)
+  p_bot: number;       // Pa (pressão na base do trecho molhado)
+  h_top_wet: number;   // m (profundidade vertical no topo do trecho molhado)
+  h_bot_wet: number;   // m (profundidade vertical na base do trecho molhado)
+};
+
+const EPS = 1e-9;
+
+function clamp(val: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, val));
+}
+
+export function calculateSurface(
+  L: number,          // Comprimento total da face (m)
+  B: number,          // Largura da face (m)
+  theta_deg: number,  // Ângulo com a horizontal (90 = vertical)
+  h_top: number,      // Profundidade vertical do topo da face (m)
+  gamma: number       // Peso específico (rho * g)
+): RectSurfaceResult {
+  const Lc = Math.max(0, L);
+  const Bc = Math.max(0, B);
+
+  const empty: RectSurfaceResult = {
+    FR: 0, s_cp: 0, h_cp: 0, s_cg: 0, h_cg: 0, area: 0, wetLength: 0,
+    s_wet_start: 0, s_wet_end: 0,
+    p_top: 0, p_bot: 0,
+    h_top_wet: 0, h_bot_wet: 0,
+  };
+
+  if (Lc < EPS || Bc < EPS || gamma <= 0) return empty;
+
+  const theta_rad = (theta_deg * Math.PI) / 180;
+  const sinT = Math.sin(theta_rad);
+  const sin2T = sinT * sinT;
+
+  let s1 = 0;
+  let s2 = Lc;
+
+  if (Math.abs(sinT) < 1e-6) {
+    if (h_top <= 0) return empty;
+    s1 = 0;
+    s2 = Lc;
+  } else if (sinT > 0) {
+    if (h_top < 0) {
+      s1 = -h_top / sinT;
+    }
+    if (s1 >= Lc) return empty;
+  } else {
+    if (h_top <= 0) return empty;
+    s2 = Math.min(Lc, -h_top / sinT);
+  }
+
+  s1 = clamp(s1, 0, Lc);
+  s2 = clamp(s2, 0, Lc);
+  const wetLength = s2 - s1;
+
+  if (wetLength <= EPS) return empty;
+
+  let area = Bc * wetLength;
+  let s_cg_wet = s1 + wetLength / 2;
+  let IG = (Bc * Math.pow(wetLength, 3)) / 12;
+
+  const h_cg = h_top + s_cg_wet * sinT;
+
+  if (h_cg <= EPS) return empty;
+
+  const FR = gamma * h_cg * area;
+  const h_cp = h_cg + (IG * sin2T) / (area * h_cg);
+
+  let s_cp = s_cg_wet;
+  if (Math.abs(sinT) > 1e-6) {
+    s_cp = (h_cp - h_top) / sinT;
+  }
+  s_cp = clamp(s_cp, 0, Lc);
+
+  return {
+    FR,
+    s_cp,
+    h_cp,
+    s_cg: s_cg_wet,
+    h_cg,
+    area,
+    wetLength,
+    s_wet_start: s1,
+    s_wet_end: s2,
+    h_top_wet: Math.max(0, h_top + s1 * sinT),
+    h_bot_wet: Math.max(0, h_top + s2 * sinT),
+    p_top: gamma * Math.max(0, h_top + s1 * sinT),
+    p_bot: gamma * Math.max(0, h_top + s2 * sinT),
+  };
+}
+
+export function calculateNetForce(
+  L: number,
+  B: number,
+  theta_deg: number,
+  h_top_up: number,
+  h_top_down: number,
+  gamma: number
+) {
+  const up = calculateSurface(L, B, theta_deg, h_top_up, gamma);
+  const down = calculateSurface(L, B, theta_deg, h_top_down, gamma);
+
+  const FR_net = up.FR - down.FR;
+
+  let s_cp_net = 0;
+
+  if (Math.abs(FR_net) > 1e-6) {
+    const M_up = up.FR * up.s_cp;
+    const M_down = down.FR * down.s_cp;
+    s_cp_net = clamp((M_up - M_down) / FR_net, 0, Math.max(0, L));
+  } else {
+    if (up.FR > down.FR && up.FR > 1e-6) s_cp_net = up.s_cp;
+    else if (down.FR > 1e-6) s_cp_net = down.s_cp;
+    else s_cp_net = L / 2;
+  }
+
+  return { FR_net, s_cp_net, up, down };
+}

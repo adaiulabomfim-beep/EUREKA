@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BodyFallLab } from './modulos/corpo-em-queda/components/layout/BodyFallLab';
+import { DamLab } from './modulos/empuxo-em-superficies/barragens';
 import { GatePressureLab } from './modulos/empuxo-em-superficies/pressao-em-comportas';
 import { TheoryReference } from './components/TheoryReference';
 import { ChatBot } from './components/ChatBot';
@@ -138,8 +139,8 @@ const App: React.FC = () => {
                   </div>
 
                   {currentMode === SimulationMode.FALLING_BODY && <BodyFallLab onContextUpdate={setSimulationContext} />}
-                  {currentMode === SimulationMode.DAM_HYDROLOGY && <GatePressureLab onContextUpdate={setSimulationContext} isDamMode={true} />}
-                  {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} isDamMode={false} />}
+                  {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} />}
+                  {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} />}
                   {currentMode === SimulationMode.THEORY && <TheoryReference />}
               </div>
             </main>
