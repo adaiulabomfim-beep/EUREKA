@@ -49,7 +49,9 @@ interface DamSceneProps {
   up?: RectSurfaceResult;
   down?: RectSurfaceResult;
 
+  isAnalyzed: boolean;
   onCalculate: () => void;
+  onReset: () => void;
 }
 
 const TANK_BORDER_COLOR = "#22d3ee";
@@ -74,7 +76,9 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     downstreamLevel = 0,
     up,
     down,
+    isAnalyzed,
     onCalculate,
+    onReset,
   } = props;
 
   // ===== VIEW =====
@@ -933,25 +937,34 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         </button>
       </div>
 
-      {/* botão analisar isolado no canto inferior direito */}
+      {/* botão analisar/reiniciar isolado no canto inferior direito */}
       <div 
         className="absolute bottom-20 right-6 z-30"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onCalculate}
-          className="
+          onClick={isAnalyzed ? onReset : onCalculate}
+          className={`
             flex items-center gap-2
-            bg-gradient-to-br from-blue-600 to-cyan-600
-            hover:from-blue-700 hover:to-cyan-600
-            text-white px-5 py-2.5 rounded-full
-            shadow-lg shadow-blue-500/20
+            px-5 py-2.5 rounded-full
+            shadow-lg
             font-black text-xs tracking-wide uppercase
-            transition-transform active:scale-95
-          "
-          title="Analisar"
+            transition-all active:scale-95
+            ${isAnalyzed 
+              ? "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-slate-200/50" 
+              : "bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white shadow-blue-500/20"}
+          `}
+          title={isAnalyzed ? "Reiniciar" : "Analisar"}
         >
-          <Target className="w-3.5 h-3.5" /> ANALISAR
+          {isAnalyzed ? (
+            <>
+              <RotateCcw className="w-3.5 h-3.5" /> REINICIAR
+            </>
+          ) : (
+            <>
+              <Target className="w-3.5 h-3.5" /> ANALISAR
+            </>
+          )}
         </button>
       </div>
 

@@ -235,7 +235,9 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
                 s_cp={analyzedResults ? analyzedResults.forceData.s_cp_net : 0}
                 up={analyzedResults ? analyzedResults.forceData.up : undefined}
                 down={analyzedResults ? analyzedResults.forceData.down : undefined}
+                isAnalyzed={!!analyzedResults}
                 onCalculate={handleCalculate}
+                onReset={() => setAnalyzedResults(null)}
             />
              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-200/50 to-transparent pointer-events-none"></div>
         </div>

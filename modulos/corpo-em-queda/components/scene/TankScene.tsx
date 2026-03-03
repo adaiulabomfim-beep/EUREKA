@@ -1089,7 +1089,6 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
               </g>
 
               <Vectors />
-              <Dimensions />
             </>
           );
         })()}
