@@ -17,6 +17,7 @@ import {
 import { MATERIALS, FLUIDS, ObjectShape } from '../../types';
 import { useBuoyancySimulation } from '../../hooks/useBuoyancySimulation';
 import { TankScene } from '../scene/TankScene';
+import { ResultsPanel, ResultsCard } from '../../../../components/ResultsPanel';
 
 interface BodyFallLabProps {
   onContextUpdate?: (ctx: string) => void;
@@ -493,105 +494,67 @@ export const BodyFallLab: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
         {/* --- RIGHT SIDEBAR: RESULTS --- */}
         <div className="lg:col-span-3 flex flex-col gap-3 h-full">
-          <div className="bg-white/75 backdrop-blur-md p-4 rounded-2xl shadow-xl shadow-blue-200/25 border border-blue-100/70 flex flex-col h-full">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
-              <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                <Info className="w-3.5 h-3.5 text-blue-700" /> Painel de Resultados
-              </h3>
-            </div>
+          <ResultsPanel
+            footerButton={{
+              label: showCalculations ? 'Ocultar Memorial' : 'Memorial de Cálculo',
+              onClick: () => setShowCalculations(!showCalculations),
+              icon: Calculator,
+              disabled: !isSimulating,
+            }}
+          >
+            {/* Peso Real */}
+            <ResultsCard
+              title="Peso Real (P)"
+              value={physics.objectWeight >= 10000 ? (physics.objectWeight / 1000).toFixed(1) : physics.objectWeight.toFixed(1)}
+              unit={physics.objectWeight >= 10000 ? 'kN' : 'N'}
+              icon={ArrowDown}
+              theme="red"
+            />
 
-            <div className="space-y-3 flex-1">
-              {/* Peso Real */}
-              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Peso Real (P)</span>
-                  <ArrowDown className="w-3.5 h-3.5 text-red-500" />
-                </div>
-                <div className="text-xl font-mono font-bold text-slate-800 tracking-tight">
-                  {physics.objectWeight >= 10000 ? `${(physics.objectWeight / 1000).toFixed(1)} kN` : `${physics.objectWeight.toFixed(1)} N`}
-                </div>
-              </div>
+            {/* Empuxo */}
+            <ResultsCard
+              title="Empuxo Total (E)"
+              value={isSimulating ? (physics.buoyancyForce >= 10000 ? (physics.buoyancyForce / 1000).toFixed(1) : physics.buoyancyForce.toFixed(1)) : '???'}
+              unit={isSimulating ? (physics.buoyancyForce >= 10000 ? 'kN' : 'N') : ''}
+              icon={isSimulating ? ArrowUp : EyeOff}
+              theme="green"
+            />
 
-              {/* Empuxo */}
-              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Empuxo Total (E)</span>
-                  {isSimulating ? <ArrowUp className="w-3.5 h-3.5 text-emerald-500" /> : <EyeOff className="w-3.5 h-3.5 text-slate-300" />}
-                </div>
-                <div className="text-xl font-mono font-bold text-slate-400 tracking-tight">
-                  {isSimulating ? (
-                    <span className="text-slate-800">
-                      {physics.buoyancyForce >= 10000 ? `${(physics.buoyancyForce / 1000).toFixed(1)} kN` : `${physics.buoyancyForce.toFixed(1)} N`}
-                    </span>
-                  ) : (
-                    '???'
-                  )}
-                </div>
-              </div>
+            {/* Peso Aparente */}
+            <ResultsCard
+              title="Peso Aparente (Pap)"
+              value={forceText}
+              theme="blue"
+              badge="DINAMÔMETRO"
+            />
 
-              {/* Peso Aparente */}
-              <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm relative overflow-hidden">
-                <div className="absolute top-2 right-2 bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                  DINAMÔMETRO
-                </div>
-                <div className="text-[9px] font-bold text-blue-700 uppercase tracking-widest mb-1 mt-1">
-                  Peso Aparente (P<sub>ap</sub>)
-                </div>
-                <div className="text-2xl font-mono font-bold tracking-tight text-slate-800 mb-1">{forceText}</div>
-              </div>
+            {/* Status */}
+            <ResultsCard
+              title="Estado do Objeto"
+              value={isSimulating ? physics.status : 'PRONTO'}
+              highlight={true}
+            />
 
-              {/* Status */}
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-2.5 rounded-xl border border-blue-100 text-center">
-                <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5 text-slate-500">Estado do Objeto</div>
-                <div className="text-xs font-bold uppercase text-blue-800">{isSimulating ? physics.status : 'PRONTO'}</div>
-              </div>
+            {/* Submerged Height */}
+            <ResultsCard
+              title="Altura Submersa (Hsub)"
+              value={isSimulating ? (physics.h_sub_actual / 100).toFixed(2) : '?'}
+              unit="m"
+              icon={Ruler}
+              theme="cyan"
+              secondaryValue={enableTwoFluids && isSimulating ? `A: ${(physics.h_in_A / 100).toFixed(2)}m | B: ${(physics.h_in_B / 100).toFixed(2)}m` : undefined}
+            />
 
-              {/* Submerged Height */}
-              <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100 flex items-center justify-between">
-                <div>
-                  <div className="text-[9px] font-bold text-blue-600 uppercase tracking-wide">
-                    Altura Submersa (h<sub>sub</sub>)
-                  </div>
-                  <div className="text-base font-mono font-bold text-slate-800">
-                    {isSimulating ? physics.h_sub_actual.toFixed(2) : '?'} <span className="text-[10px]">cm</span>
-                  </div>
-                </div>
-                <Ruler className="w-3.5 h-3.5 text-blue-400" />
-              </div>
-
-              {/* Volume Deslocado */}
-              <div className="bg-cyan-50/60 p-3 rounded-xl border border-cyan-100">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-[9px] font-bold text-cyan-700 uppercase tracking-widest">
-                    Volume Deslocado (V<sub>desl</sub>)
-                  </span>
-                  <div className="bg-cyan-700 text-white text-[8px] font-bold px-1 rounded">
-                    V<sub>desl</sub> = V<sub>sub</sub>
-                  </div>
-                </div>
-                <div className="text-base font-mono font-bold text-slate-800">
-                  {isSimulating ? physics.vol_deslocado.toFixed(4) : '?'} <span className="text-[10px]">m³</span>
-                </div>
-                <div className="text-[9px] text-cyan-800 mt-1 font-medium">
-                  Elevação do Nível (Δh): <span className="font-bold">{isSimulating ? physics.deltaH_cm.toFixed(2) : '?'} cm</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setShowCalculations(!showCalculations)}
-                disabled={!isSimulating}
-                className={`w-full py-2.5 rounded-xl font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wide active:scale-95 ${
-                  isSimulating
-                    ? 'bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white shadow-blue-500/20'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                }`}
-              >
-                <Calculator className="w-3.5 h-3.5" /> {showCalculations ? 'Ocultar Memorial' : 'Memorial de Cálculo'}
-              </button>
-            </div>
-          </div>
+            {/* Volume Deslocado */}
+            <ResultsCard
+              title="Volume Deslocado (Vdesl)"
+              value={isSimulating ? physics.vol_deslocado.toFixed(4) : '?'}
+              unit="m³"
+              theme="amber"
+              badge="Vdesl = Vsub"
+              secondaryValue={`Elevação do Nível (Δh): ${isSimulating ? physics.deltaH_cm.toFixed(2) : '?'} cm`}
+            />
+          </ResultsPanel>
         </div>
       </div>
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Square, Info, BookOpen, Construction, Calculator, FileText, RotateCw, MoveVertical, Maximize, AlertCircle, Circle, CircleDashed } from 'lucide-react';
+import { Layers, Square, Info, BookOpen, Construction, Calculator, FileText, RotateCw, MoveVertical, Maximize, AlertCircle, Circle, CircleDashed, ArrowDown } from 'lucide-react';
 import { DamType, GateShape, HingePosition, SimulationConfig } from '../../types';
 import { useGatePressureSimulation } from '../../hooks/useGatePressureSimulation';
 import { GatePressureScene } from '../scene/GatePressureScene';
+import { ResultsPanel, ResultsCard } from '../../../../../components/ResultsPanel';
 import { PRESETS } from '../../presets';
 
 interface GatePressureLabProps {
@@ -428,81 +429,89 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
 
         {/* --- RIGHT SIDEBAR: RESULTS --- */}
         <div className="lg:col-span-3 flex flex-col gap-4 h-full">
-             <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 flex flex-col h-full">
-                 <div className="flex items-center justify-between mb-6 pb-2 border-b border-blue-50">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Info className="w-4 h-4 text-blue-500" /> Resultados</h3>
-                 </div>
-                 
-                 {analyzedResults ? (
-                    <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-1 animate-in fade-in slide-in-from-bottom-2">
-                         {/* Hydrostatic Force Card */}
-                         <div className="group bg-white/50 p-4 rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden">
-                             <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 group-hover:bg-blue-600 transition-colors"></div>
-                             <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Força Hidrostática Resultante</div>
-                             <div className="text-2xl font-mono font-black text-slate-800 flex items-center gap-2">
-                                 {(Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2)} <span className="text-sm font-sans font-black text-slate-400 self-end mb-1">kN</span>
-                             </div>
-                         </div>
+          <ResultsPanel
+            title="RESULTADOS"
+            footerButton={{
+              label: showDetails ? 'Ocultar Memória' : 'Memória de Cálculo',
+              onClick: () => setShowDetails(!showDetails),
+              icon: Calculator,
+              disabled: !analyzedResults,
+            }}
+          >
+            {analyzedResults ? (
+              <>
+                {/* Hydrostatic Force Card */}
+                <ResultsCard
+                  title="Força Hidrostática Resultante"
+                  value={(Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2)}
+                  unit="kN"
+                  theme="blue"
+                  icon={ArrowDown}
+                />
 
-                         {/* Center of Pressure Depth (NEW) */}
-                         <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
-                             <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Centro de Pressão (CP)</span><MoveVertical className="w-3 h-3 text-blue-400" /></div>
-                             <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100 flex justify-between items-center">
-                                 <div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Posição ao longo da face</div>
-                                 <div className="font-mono font-black text-blue-700 text-sm mt-0.5">{analyzedResults.forceData.s_cp_net.toFixed(2)} m</div>
-                             </div>
-                             <div className="text-[9px] text-slate-400 mt-2 text-right font-bold uppercase">Medido a partir do topo</div>
-                         </div>
+                {/* Center of Pressure Depth */}
+                <ResultsCard
+                  title="Centro de Pressão (CP)"
+                  value={analyzedResults.forceData.s_cp_net.toFixed(2)}
+                  unit="m"
+                  theme="cyan"
+                  icon={MoveVertical}
+                  secondaryValue="Posição ao longo da face (do topo)"
+                />
 
-                         {/* Equilibrium (NEW) */}
-                         {(hingePosition !== HingePosition.NONE || hasTieRod) && (
-                             <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
-                                 <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Equilíbrio Estático</span><RotateCw className="w-3 h-3 text-blue-400" /></div>
-                                 <div className="grid grid-cols-1 gap-3">
-                                     {hingePosition !== HingePosition.NONE && (
-                                         <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100 flex justify-between items-center">
-                                             <div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Momento no Apoio</div>
-                                             <div className="font-mono font-black text-slate-700 text-sm mt-0.5">{(Math.abs(analyzedResults.equilibrium.M_hinge) / 1000).toFixed(2)} kN·m</div>
-                                         </div>
-                                     )}
-                                     {hasTieRod && (
-                                         <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100 flex justify-between items-center">
-                                             <div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Força no Tirante</div>
-                                             <div className="font-mono font-black text-blue-700 text-sm mt-0.5">{(Math.abs(analyzedResults.equilibrium.F_tie) / 1000).toFixed(2)} kN</div>
-                                         </div>
-                                     )}
-                                 </div>
-                             </div>
-                         )}
+                {/* Equilibrium */}
+                {(hingePosition !== HingePosition.NONE || hasTieRod) && (
+                  <>
+                    {hingePosition !== HingePosition.NONE && (
+                      <ResultsCard
+                        title="Momento no Apoio"
+                        value={(Math.abs(analyzedResults.equilibrium.M_hinge) / 1000).toFixed(2)}
+                        unit="kN·m"
+                        theme="purple"
+                        icon={RotateCw}
+                      />
+                    )}
+                    {hasTieRod && (
+                      <ResultsCard
+                        title="Força no Tirante"
+                        value={(Math.abs(analyzedResults.equilibrium.F_tie) / 1000).toFixed(2)}
+                        unit="kN"
+                        theme="amber"
+                        icon={RotateCw}
+                      />
+                    )}
+                  </>
+                )}
 
-                         {/* Geometry Properties (NEW) */}
-                         <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
-                             <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Propriedades Geométricas</span><Maximize className="w-3 h-3 text-blue-400" /></div>
-                             <div className="grid grid-cols-2 gap-3">
-                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (M)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.up.area.toFixed(2)} m²</div></div>
-                                 <div className="bg-white/70 p-2.5 rounded-lg border border-blue-100"><div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Área Molhada (J)</div><div className="font-mono font-black text-slate-700 text-sm mt-0.5">{analyzedResults.forceData.down.area.toFixed(2)} m²</div></div>
-                             </div>
-                         </div>
-                    </div>
-                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60 p-4">
-                        <div className="bg-blue-50 p-4 rounded-full mb-3"><AlertCircle className="w-8 h-8 text-blue-400" /></div>
-                        <h4 className="text-sm font-black text-slate-600 tracking-tight">Aguardando análise</h4>
-                        <p className="text-xs text-slate-400 mt-1 max-w-[200px] font-medium">Configure os parâmetros e clique em "Analisar" na área central.</p>
-                    </div>
-                 )}
-
-                 {analyzedResults && (
-                     <div className="mt-4 pt-4 border-t border-blue-50">
-                        <button 
-                           onClick={() => setShowDetails(!showDetails)} 
-                           className="w-full py-2.5 rounded-xl font-black text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white active:scale-95 uppercase tracking-wide"
-                        >
-                           <Calculator className="w-4 h-4" /> {showDetails ? 'Ocultar Memória' : 'Memória de Cálculo'}
-                        </button>
-                     </div>
-                 )}
-             </div>
+                {/* Geometry Properties */}
+                <ResultsCard
+                  title="Área Molhada (Montante)"
+                  value={analyzedResults.forceData.up.area.toFixed(2)}
+                  unit="m²"
+                  theme="slate"
+                  icon={Maximize}
+                />
+                
+                <ResultsCard
+                  title="Área Molhada (Jusante)"
+                  value={analyzedResults.forceData.down.area.toFixed(2)}
+                  unit="m²"
+                  theme="slate"
+                  icon={Maximize}
+                />
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60 p-4 py-20">
+                <div className="bg-blue-50 p-4 rounded-full mb-3">
+                  <AlertCircle className="w-8 h-8 text-blue-400" />
+                </div>
+                <h4 className="text-sm font-black text-slate-600 tracking-tight">Aguardando análise</h4>
+                <p className="text-xs text-slate-400 mt-1 max-w-[200px] font-medium">
+                  Configure os parâmetros e clique em "Analisar" na área central.
+                </p>
+              </div>
+            )}
+          </ResultsPanel>
         </div>
       </div>
 

@@ -18,11 +18,7 @@ const App: React.FC = () => {
     <>
       <AnimatePresence mode="wait">
         {!hasStarted ? (
-          <motion.div
-            key="landing"
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
-          >
+          <motion.div key="landing" exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
             <LandingPage onStart={() => setHasStarted(true)} />
           </motion.div>
         ) : (
@@ -49,16 +45,20 @@ const App: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <div className="hidden md:flex items-center gap-4 text-right">
-                   <div className="flex flex-col items-end gap-1">
-                      <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/90">
-                        PROF. DAVI SANTIAGO AQUINO
-                      </p>
-                      <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-white/70 font-bold">
-                          <GraduationCap className="w-3 h-3" />
-                          <span>IFBA <span className="mx-1">•</span> CAMPUS EUNÁPOLIS</span>
-                      </div>
-                   </div>
+
+                {/* Bloco da direita (sem divisor sobrando) */}
+                <div className="hidden md:flex items-center gap-6 text-right">
+                  <div className="flex flex-col items-end gap-1">
+                    <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/90">
+                      PROF. DAVI SANTIAGO AQUINO
+                    </p>
+                    <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-white/70 font-bold">
+                      <GraduationCap className="w-3 h-3" />
+                      <span>
+                        IFBA <span className="mx-1">•</span> CAMPUS EUNÁPOLIS
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </header>
@@ -71,45 +71,56 @@ const App: React.FC = () => {
                     onClick={() => setCurrentMode(SimulationMode.FALLING_BODY)}
                     className={`
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
-                      ${currentMode === SimulationMode.FALLING_BODY 
-                        ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
-                        : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
+                      ${
+                        currentMode === SimulationMode.FALLING_BODY
+                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
+                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                      }
                     `}
                   >
                     <Anchor className="w-4 h-4" />
                     Corpo em Queda
                   </button>
+
                   <button
                     onClick={() => setCurrentMode(SimulationMode.DAM_HYDROLOGY)}
                     className={`
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
-                      ${currentMode === SimulationMode.DAM_HYDROLOGY 
-                        ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
-                        : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
+                      ${
+                        currentMode === SimulationMode.DAM_HYDROLOGY
+                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
+                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                      }
                     `}
                   >
                     <Mountain className="w-4 h-4" />
                     Barragens
                   </button>
+
                   <button
                     onClick={() => setCurrentMode(SimulationMode.GATE_PRESSURE)}
                     className={`
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
-                      ${currentMode === SimulationMode.GATE_PRESSURE 
-                        ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
-                        : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
+                      ${
+                        currentMode === SimulationMode.GATE_PRESSURE
+                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
+                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                      }
                     `}
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     Comportas
                   </button>
+
                   <button
                     onClick={() => setCurrentMode(SimulationMode.THEORY)}
                     className={`
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
-                      ${currentMode === SimulationMode.THEORY 
-                        ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
-                        : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'}
+                      ${
+                        currentMode === SimulationMode.THEORY
+                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
+                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                      }
                     `}
                   >
                     <BookOpen className="w-4 h-4" />
@@ -122,38 +133,34 @@ const App: React.FC = () => {
             {/* Main Content Area */}
             <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                   {/* Section Title */}
-                  <div className="mb-8">
-                      <h2 className="text-3xl font-black tracking-tight text-slate-800">
-                          {currentMode === SimulationMode.FALLING_BODY && "Princípio de Arquimedes"}
-                          {currentMode === SimulationMode.DAM_HYDROLOGY && "Geometria e Análise de Barragens"}
-                          {currentMode === SimulationMode.GATE_PRESSURE && "Forças Hidrostáticas em Superfícies"}
-                          {currentMode === SimulationMode.THEORY && "Fundamentação Teórica"}
-                      </h2>
-                      <p className="text-slate-500 text-sm mt-2 font-medium">
-                          {currentMode === SimulationMode.FALLING_BODY && "Simule flutuação, equilíbrio e submersão (Princípio de Arquimedes)."}
-                          {currentMode === SimulationMode.DAM_HYDROLOGY && "Análise do reservatório e geometria da barragem."}
-                          {currentMode === SimulationMode.GATE_PRESSURE && "Distribuição de pressão e força resultante em comportas planas/curvas."}
-                          {currentMode === SimulationMode.THEORY && "Material de apoio e fórmulas essenciais para os experimentos."}
-                      </p>
-                  </div>
+                {/* Section Title */}
+                <div className="mb-8">
+                  <h2 className="text-3xl font-black tracking-tight text-slate-800">
+                    {currentMode === SimulationMode.FALLING_BODY && 'Princípio de Arquimedes'}
+                    {currentMode === SimulationMode.DAM_HYDROLOGY && 'Geometria e Análise de Barragens'}
+                    {currentMode === SimulationMode.GATE_PRESSURE && 'Forças Hidrostáticas em Superfícies'}
+                    {currentMode === SimulationMode.THEORY && 'Fundamentação Teórica'}
+                  </h2>
+                  <p className="text-slate-500 text-sm mt-2 font-medium">
+                    {currentMode === SimulationMode.FALLING_BODY &&
+                      'Simule flutuação, equilíbrio e submersão (Princípio de Arquimedes).'}
+                    {currentMode === SimulationMode.DAM_HYDROLOGY && 'Análise do reservatório e geometria da barragem.'}
+                    {currentMode === SimulationMode.GATE_PRESSURE &&
+                      'Distribuição de pressão e força resultante em comportas planas/curvas.'}
+                    {currentMode === SimulationMode.THEORY &&
+                      'Material de apoio e fórmulas essenciais para os experimentos.'}
+                  </p>
+                </div>
 
-                  {currentMode === SimulationMode.FALLING_BODY && <BodyFallLab onContextUpdate={setSimulationContext} />}
-                  {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} />}
-                  {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} />}
-                  {currentMode === SimulationMode.THEORY && <TheoryReference />}
+                {currentMode === SimulationMode.FALLING_BODY && <BodyFallLab onContextUpdate={setSimulationContext} />}
+                {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} />}
+                {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} />}
+                {currentMode === SimulationMode.THEORY && <TheoryReference />}
               </div>
             </main>
 
             {/* AI ChatBot Overlay */}
             <ChatBot simulationContext={simulationContext} />
-
-            {/* Footer Minimalista */}
-            <footer className="mt-auto py-8 text-center border-t border-blue-100/50 bg-white/40 backdrop-blur-sm">
-              <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400/80">
-                DESENVOLVIDO POR <span className="text-slate-500">ADAIULA FERRAZ</span> — ENGENHARIA CIVIL
-              </p>
-            </footer>
           </motion.div>
         )}
       </AnimatePresence>
