@@ -201,7 +201,7 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     const xFaceBot = 0;
     const xFaceTop = getDamFaceX(damHeight);
 
-    // Upstream face (straight vertical or slightly inclined)
+    // Upstream face
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const y = t * damHeight;
@@ -304,8 +304,6 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     return (z: number) => {
       const rr = archRadius * archRadius;
       const zz = z * z;
-      // Center (z=0) is most upstream (smallest X), edges are downstream (larger X)
-      // This creates a convex shape facing the water at negative X
       return archRadius - Math.sqrt(Math.max(0, rr - zz));
     };
   }, [damType, archRadius]);
@@ -373,7 +371,7 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     const scale = Math.min(scaleX, scaleY, 40);
 
     const panX = SVG_W / 2 - ORIGIN_X - centerX * scale;
-    const panY = SVG_H / 2 - ORIGIN_Y + centerY * scale - 60; // Move up by 60px
+    const panY = SVG_H / 2 - ORIGIN_Y + centerY * scale - 60;
 
     return {
       autoScale: scale,
@@ -399,10 +397,9 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
   const SCALE = autoScale;
   const finalPan = { x: pan.x + autoPan.x, y: pan.y + autoPan.y };
 
-  // PROJECTION (mais estável: centro em tela + rotação + escala + pan)
+  // PROJECTION
   const project = useCallback(
     (p: Point3D) => {
-      // centraliza no bounding center
       const local = { x: p.x - center.x, y: p.y - center.y, z: p.z - center.z };
 
       if (!is3D) {
@@ -418,18 +415,18 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
       return {
         x: ORIGIN_X + r.x * SCALE + finalPan.x,
         y: ORIGIN_Y - r.y * SCALE + finalPan.y,
-        zDepth: r.z, // profundidade relativa já basta
+        zDepth: r.z,
       };
     },
     [center, is3D, rotate, SCALE, finalPan.x, finalPan.y]
   );
 
-  // iluminação (rotaciona normal junto com a câmera)
+  // iluminação
   const brightness = useCallback(
     (n: Point3D) => {
       if (!is3D) return 1;
 
-      const rn = rotate(n); // normal no espaço da câmera
+      const rn = rotate(n);
 
       const lx = -0.45, ly = 0.9, lz = 1;
       const ll = Math.sqrt(lx * lx + ly * ly + lz * lz) || 1;
@@ -504,7 +501,7 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         for (let i = 0; i < profile.length; i++) {
           const p1 = profile[i];
           const p2 = profile[(i + 1) % profile.length];
-          
+
           const p1_z1 = mapPt(p1, sz1);
           const p2_z1 = mapPt(p2, sz1);
           const p2_z2 = mapPt(p2, sz2);
@@ -558,7 +555,6 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         const xC2_bot = getContactX(0, z2);
         const xC2_top = getContactX(waterLevelY, z2);
 
-        // End caps
         if (s === 0) {
           const backPts = damFaceSide === "UPSTREAM"
             ? [{ x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }].reverse()
@@ -572,25 +568,21 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
           faces.push(face(frontPts, fill, 0.78, "none", 0, { x: 0, y: 0, z: 1 }, "WATER"));
         }
 
-        // Top Surface
         const topPts = damFaceSide === "UPSTREAM"
           ? [{ x: farWorldX, y: waterLevelY, z: z2 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }]
           : [{ x: xC1_top, y: waterLevelY, z: z1 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z1 }];
         faces.push(face(topPts, surf, 0.6, "none", 0, { x: 0, y: 1, z: 0 }, "WATER"));
 
-        // Bottom
         const botPts = damFaceSide === "UPSTREAM"
           ? [{ x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }, { x: xC2_bot, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z2 }]
           : [{ x: xC2_bot, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }];
         faces.push(face(botPts, fill, 0.78, "none", 0, { x: 0, y: -1, z: 0 }, "WATER"));
 
-        // Far Wall
         const farWallPts = damFaceSide === "UPSTREAM"
           ? [{ x: farWorldX, y: 0, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z1 }, { x: farWorldX, y: 0, z: z1 }]
           : [{ x: farWorldX, y: 0, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: 0, z: z2 }];
         faces.push(face(farWallPts, fill, 0.78, "none", 0, { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 }, "WATER"));
 
-        // Contact Wall
         const contactWallPts = damFaceSide === "UPSTREAM"
           ? [{ x: xC1_bot, y: 0, z: z1 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: xC2_bot, y: 0, z: z2 }]
           : [{ x: xC2_bot, y: 0, z: z2 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: xC1_bot, y: 0, z: z1 }];
@@ -682,7 +674,6 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
       }
     }
 
-    // água primeiro, barragem depois
     return [...waterFaces, ...damFaces];
   }, [
     damType,
@@ -705,7 +696,7 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     waterBox3D,
   ]);
 
-  // ===== Rendered faces (NO CULLING) =====
+  // ===== Rendered faces =====
   const rendered = useMemo(() => {
     const projected: Face[] = worldGeometry.map((wf, index) => {
       const proj = wf.pts3.map(project);
@@ -730,10 +721,8 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
       };
     });
 
-    // SVG painter: desenhar primeiro o que está "mais longe" (menor z), por último o mais perto (maior z).
-    // Empates: WATER antes do DAM (para DAM passar por cima). Depois prioridade e id.
     projected.sort((a, b) => {
-      if (a.zDepth !== b.zDepth) return a.zDepth - b.zDepth; // longe -> perto
+      if (a.zDepth !== b.zDepth) return a.zDepth - b.zDepth;
       if (a.kind !== b.kind) return a.kind === "WATER" ? -1 : 1;
       if (a.priority !== b.priority) return a.priority - b.priority;
       return a.id - b.id;
@@ -742,34 +731,36 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     return projected;
   }, [worldGeometry, project, brightness]);
 
-  // ===== VECTORS =====
+  // ===== VECTORS (CORRIGIDO: DISTRIBUI EM ALTURA (y) E LARGURA (z)) =====
   const vectors = useMemo(() => {
     if (!showVectors) return [];
 
     const vecs: any[] = [];
-    
-    const isInside = (p: { x: number; y: number }) => 
+
+    const isInside = (p: { x: number; y: number }) =>
       p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
 
+    // ✅ agora recebe z
     const pushArrow = (
-      x: number, 
-      y: number, 
-      nx: number, 
-      ny: number, 
-      magWorld: number, 
-      color: string, 
-      isResultant: boolean, 
+      x: number,
+      y: number,
+      z: number,
+      nx: number,
+      ny: number,
+      magWorld: number,
+      color: string,
+      isResultant: boolean,
       val?: string
     ) => {
       let finalMag = magWorld;
-      let pEnd = project({ x, y, z: 0 });
-      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z: 0 });
 
-      // Se o rabo (start) estiver fora do viewport, encurta a seta até caber
+      const pEnd = project({ x, y, z });
+      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z });
+
       if (!isInside(pStart)) {
         for (let f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
           const testMag = magWorld * f;
-          const testStart = project({ x: x - nx * testMag, y: y - ny * testMag, z: 0 });
+          const testStart = project({ x: x - nx * testMag, y: y - ny * testMag, z });
           if (isInside(testStart)) {
             finalMag = testMag;
             pStart = testStart;
@@ -784,8 +775,8 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         color,
         isResultant,
         val: val || "",
-        opacity: isResultant ? 1 : 0.45,
-        strokeWidth: isResultant ? 3.5 : 1.6,
+        opacity: isResultant ? 1 : 0.40,
+        strokeWidth: isResultant ? 3.5 : 1.35,
       });
     };
 
@@ -811,58 +802,98 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
       return { nx: nx / m, ny: ny / m };
     };
 
-    // 1. Pressão Distribuída (Triângulo)
-    const N = 11;
-    
-    // Montante
+    // ===== grade de amostragem =====
+    // mais pontos em y (altura) e z (largura do canal)
+    const Ny = 40; // altura (linhas)
+    const Nz = is3D ? 20 : 1; // largura (colunas) - no 2D fica 1
+
+    const zMin = -CHANNEL_WIDTH / 2;
+    const zMax = CHANNEL_WIDTH / 2;
+    const zAt = (j: number) => (Nz === 1 ? 0 : zMin + (j / (Nz - 1)) * (zMax - zMin));
+
+    const contactXWorld = (y: number, side: "UPSTREAM" | "DOWNSTREAM", z: number) => {
+      const base = getDamXAtY(y, side);
+      const off = archOffsetFn ? archOffsetFn(z) : 0;
+      return toWorldX(base + off);
+    };
+
+    // 1) Pressão distribuída - Montante (vermelho)
     if (upstreamLevel > 0) {
-      for (let i = 0; i < N; i++) {
-        const d = (i / (N - 1)) * upstreamLevel; // profundidade (0 no topo, H no fundo)
+      for (let i = 0; i < Ny; i++) {
+        const d = (i / (Ny - 1)) * upstreamLevel;   // profundidade (0 topo -> H fundo)
         const y = upstreamLevel - d;
-        const x = toWorldX(getDamXAtY(y, "UPSTREAM"));
+
         const { nx, ny } = localNormal(y, "UPSTREAM");
-        
-        const Lpx = 10 + (70 - 10) * (d / upstreamLevel);
-        pushArrow(x, y, nx, ny, Lpx / SCALE, "#ef4444", false);
+
+        // comprimento proporcional à profundidade (triângulo)
+        const Lpx = 10 + (72 - 10) * (d / Math.max(1e-9, upstreamLevel));
+        const Lw = Lpx / SCALE;
+
+        for (let j = 0; j < Nz; j++) {
+          const z = zAt(j);
+          const x = contactXWorld(y, "UPSTREAM", z);
+          pushArrow(x, y, z, nx, ny, Lw, "#ef4444", false);
+        }
       }
     }
 
-    // Jusante
+    // 1) Pressão distribuída - Jusante (azul)
     if (downstreamLevel > 0) {
-      for (let i = 0; i < N; i++) {
-        const d = (i / (N - 1)) * downstreamLevel;
+      for (let i = 0; i < Ny; i++) {
+        const d = (i / (Ny - 1)) * downstreamLevel;
         const y = downstreamLevel - d;
-        const x = toWorldX(getDamXAtY(y, "DOWNSTREAM"));
+
         const { nx, ny } = localNormal(y, "DOWNSTREAM");
-        
-        const Lpx = 10 + (70 - 10) * (d / downstreamLevel);
-        pushArrow(x, y, nx, ny, Lpx / SCALE, "#3b82f6", false);
+
+        const Lpx = 10 + (72 - 10) * (d / Math.max(1e-9, downstreamLevel));
+        const Lw = Lpx / SCALE;
+
+        for (let j = 0; j < Nz; j++) {
+          const z = zAt(j);
+          const x = contactXWorld(y, "DOWNSTREAM", z);
+          pushArrow(x, y, z, nx, ny, Lw, "#3b82f6", false);
+        }
       }
     }
 
-    // 2. Resultantes (FR)
+    // 2) Resultantes (mantém no centro z=0 para ficar “limpo”)
     if (up && up.FR > 1e-6) {
       const ycp = up.y_cp;
-      const xcp = toWorldX(getDamXAtY(ycp, "UPSTREAM"));
+      const z = 0;
+      const xcp = contactXWorld(ycp, "UPSTREAM", z);
       const { nx, ny } = localNormal(ycp, "UPSTREAM");
-      
+
       const FR_kN = up.FR / 1000;
       const arrowPx = clamp(25 + FR_kN * 0.05, 30, 85);
-      pushArrow(xcp, ycp, nx, ny, arrowPx / SCALE, "#b91c1c", true, `${FR_kN.toFixed(1)} kN/m`);
+      pushArrow(xcp, ycp, z, nx, ny, arrowPx / SCALE, "#b91c1c", true, `${FR_kN.toFixed(1)} kN/m`);
     }
 
     if (down && down.FR > 1e-6) {
       const ycp = down.y_cp;
-      const xcp = toWorldX(getDamXAtY(ycp, "DOWNSTREAM"));
+      const z = 0;
+      const xcp = contactXWorld(ycp, "DOWNSTREAM", z);
       const { nx, ny } = localNormal(ycp, "DOWNSTREAM");
-      
+
       const FR_kN = down.FR / 1000;
       const arrowPx = clamp(25 + FR_kN * 0.05, 30, 85);
-      pushArrow(xcp, ycp, nx, ny, arrowPx / SCALE, "#1d4ed8", true, `${FR_kN.toFixed(1)} kN/m`);
+      pushArrow(xcp, ycp, z, nx, ny, arrowPx / SCALE, "#1d4ed8", true, `${FR_kN.toFixed(1)} kN/m`);
     }
 
     return vecs;
-  }, [showVectors, upstreamLevel, downstreamLevel, up, down, damHeight, inclinationAngle, getDamXAtY, project, toWorldX, SCALE]);
+  }, [
+    showVectors,
+    is3D,
+    upstreamLevel,
+    downstreamLevel,
+    up,
+    down,
+    damHeight,
+    getDamXAtY,
+    project,
+    toWorldX,
+    SCALE,
+    archOffsetFn,
+  ]);
 
   return (
     <div
@@ -894,7 +925,7 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         />
       </div>
 
-      {/* barra de controles (pills) estilo TankScene */}
+      {/* barra de controles */}
       <div
         className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/85 p-1.5 rounded-full shadow-xl border border-blue-100/70 backdrop-blur-md z-30 transition-all hover:scale-[1.03]"
         onMouseDown={(e) => e.stopPropagation()}
@@ -924,8 +955,8 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         </button>
       </div>
 
-      {/* botão analisar/reiniciar isolado no canto inferior direito */}
-      <div 
+      {/* botão analisar/reiniciar */}
+      <div
         className="absolute bottom-20 right-6 z-30"
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -937,8 +968,8 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
             shadow-lg
             font-black text-xs tracking-wide uppercase
             transition-all active:scale-95
-            ${isAnalyzed 
-              ? "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-slate-200/50" 
+            ${isAnalyzed
+              ? "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-slate-200/50"
               : "bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white shadow-blue-500/20"}
           `}
           title={isAnalyzed ? "Reiniciar" : "Analisar"}
