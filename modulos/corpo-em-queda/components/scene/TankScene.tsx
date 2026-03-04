@@ -498,12 +498,11 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
             onClick={onToggleSimulate}
             className="
               flex items-center gap-2
-              bg-white/80 hover:bg-white
-              text-slate-700 px-5 py-2.5 rounded-full
-              border border-blue-100/70
-              shadow-sm
+              bg-white text-slate-700 px-5 py-2.5 rounded-full
+              border border-slate-200 hover:bg-slate-50
+              shadow-lg shadow-slate-200/50
               font-black text-xs tracking-wide uppercase
-              transition-transform active:scale-95
+              transition-all active:scale-95
             "
           >
             <RotateCcw className="w-3.5 h-3.5" /> REINICIAR

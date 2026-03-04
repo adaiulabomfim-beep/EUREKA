@@ -49,7 +49,9 @@ interface GatePressureSceneProps {
   gateWeight: number;
   gateWeightEnabled: boolean;
 
+  isAnalyzed: boolean;
   onCalculate: () => void;
+  onReset: () => void;
 }
 
 const TANK_BORDER_COLOR = '#22d3ee';
@@ -66,7 +68,9 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     up, down,
     hingePosition, hasTieRod, tieRodPosRel, tieRodAngle,
     gateWeight, gateWeightEnabled,
+    isAnalyzed,
     onCalculate,
+    onReset,
   } = props;
 
   // ===== VIEW =====
@@ -886,7 +890,30 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/85 p-1.5 rounded-full shadow-2xl border border-blue-100/60 backdrop-blur-md z-30 select-none">
-        <button onClick={onCalculate} className="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-[10px] transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 active:scale-95 uppercase tracking-widest"><Play className="w-3.5 h-3.5 fill-current" /> Analisar</button>
+        <button
+          onClick={isAnalyzed ? onReset : onCalculate}
+          className={`
+            flex items-center gap-2
+            px-5 py-2.5 rounded-full
+            shadow-lg
+            font-black text-xs tracking-wide uppercase
+            transition-all active:scale-95
+            ${isAnalyzed 
+              ? "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-slate-200/50" 
+              : "bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white shadow-blue-500/20"}
+          `}
+          title={isAnalyzed ? "Reiniciar" : "Analisar"}
+        >
+          {isAnalyzed ? (
+            <>
+              <RotateCcw className="w-3.5 h-3.5" /> REINICIAR
+            </>
+          ) : (
+            <>
+              <Play className="w-3.5 h-3.5 fill-current" /> ANALISAR
+            </>
+          )}
+        </button>
         <div className="w-px h-5 bg-blue-100 mx-1" />
         <button onClick={() => { const next = !is3D; setIs3D(next); if (next) resetView(); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-black text-[10px] transition-all border uppercase tracking-widest ${is3D ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white/60 border-blue-100 text-slate-500 hover:bg-white'}`}><Cuboid className="w-3.5 h-3.5" /> 3D {is3D ? 'ON' : 'OFF'}</button>
         <button onClick={() => setShowVectors(!showVectors)} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-black text-[10px] transition-all border uppercase tracking-widest ${showVectors ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white/60 border-blue-100 text-slate-500 hover:bg-white'}`}><Target className="w-3.5 h-3.5" /> Vetores</button>

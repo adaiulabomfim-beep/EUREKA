@@ -419,7 +419,9 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
                 tieRodAngle={tieRodAngle}
                 gateWeight={gateWeight}
                 gateWeightEnabled={gateWeightEnabled}
+                isAnalyzed={!!analyzedResults}
                 onCalculate={handleCalculate}
+                onReset={() => setAnalyzedResults(null)}
             />
              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-200/50 to-transparent pointer-events-none"></div>
         </div>
@@ -492,7 +494,12 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
 
                  {analyzedResults && (
                      <div className="mt-4 pt-4 border-t border-blue-50">
-                        <button onClick={() => setShowDetails(!showDetails)} className="w-full py-3.5 rounded-xl font-black text-sm shadow-lg transition-all flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white active:scale-95 uppercase tracking-widest"><Calculator className="w-4 h-4" /> {showDetails ? 'Ocultar Memória' : 'Memória de Cálculo'}</button>
+                        <button 
+                           onClick={() => setShowDetails(!showDetails)} 
+                           className="w-full py-2.5 rounded-xl font-black text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white active:scale-95 uppercase tracking-wide"
+                        >
+                           <Calculator className="w-4 h-4" /> {showDetails ? 'Ocultar Memória' : 'Memória de Cálculo'}
+                        </button>
                      </div>
                  )}
              </div>

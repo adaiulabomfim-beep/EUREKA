@@ -267,7 +267,7 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
                                  <div className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Posição ao longo da face</div>
                                  <div className="font-mono font-black text-blue-700 text-sm mt-0.5">{analyzedResults.forceData.s_cp_net.toFixed(2)} m</div>
                              </div>
-                             <div className="text-[9px] text-slate-400 mt-2 text-right font-bold uppercase">Medido a partir do topo</div>
+                             <div className="text-[9px] text-slate-400 mt-2 text-right font-bold uppercase">Medido a partir da superfície livre</div>
                          </div>
 
                          {/* Geometry Properties (NEW) */}
@@ -289,7 +289,12 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
 
                  {analyzedResults && (
                      <div className="mt-4 pt-4 border-t border-blue-50">
-                        <button onClick={() => setShowDetails(!showDetails)} className="w-full py-3.5 rounded-xl font-black text-sm shadow-lg transition-all flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white active:scale-95 uppercase tracking-widest"><Calculator className="w-4 h-4" /> {showDetails ? 'Ocultar Memória' : 'Memória de Cálculo'}</button>
+                        <button 
+                           onClick={() => setShowDetails(!showDetails)} 
+                           className="w-full py-2.5 rounded-xl font-black text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white active:scale-95 uppercase tracking-wide"
+                        >
+                           <Calculator className="w-4 h-4" /> {showDetails ? 'Ocultar Memória' : 'Memória de Cálculo'}
+                        </button>
                      </div>
                  )}
              </div>
@@ -314,7 +319,7 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
                        <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
                            <CalculationLine label="Inclinação da Face (θ)" symbol="θ" result={inclinationAngle.toString()} unit="°" />
                            <CalculationLine label="Comprimento Molhado (L)" symbol={<>L<sub>wet</sub></>} result={analyzedResults.forceData.up.wetLength.toFixed(3)} unit="m" />
-                           <CalculationLine label="Área (A)" symbol="A" result={analyzedResults.forceData.up.area.toFixed(3)} unit="m²/m" />
+                           <CalculationLine label="Área Molhada (A)" symbol="A" result={analyzedResults.forceData.up.area.toFixed(3)} unit="m²/m" />
                        </div>
                    </section>
 
@@ -324,8 +329,8 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
                            <CalculationLine label="Profundidade do Centróide" symbol={<>h<sub>cg</sub></>} result={analyzedResults.forceData.up.h_cg.toFixed(3)} unit="m" />
                            <CalculationLine 
                                 label="Força Resultante" symbol={<>F<sub>R</sub></>} 
-                                formula={<>P<sub>cg</sub> · A</>} 
-                                substitution={`${((analyzedResults.forceData.up.h_cg * 9810)/1000).toFixed(2)} · ${analyzedResults.forceData.up.area.toFixed(2)}`} 
+                                formula={<>γ · h<sub>cg</sub> · A</>} 
+                                substitution={`${(9.81).toFixed(2)} · ${analyzedResults.forceData.up.h_cg.toFixed(2)} · ${analyzedResults.forceData.up.area.toFixed(2)}`} 
                                 result={(analyzedResults.forceData.up.FR/1000).toFixed(3)} unit="kN/m" isSubHeader
                            />
                        </div>
@@ -334,16 +339,16 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
                    <section>
                        <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-6 flex items-center gap-2"><div className="w-6 h-px bg-cyan-200"></div> Ponto de Aplicação (Centro de Pressão) <div className="flex-1 h-px bg-blue-50"></div></h4>
                        <div className="bg-cyan-50/30 p-6 rounded-2xl border border-cyan-100/50">
-                           <CalculationLine label="Posição do Centróide (inclinado)" symbol={<>s<sub>cg</sub></>} result={analyzedResults.forceData.up.s_cg.toFixed(3)} unit="m" />
+                           <CalculationLine label="Posição do Centróide (ao longo da face)" symbol={<>s<sub>cg</sub></>} result={analyzedResults.forceData.up.s_cg.toFixed(3)} unit="m" />
                            <CalculationLine 
-                                label="Posição do CP (inclinado)" symbol={<>s<sub>cp</sub></>}
+                                label="Posição do CP (ao longo da face)" symbol={<>s<sub>cp</sub></>}
                                 result={analyzedResults.forceData.up.s_cp.toFixed(3)} unit="m" 
                            />
                            
                            <div className="mt-4 pt-4 border-t border-cyan-100">
                                <CalculationLine 
                                     label="Profundidade Vertical do CP" symbol={<>h<sub>cp</sub></>} 
-                                    formula={<>s<sub>cp</sub> · sin(θ)</>}
+                                    formula={<>h<sub>cg</sub> + I<sub>G</sub>·sin²(θ)/(A·h<sub>cg</sub>)</>}
                                     result={analyzedResults.forceData.up.h_cp.toFixed(3)} unit="m" isSubHeader
                                />
                            </div>

@@ -62,8 +62,6 @@ const CONCRETE_FILL = "#9ca3af";
 const CONCRETE_STROKE = "#64748b";
 const EARTH_FILL = "#8B5A2B";
 const EARTH_STROKE = "#5C3A21";
-const CORE_FILL = "#fb923c";
-const CORE_STROKE = "#ea580c";
 
 export const DamScene: React.FC<DamSceneProps> = (props) => {
   const {
@@ -186,13 +184,6 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     const xBackBot = damBaseWidth;
     const xBackTop = xFaceTop + damCrestWidth;
 
-    const coreBaseWidth = damBaseWidth * 0.4;
-    const coreCrestWidth = Math.max(0.2, damCrestWidth * 0.4);
-    const coreXFaceBot = xFaceBot + (damBaseWidth - coreBaseWidth) / 2;
-    const coreXBackBot = coreXFaceBot + coreBaseWidth;
-    const coreXFaceTop = xFaceTop + (damCrestWidth - coreCrestWidth) / 2;
-    const coreXBackTop = coreXFaceTop + coreCrestWidth;
-
     return {
       profile: [
         { x: xFaceBot, y: 0 },
@@ -200,41 +191,31 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         { x: xBackTop, y: damHeight },
         { x: xFaceTop, y: damHeight },
       ],
-      coreProfile: [
-        { x: coreXFaceBot, y: 0 },
-        { x: coreXBackBot, y: 0 },
-        { x: coreXBackTop, y: damHeight },
-        { x: coreXFaceTop, y: damHeight },
-      ],
     };
   }, [damHeight, damBaseWidth, damCrestWidth, getDamFaceX]);
 
   const buildArchDam = useCallback(() => {
     const profile: { x: number; y: number }[] = [];
-    const steps = 24;
+    const steps = 12;
 
     const xFaceBot = 0;
     const xFaceTop = getDamFaceX(damHeight);
 
-    const curveAmount = damHeight * 0.14;
-    const bulgeSign = -1;
-
+    // Upstream face (straight vertical or slightly inclined)
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const y = t * damHeight;
-      const linearX = xFaceBot + t * (xFaceTop - xFaceBot);
-      const bulge = bulgeSign * curveAmount * 4 * t * (1 - t);
-      profile.push({ x: linearX + bulge, y });
+      const x = xFaceBot + t * (xFaceTop - xFaceBot);
+      profile.push({ x, y });
     }
 
+    // Downstream face
     for (let i = steps; i >= 0; i--) {
       const t = i / steps;
       const y = t * damHeight;
-      const linearX = xFaceBot + t * (xFaceTop - xFaceBot);
-      const bulge = bulgeSign * curveAmount * 4 * t * (1 - t);
-
+      const x = xFaceBot + t * (xFaceTop - xFaceBot);
       const thickness = damBaseWidth * (1 - t) + damCrestWidth * t;
-      profile.push({ x: linearX + bulge + thickness, y });
+      profile.push({ x: x + thickness, y });
     }
 
     return { profile };
@@ -317,12 +298,14 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
   );
 
   // ===== ARCH OFFSET (MEMO) =====
-  const archRadius = useMemo(() => Math.max(CHANNEL_WIDTH * 0.9, damBaseWidth * 2.2), [damBaseWidth]);
+  const archRadius = useMemo(() => Math.max(CHANNEL_WIDTH * 0.6, damBaseWidth * 1.5), [damBaseWidth]);
   const archOffsetFn = useMemo(() => {
     if (damType !== DamType.ARCH) return undefined;
     return (z: number) => {
       const rr = archRadius * archRadius;
       const zz = z * z;
+      // Center (z=0) is most upstream (smallest X), edges are downstream (larger X)
+      // This creates a convex shape facing the water at negative X
       return archRadius - Math.sqrt(Math.max(0, rr - zz));
     };
   }, [damType, archRadius]);
@@ -498,36 +481,43 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
       hatchPattern?: string
     ) => {
       const faces: WorldFace[] = [];
-      const zF = zOffset + zWidth / 2;
-      const zB = zOffset - zWidth / 2;
+      const steps = xOffsetFn ? 16 : 1;
+      const dz = zWidth / steps;
+      const zStart = zOffset - zWidth / 2;
 
       const mapPt = (p: { x: number; y: number }, z: number) => {
         const off = xOffsetFn ? xOffsetFn(z) : 0;
         return { x: toWorldX(p.x + off), y: p.y, z };
       };
 
-      faces.push(
-        face(profile.map((p) => mapPt(p, zF)), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: 1 }, kind, hatchPattern, kind === "DAM" ? 2 : 1)
-      );
-      faces.push(
-        face(profile.map((p) => mapPt(p, zB)).reverse(), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: -1 }, kind, hatchPattern, kind === "DAM" ? 2 : 1)
-      );
+      // Caps
+      const zF = zOffset + zWidth / 2;
+      const zB = zOffset - zWidth / 2;
+      faces.push(face(profile.map((p) => mapPt(p, zF)), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: 1 }, kind, hatchPattern, kind === "DAM" ? 2 : 1));
+      faces.push(face(profile.map((p) => mapPt(p, zB)).reverse(), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: -1 }, kind, hatchPattern, kind === "DAM" ? 2 : 1));
 
-      for (let i = 0; i < profile.length; i++) {
-        const p1 = profile[i];
-        const p2 = profile[(i + 1) % profile.length];
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const mag = Math.sqrt(dx * dx + dy * dy) || 1;
-        const nx = dy / mag;
-        const ny = -dx / mag;
+      // Sides
+      for (let s = 0; s < steps; s++) {
+        const sz1 = zStart + s * dz;
+        const sz2 = zStart + (s + 1) * dz;
 
-        const p1F = mapPt(p1, zF);
-        const p2F = mapPt(p2, zF);
-        const p2B = mapPt(p2, zB);
-        const p1B = mapPt(p1, zB);
+        for (let i = 0; i < profile.length; i++) {
+          const p1 = profile[i];
+          const p2 = profile[(i + 1) % profile.length];
+          
+          const p1_z1 = mapPt(p1, sz1);
+          const p2_z1 = mapPt(p2, sz1);
+          const p2_z2 = mapPt(p2, sz2);
+          const p1_z2 = mapPt(p1, sz2);
 
-        faces.push(face([p1F, p2F, p2B, p1B], fill, opacity, "none", 0, { x: nx, y: ny, z: 0 }, kind, hatchPattern, kind === "DAM" ? 2 : 1));
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const mag = Math.sqrt(dx * dx + dy * dy) || 1;
+          const nx = dy / mag;
+          const ny = -dx / mag;
+
+          faces.push(face([p1_z1, p2_z1, p2_z2, p1_z2], fill, opacity, "none", 0, { x: nx, y: ny, z: 0 }, kind, hatchPattern, kind === "DAM" ? 2 : 1));
+        }
       }
 
       return faces;
@@ -546,121 +536,66 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
       fillId: "A" | "B" = "A"
     ) => {
       const faces: WorldFace[] = [];
-      const zF = depth / 2;
-      const zB = -depth / 2;
-      const yBottom = 0;
-
-      const getContactX = (y: number, z: number) => {
-        const base = getDamXAtY(y, damFaceSide);
-        const off = offsetFn ? offsetFn(z) : 0;
-        return toWorldX(base + off);
-      };
-
+      const steps = offsetFn ? 16 : 1;
+      const dz = depth / steps;
+      const zStart = -depth / 2;
       const farWorldX = toWorldX(farX);
-
       const fill = fillId === "A" ? "url(#fluidDepthA)" : "url(#fluidDepthB)";
       const surf = fillId === "A" ? "url(#surfaceGradientA)" : "url(#surfaceGradientB)";
 
-      const xContactBottom_zF = getContactX(yBottom, zF);
-      const xContactTop_zF = getContactX(waterLevelY, zF);
-      const xContactBottom_zB = getContactX(yBottom, zB);
-      const xContactTop_zB = getContactX(waterLevelY, zB);
+      for (let s = 0; s < steps; s++) {
+        const z1 = zStart + s * dz;
+        const z2 = zStart + (s + 1) * dz;
 
-      // 1. FRONT FACE (z = zF)
-      const frontPts = damFaceSide === "UPSTREAM"
-        ? [
-            { x: farWorldX, y: yBottom, z: zF },
-            { x: xContactBottom_zF, y: yBottom, z: zF },
-            { x: xContactTop_zF, y: waterLevelY, z: zF },
-            { x: farWorldX, y: waterLevelY, z: zF },
-          ]
-        : [
-            { x: xContactBottom_zF, y: yBottom, z: zF },
-            { x: farWorldX, y: yBottom, z: zF },
-            { x: farWorldX, y: waterLevelY, z: zF },
-            { x: xContactTop_zF, y: waterLevelY, z: zF },
-          ];
-      faces.push(face(frontPts, fill, 0.78, "none", 0, { x: 0, y: 0, z: 1 }, "WATER", undefined, 0));
+        const getContactX = (y: number, z: number) => {
+          const base = getDamXAtY(y, damFaceSide);
+          const off = offsetFn ? offsetFn(z) : 0;
+          return toWorldX(base + off);
+        };
 
-      // 2. BACK FACE (z = zB)
-      const backPts = damFaceSide === "UPSTREAM"
-        ? [
-            { x: farWorldX, y: yBottom, z: zB },
-            { x: xContactBottom_zB, y: yBottom, z: zB },
-            { x: xContactTop_zB, y: waterLevelY, z: zB },
-            { x: farWorldX, y: waterLevelY, z: zB },
-          ].reverse()
-        : [
-            { x: xContactBottom_zB, y: yBottom, z: zB },
-            { x: farWorldX, y: yBottom, z: zB },
-            { x: farWorldX, y: waterLevelY, z: zB },
-            { x: xContactTop_zB, y: waterLevelY, z: zB },
-          ].reverse();
-      faces.push(face(backPts, fill, 0.78, "none", 0, { x: 0, y: 0, z: -1 }, "WATER", undefined, 0));
+        const xC1_bot = getContactX(0, z1);
+        const xC1_top = getContactX(waterLevelY, z1);
+        const xC2_bot = getContactX(0, z2);
+        const xC2_top = getContactX(waterLevelY, z2);
 
-      // 3. TOP FACE (Surface)
-      const topPts = damFaceSide === "UPSTREAM"
-        ? [
-            { x: farWorldX, y: waterLevelY, z: zF },
-            { x: xContactTop_zF, y: waterLevelY, z: zF },
-            { x: xContactTop_zB, y: waterLevelY, z: zB },
-            { x: farWorldX, y: waterLevelY, z: zB },
-          ]
-        : [
-            { x: xContactTop_zB, y: waterLevelY, z: zB },
-            { x: xContactTop_zF, y: waterLevelY, z: zF },
-            { x: farWorldX, y: waterLevelY, z: zF },
-            { x: farWorldX, y: waterLevelY, z: zB },
-          ];
-      faces.push(face(topPts, surf, 0.6, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", undefined, 0));
+        // End caps
+        if (s === 0) {
+          const backPts = damFaceSide === "UPSTREAM"
+            ? [{ x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }].reverse()
+            : [{ x: xC1_bot, y: 0, z: z1 }, { x: farWorldX, y: 0, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }, { x: xC1_top, y: waterLevelY, z: z1 }].reverse();
+          faces.push(face(backPts, fill, 0.78, "none", 0, { x: 0, y: 0, z: -1 }, "WATER"));
+        }
+        if (s === steps - 1) {
+          const frontPts = damFaceSide === "UPSTREAM"
+            ? [{ x: farWorldX, y: 0, z: z2 }, { x: xC2_bot, y: 0, z: z2 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }]
+            : [{ x: xC2_bot, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: xC2_top, y: waterLevelY, z: z2 }];
+          faces.push(face(frontPts, fill, 0.78, "none", 0, { x: 0, y: 0, z: 1 }, "WATER"));
+        }
 
-      // 4. BOTTOM FACE
-      const botPts = damFaceSide === "UPSTREAM"
-        ? [
-            { x: farWorldX, y: yBottom, z: zB },
-            { x: xContactBottom_zB, y: yBottom, z: zB },
-            { x: xContactBottom_zF, y: yBottom, z: zF },
-            { x: farWorldX, y: yBottom, z: zF },
-          ]
-        : [
-            { x: xContactBottom_zF, y: yBottom, z: zF },
-            { x: farWorldX, y: yBottom, z: zF },
-            { x: farWorldX, y: yBottom, z: zB },
-            { x: xContactBottom_zB, y: yBottom, z: zB },
-          ];
-      faces.push(face(botPts, fill, 0.78, "none", 0, { x: 0, y: -1, z: 0 }, "WATER", undefined, 0));
+        // Top Surface
+        const topPts = damFaceSide === "UPSTREAM"
+          ? [{ x: farWorldX, y: waterLevelY, z: z2 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }]
+          : [{ x: xC1_top, y: waterLevelY, z: z1 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z1 }];
+        faces.push(face(topPts, surf, 0.6, "none", 0, { x: 0, y: 1, z: 0 }, "WATER"));
 
-      // 5. FAR WALL
-      const farWall = damFaceSide === "UPSTREAM"
-        ? [
-            { x: farWorldX, y: yBottom, z: zF },
-            { x: farWorldX, y: waterLevelY, z: zF },
-            { x: farWorldX, y: waterLevelY, z: zB },
-            { x: farWorldX, y: yBottom, z: zB },
-          ]
-        : [
-            { x: farWorldX, y: yBottom, z: zB },
-            { x: farWorldX, y: waterLevelY, z: zB },
-            { x: farWorldX, y: waterLevelY, z: zF },
-            { x: farWorldX, y: yBottom, z: zF },
-          ];
-      faces.push(face(farWall, fill, 0.78, "none", 0, { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 }, "WATER", undefined, 0));
+        // Bottom
+        const botPts = damFaceSide === "UPSTREAM"
+          ? [{ x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }, { x: xC2_bot, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z2 }]
+          : [{ x: xC2_bot, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }];
+        faces.push(face(botPts, fill, 0.78, "none", 0, { x: 0, y: -1, z: 0 }, "WATER"));
 
-      // 6. CONTACT WALL
-      const contactWall = damFaceSide === "UPSTREAM"
-        ? [
-            { x: xContactBottom_zB, y: yBottom, z: zB },
-            { x: xContactTop_zB, y: waterLevelY, z: zB },
-            { x: xContactTop_zF, y: waterLevelY, z: zF },
-            { x: xContactBottom_zF, y: yBottom, z: zF },
-          ]
-        : [
-            { x: xContactBottom_zF, y: yBottom, z: zF },
-            { x: xContactTop_zF, y: waterLevelY, z: zF },
-            { x: xContactTop_zB, y: waterLevelY, z: zB },
-            { x: xContactBottom_zB, y: yBottom, z: zB },
-          ];
-      faces.push(face(contactWall, fill, 0.78, "none", 0, { x: damFaceSide === "UPSTREAM" ? 1 : -1, y: 0, z: 0 }, "WATER", undefined, 0));
+        // Far Wall
+        const farWallPts = damFaceSide === "UPSTREAM"
+          ? [{ x: farWorldX, y: 0, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z1 }, { x: farWorldX, y: 0, z: z1 }]
+          : [{ x: farWorldX, y: 0, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: 0, z: z2 }];
+        faces.push(face(farWallPts, fill, 0.78, "none", 0, { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 }, "WATER"));
+
+        // Contact Wall
+        const contactWallPts = damFaceSide === "UPSTREAM"
+          ? [{ x: xC1_bot, y: 0, z: z1 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: xC2_bot, y: 0, z: z2 }]
+          : [{ x: xC2_bot, y: 0, z: z2 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: xC1_bot, y: 0, z: z1 }];
+        faces.push(face(contactWallPts, fill, 0.78, "none", 0, { x: damFaceSide === "UPSTREAM" ? 1 : -1, y: 0, z: 0 }, "WATER"));
+      }
 
       return faces;
     },
@@ -690,14 +625,12 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
         damFaces.push(face(buttressProfile.map((p) => ({ x: toWorldX(p.x), y: p.y, z: 0 })), CONCRETE_FILL, 1, CONCRETE_STROKE, 1.5, { x: 0, y: 0, z: 1 }, "DAM", "url(#concretePattern)", 2));
       }
     } else if (damType === DamType.EMBANKMENT) {
-      const { profile, coreProfile } = buildEarthDam();
+      const { profile } = buildEarthDam();
 
       if (is3D) {
-        damFaces.push(...prism(coreProfile, CHANNEL_WIDTH - 0.25, CORE_FILL, 1, CORE_STROKE, 1, "DAM", undefined, 0, "url(#earthHatch)"));
         damFaces.push(...prism(profile, CHANNEL_WIDTH, EARTH_FILL, 1, EARTH_STROKE, 1, "DAM", undefined, 0, "url(#earthHatch)"));
       } else {
         damFaces.push(face(profile.map((p) => ({ x: toWorldX(p.x), y: p.y, z: 0 })), EARTH_FILL, 1, EARTH_STROKE, 1.5, { x: 0, y: 0, z: 1 }, "DAM", "url(#earthHatch)", 2));
-        damFaces.push(face(coreProfile.map((p) => ({ x: toWorldX(p.x), y: p.y, z: 0 })), CORE_FILL, 1, CORE_STROKE, 1.5, { x: 0, y: 0, z: 1 }, "DAM", "url(#earthHatch)", 2));
       }
     } else if (damType === DamType.ARCH) {
       const { profile } = buildArchDam();
@@ -814,68 +747,122 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
     if (!showVectors) return [];
 
     const vecs: any[] = [];
-    const th = (inclinationAngle * Math.PI) / 180;
-    const sinT = Math.max(1e-6, Math.sin(th));
+    
+    const isInside = (p: { x: number; y: number }) => 
+      p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
 
-    const pushArrow = (x: number, y: number, nx: number, ny: number, mag: number, color: string, isResultant?: boolean, val?: string) => {
-      const pStart = project({ x: x + nx * mag, y: y + ny * mag, z: 0 });
-      const pEnd = project({ x, y, z: 0 });
+    const pushArrow = (
+      x: number, 
+      y: number, 
+      nx: number, 
+      ny: number, 
+      magWorld: number, 
+      color: string, 
+      isResultant: boolean, 
+      val?: string
+    ) => {
+      let finalMag = magWorld;
+      let pEnd = project({ x, y, z: 0 });
+      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z: 0 });
+
+      // Se o rabo (start) estiver fora do viewport, encurta a seta até caber
+      if (!isInside(pStart)) {
+        for (let f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
+          const testMag = magWorld * f;
+          const testStart = project({ x: x - nx * testMag, y: y - ny * testMag, z: 0 });
+          if (isInside(testStart)) {
+            finalMag = testMag;
+            pStart = testStart;
+            break;
+          }
+        }
+      }
 
       vecs.push({
         start: pStart,
         end: pEnd,
         color,
-        isResultant: !!isResultant,
+        isResultant,
         val: val || "",
+        opacity: isResultant ? 1 : 0.45,
+        strokeWidth: isResultant ? 3.5 : 1.6,
       });
     };
 
     const localNormal = (y: number, side: "UPSTREAM" | "DOWNSTREAM") => {
-      const dy = 0.15;
-      const x1 = getDamXAtY(Math.max(0, y - dy), side);
-      const x2 = getDamXAtY(Math.min(damHeight, y + dy), side);
+      const dy = 0.05;
+      const y1 = Math.max(0, y - dy);
+      const y2 = Math.min(damHeight, y + dy);
+      const x1 = getDamXAtY(y1, side);
+      const x2 = getDamXAtY(y2, side);
       const dx = x2 - x1;
+      const dY = y2 - y1;
 
-      const tx = dx;
-      const ty = 2 * dy;
-
-      let nx = -ty;
-      let ny = tx;
+      let nx = -dY;
+      let ny = dx;
 
       if (side === "UPSTREAM") {
-        if (nx < 0) {
-          nx *= -1;
-          ny *= -1;
-        }
+        if (nx < 0) { nx = -nx; ny = -ny; }
       } else {
-        if (nx > 0) {
-          nx *= -1;
-          ny *= -1;
-        }
+        if (nx > 0) { nx = -nx; ny = -ny; }
       }
 
       const m = Math.sqrt(nx * nx + ny * ny) || 1;
       return { nx: nx / m, ny: ny / m };
     };
 
+    // 1. Pressão Distribuída (Triângulo)
+    const N = 11;
+    
+    // Montante
+    if (upstreamLevel > 0) {
+      for (let i = 0; i < N; i++) {
+        const d = (i / (N - 1)) * upstreamLevel; // profundidade (0 no topo, H no fundo)
+        const y = upstreamLevel - d;
+        const x = toWorldX(getDamXAtY(y, "UPSTREAM"));
+        const { nx, ny } = localNormal(y, "UPSTREAM");
+        
+        const Lpx = 10 + (70 - 10) * (d / upstreamLevel);
+        pushArrow(x, y, nx, ny, Lpx / SCALE, "#ef4444", false);
+      }
+    }
+
+    // Jusante
+    if (downstreamLevel > 0) {
+      for (let i = 0; i < N; i++) {
+        const d = (i / (N - 1)) * downstreamLevel;
+        const y = downstreamLevel - d;
+        const x = toWorldX(getDamXAtY(y, "DOWNSTREAM"));
+        const { nx, ny } = localNormal(y, "DOWNSTREAM");
+        
+        const Lpx = 10 + (70 - 10) * (d / downstreamLevel);
+        pushArrow(x, y, nx, ny, Lpx / SCALE, "#3b82f6", false);
+      }
+    }
+
+    // 2. Resultantes (FR)
     if (up && up.FR > 1e-6) {
-      const ycp = damHeight - up.s_cp * sinT;
+      const ycp = up.y_cp;
       const xcp = toWorldX(getDamXAtY(ycp, "UPSTREAM"));
       const { nx, ny } = localNormal(ycp, "UPSTREAM");
-      const mag = Math.min(90, 28 + (up.FR / 10000) * 5);
-      pushArrow(xcp, ycp, nx, ny, mag, "#b91c1c", true, `${(up.FR / 1000).toFixed(1)} kN/m`);
+      
+      const FR_kN = up.FR / 1000;
+      const arrowPx = clamp(25 + FR_kN * 0.05, 30, 85);
+      pushArrow(xcp, ycp, nx, ny, arrowPx / SCALE, "#b91c1c", true, `${FR_kN.toFixed(1)} kN/m`);
     }
 
     if (down && down.FR > 1e-6) {
-      const ycp = damHeight - down.s_cp * sinT;
+      const ycp = down.y_cp;
       const xcp = toWorldX(getDamXAtY(ycp, "DOWNSTREAM"));
       const { nx, ny } = localNormal(ycp, "DOWNSTREAM");
-      const mag = Math.min(90, 28 + (down.FR / 10000) * 5);
-      pushArrow(xcp, ycp, nx, ny, mag, "#1d4ed8", true, `${(down.FR / 1000).toFixed(1)} kN/m`);
+      
+      const FR_kN = down.FR / 1000;
+      const arrowPx = clamp(25 + FR_kN * 0.05, 30, 85);
+      pushArrow(xcp, ycp, nx, ny, arrowPx / SCALE, "#1d4ed8", true, `${FR_kN.toFixed(1)} kN/m`);
     }
 
     return vecs;
-  }, [showVectors, upstreamLevel, downstreamLevel, up, down, damHeight, inclinationAngle, getDamXAtY, project, toWorldX]);
+  }, [showVectors, upstreamLevel, downstreamLevel, up, down, damHeight, inclinationAngle, getDamXAtY, project, toWorldX, SCALE]);
 
   return (
     <div
@@ -1106,9 +1093,9 @@ export const DamScene: React.FC<DamSceneProps> = (props) => {
                 x2={v.end.x}
                 y2={v.end.y}
                 stroke={color}
-                strokeWidth={v.isResultant ? 3 : 2}
+                strokeWidth={v.strokeWidth}
                 markerEnd={marker}
-                opacity={v.isResultant ? 1 : 0.55}
+                opacity={v.opacity}
               />
               <circle cx={v.end.x} cy={v.end.y} r={v.isResultant ? 3 : 1.6} fill={color} />
 

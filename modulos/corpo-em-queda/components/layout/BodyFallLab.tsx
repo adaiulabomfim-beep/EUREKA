@@ -582,10 +582,10 @@ export const BodyFallLab: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
               <button
                 onClick={() => setShowCalculations(!showCalculations)}
                 disabled={!isSimulating}
-                className={`w-full py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 ${
+                className={`w-full py-2.5 rounded-xl font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wide active:scale-95 ${
                   isSimulating
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    ? 'bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white shadow-blue-500/20'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
                 }`}
               >
                 <Calculator className="w-3.5 h-3.5" /> {showCalculations ? 'Ocultar Memorial' : 'Memorial de Cálculo'}
