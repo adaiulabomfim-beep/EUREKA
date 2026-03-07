@@ -430,7 +430,6 @@ export const GatePressureLab: React.FC<GatePressureLabProps> = ({ onContextUpdat
         {/* --- RIGHT SIDEBAR: RESULTS --- */}
         <div className="lg:col-span-3 flex flex-col gap-4 h-full">
           <ResultsPanel
-            title="RESULTADOS"
             footerButton={{
               label: showDetails ? 'Ocultar Memória' : 'Memória de Cálculo',
               onClick: () => setShowDetails(!showDetails),

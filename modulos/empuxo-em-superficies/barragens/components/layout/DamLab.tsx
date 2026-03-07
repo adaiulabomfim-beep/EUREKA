@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Construction, Calculator, FileText, RotateCw, MoveVertical, Maximize, AlertCircle, ArrowDown } from 'lucide-react';
-import { DamType, DamSimulationConfig } from '../../types';
+import { DamType } from '../../core/types/DamType';
+import { DamSimulationConfig } from '../../core/interfaces/DamRendererProps';
 import { useDamSimulation } from '../../hooks/useDamSimulation';
-import { DamScene } from '../scene/DamScene';
+import { DamRenderer } from '../scene/DamRenderer';
 import { ResultsPanel, ResultsCard } from '../../../../../components/ResultsPanel';
-import { DAM_PRESETS } from '../../presets';
+import { DAM_PRESETS } from '../../core/shared/presets';
+import { damTypeRegistry } from '../../registry/damTypeRegistry';
 
 interface DamLabProps {
     onContextUpdate?: (ctx: string) => void;
@@ -112,28 +114,10 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
 
   // LOGIC
   useEffect(() => {
-    switch (damType) {
-        case DamType.GRAVITY: 
-            setInclinationAngle(90); 
-            setDamBaseWidth(Math.round(damHeight * 0.8)); 
-            setDamCrestWidth(Math.round(damHeight * 0.8 * 0.25 * 10)/10); 
-            break;
-        case DamType.EMBANKMENT: 
-            setInclinationAngle(25); 
-            setDamBaseWidth(Math.round(damHeight * 3)); 
-            setDamCrestWidth(Math.round(damHeight * 0.4 * 10)/10); 
-            break;
-        case DamType.ARCH: 
-            setInclinationAngle(90); 
-            setDamBaseWidth(Math.round(damHeight * 0.25 * 10)/10); 
-            setDamCrestWidth(Math.round(damHeight * 0.1 * 10)/10); 
-            break;
-        case DamType.BUTTRESS: 
-            setInclinationAngle(55); 
-            setDamBaseWidth(Math.round(damHeight * 0.8)); 
-            setDamCrestWidth(Math.round(damHeight * 0.1 * 10)/10); 
-            break;
-    }
+    const defaults = damTypeRegistry[damType].getDefaults(damHeight);
+    setInclinationAngle(defaults.inclinationAngle);
+    setDamBaseWidth(defaults.damBaseWidth);
+    setDamCrestWidth(defaults.damCrestWidth);
   }, [damType]); 
 
   const maxWaterLevel = damHeight + 5; 
@@ -229,11 +213,13 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
         {/* --- CENTER: SCENE --- */}
         <div className="lg:col-span-6 flex flex-col h-full bg-slate-50 rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20">
              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-10"></div>
-            <DamScene
+            <DamRenderer
+                key={damType}
                 damType={damType} damHeight={damHeight} damBaseWidth={damBaseWidth} damCrestWidth={damCrestWidth}
                 inclinationAngle={inclinationAngle} upstreamLevel={upstreamLevel} downstreamLevel={effectiveDownstreamLevel}
                 force={analyzedResults ? analyzedResults.forceData.FR_net : 0} 
                 s_cp={analyzedResults ? analyzedResults.forceData.s_cp_net : 0}
+                y_cp={analyzedResults ? analyzedResults.forceData.y_cp_net : 0}
                 up={analyzedResults ? analyzedResults.forceData.up : undefined}
                 down={analyzedResults ? analyzedResults.forceData.down : undefined}
                 isAnalyzed={!!analyzedResults}
@@ -246,7 +232,6 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
         {/* --- RIGHT SIDEBAR: RESULTS --- */}
         <div className="lg:col-span-3 flex flex-col gap-4 h-full">
           <ResultsPanel
-            title="RESULTADOS (POR METRO)"
             footerButton={{
               label: showDetails ? 'Ocultar Memória' : 'Memória de Cálculo',
               onClick: () => setShowDetails(!showDetails),

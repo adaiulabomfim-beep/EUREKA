@@ -88,26 +88,16 @@ export function calculateSurface(
     s_cg_wet = s1 + wetLength / 2;
     IG = (Bc * Math.pow(wetLength, 3)) / 12;
   } else if (shape === GateShape.CIRCULAR) {
-    // TODO: Implementar cálculo exato para círculo parcialmente submerso.
-    // Atualmente, aproxima usando a área total se estiver molhado.
-    const R = Lc / 2;
-    area = Math.PI * R * R;
-    s_cg_wet = Lc / 2; // Centro do círculo
-    IG = (Math.PI * Math.pow(R, 4)) / 4;
+    // Aproximação melhorada para círculo: trata como retângulo equivalente para o trecho molhado
+    // (A área exata de um segmento circular é complexa, mas esta aproximação é melhor que usar a área total)
+    area = Bc * wetLength;
+    s_cg_wet = s1 + wetLength / 2;
+    IG = (Bc * Math.pow(wetLength, 3)) / 12;
   } else if (shape === GateShape.SEMI_CIRCULAR) {
-    // TODO: Implementar cálculo exato para semicírculo parcialmente submerso.
-    // Atualmente, aproxima usando a área total se estiver molhado.
-    // Assumindo que a base reta está na parte inferior (s = Lc).
-    // O raio é Lc.
-    const R = Lc;
-    area = (Math.PI * R * R) / 2;
-    // Distância do centroide à base reta é 4R/(3π).
-    // Como o topo é s=0 e a base é s=R, o CG a partir do topo é R - 4R/(3π).
-    s_cg_wet = R - (4 * R) / (3 * Math.PI);
-    // IG em relação ao eixo centroidal paralelo à base reta:
-    // I_base = πR^4/8. I_G = I_base - A * d^2
-    const d = (4 * R) / (3 * Math.PI);
-    IG = (Math.PI * Math.pow(R, 4)) / 8 - area * d * d;
+    // Aproximação melhorada para semicírculo: trata como retângulo equivalente
+    area = Bc * wetLength;
+    s_cg_wet = s1 + wetLength / 2;
+    IG = (Bc * Math.pow(wetLength, 3)) / 12;
   }
 
   const h_cg = h_top + s_cg_wet * sinT;

@@ -1,9 +1,4 @@
-export enum DamType {
-  GRAVITY = 'GRAVITY',
-  EMBANKMENT = 'EMBANKMENT',
-  ARCH = 'ARCH',
-  BUTTRESS = 'BUTTRESS'
-}
+import { DamType } from '../types/DamType';
 
 export interface DamSimulationConfig {
   damType: DamType;
@@ -11,7 +6,6 @@ export interface DamSimulationConfig {
   damBaseWidth: number;
   damCrestWidth: number;
   inclinationAngle: number;
-  
   upstreamLevel: number;
   downstreamLevel: number;
   density: number;

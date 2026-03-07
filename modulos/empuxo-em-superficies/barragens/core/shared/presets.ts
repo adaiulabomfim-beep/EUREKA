@@ -1,4 +1,4 @@
-import { DamSimulationConfig, DamType } from './types';
+import { DamSimulationConfig, DamType } from '../types';
 
 export const DAM_PRESETS: Record<string, DamSimulationConfig> = {
   default: {

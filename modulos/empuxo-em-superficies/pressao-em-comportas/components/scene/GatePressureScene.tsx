@@ -102,7 +102,8 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
 
   // ===== VIEW =====
   const [showVectors, setShowVectors] = useState(true);
-  const [is3D, setIs3D] = useState(true);
+  const [showDimensions, setShowDimensions] = useState(false);
+  const [is3D, setIs3D] = useState(false);
 
   // Camera
   const [rotX, setRotX] = useState(25);
@@ -118,13 +119,14 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
   // ===== CONSTANTS =====
   const SVG_W = 900;
   const SVG_H = 520;
-  const ORIGIN_X = SVG_W * 0.52;
-  const ORIGIN_Y = SVG_H * 0.82;
+  const ORIGIN_X = SVG_W * 0.5;
+  const ORIGIN_Y = SVG_H * 0.88;
 
   const SCALE = useMemo(() => {
-    const maxDim = Math.max(damHeight, damBaseWidth, gateHeight, 20);
-    return Math.min(25, (SVG_H * 0.65) / maxDim);
-  }, [damHeight, damBaseWidth, gateHeight]);
+    const maxDim = Math.max(damHeight, damBaseWidth, gateHeight, 15);
+    const baseScale = Math.min(150, (SVG_H * 0.8) / maxDim);
+    return is3D ? baseScale * 1.2 : baseScale;
+  }, [damHeight, damBaseWidth, gateHeight, is3D]);
 
   const CHANNEL_WIDTH = 40;
 
@@ -271,11 +273,14 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     const dx = p.x - damBaseWidth / 2;
     const dy = p.y;
     const dz = p.z;
+    const cx = ORIGIN_X;
+    const cy = ORIGIN_Y;
+
     if (!is3D) {
-      return { x: ORIGIN_X + dx * SCALE + pan.x, y: ORIGIN_Y - dy * SCALE + pan.y, zDepth: 0 };
+      return { x: cx + dx * SCALE + pan.x, y: cy - dy * SCALE + pan.y, zDepth: 0 };
     }
     const r = rotate({ x: dx, y: dy, z: dz });
-    return { x: ORIGIN_X + r.x * SCALE + pan.x, y: ORIGIN_Y - r.y * SCALE + pan.y, zDepth: r.z };
+    return { x: cx + r.x * SCALE + pan.x, y: cy - r.y * SCALE + pan.y, zDepth: r.z };
   };
 
   const brightness = useCallback(
@@ -309,7 +314,8 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       hatchPattern?: string
     ): Face => {
       const proj = pts3.map(project);
-      const zDepth = proj.reduce((a, p) => a + p.zDepth, 0) / Math.max(1, proj.length);
+      // Usar o máximo zDepth (ponto mais próximo da câmera) ajuda a evitar que faces grandes fiquem atrás de faces menores
+      const zDepth = Math.max(...proj.map((p) => p.zDepth));
       let b = 1;
       let isFrontFacing = true;
       if (normal) {
@@ -387,7 +393,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
         }
       } else {
         // mantém sua extrusão segmentada para o arco (ok)
-        const segments = 16;
+        const segments = 64;
         const dz = zWidth / segments;
 
         faces.push(face(profile.map((p) => ({ x: p.x + xOffsetFn(zF), y: p.y, z: zF })), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: 1 }, kind, priority, faces.length, hatchPattern));
@@ -447,12 +453,13 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     // 1) Dam
     const damProfile = getDamProfile();
     const isEarth = damType === DamType.EMBANKMENT;
+    const isArch = damType === DamType.ARCH;
     const damFill = isEarth ? EARTH_FILL : CONCRETE_FILL;
-    const damStroke = isEarth ? EARTH_STROKE : CONCRETE_STROKE;
-    const damPattern = isEarth ? "url(#earthHatch)" : "url(#concretePattern)";
+    const damStroke = isEarth ? EARTH_STROKE : (isArch ? "none" : CONCRETE_STROKE);
+    const damPattern = isEarth ? "url(#earthHatch)" : (isArch ? undefined : "url(#concretePattern)");
 
     if (is3D) {
-      damFaces.push(...prism(damProfile, CHANNEL_WIDTH, damFill, 1, damStroke, 1.2, "DAM", archOffsetFn, damPattern));
+      damFaces.push(...prism(damProfile, CHANNEL_WIDTH, damFill, 1, isArch ? damFill : damStroke, isArch ? 0.1 : 1.2, "DAM", archOffsetFn, damPattern));
     } else {
       damFaces.push(face(damProfile.map((p) => ({ ...p, z: 0 })), damFill, 1, damStroke, 1.5, { x: 0, y: 0, z: 1 }, "DAM", 2, 0, damPattern));
     }
@@ -593,8 +600,8 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
         const profileB = getWaterProfileForZ(zB);
 
         // Front/Back faces
-        waterUpFaces.push(face(profileF.map((p) => ({ ...p, z: zF })), "url(#fluidDepthA)", 0.78, "none", 0, { x: 0, y: 0, z: 1 }, "WATER"));
-        waterUpFaces.push(face(profileB.map((p) => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 0.78, "none", 0, { x: 0, y: 0, z: -1 }, "WATER"));
+        waterUpFaces.push(face(profileF.map((p) => ({ ...p, z: zF })), "url(#fluidDepthA)", 1, "none", 0, { x: 0, y: 0, z: 1 }, "WATER"));
+        waterUpFaces.push(face(profileB.map((p) => ({ ...p, z: zB })).reverse(), "url(#fluidDepthA)", 1, "none", 0, { x: 0, y: 0, z: -1 }, "WATER"));
 
         // Top surface (+ ripple)
         const makeSurfaceStrip = (z1: number, z2: number) => {
@@ -609,8 +616,8 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
             { x: xContact1, y: upstreamLevel, z: z1 },
             { x: resFarX, y: upstreamLevel, z: z1 },
           ];
-          waterUpFaces.push(face(surfacePts, "url(#surfaceGradientA)", 0.6, "none", 0, { x: 0, y: 1, z: 0 }, "WATER"));
-          waterUpFaces.push(face(surfacePts, "url(#ripplePattern)", 0.35, "none", 0, { x: 0, y: 1, z: 0 }, "WATER"));
+          // Combinando gradiente e padrão na mesma face, opacidade reduzida
+          waterUpFaces.push(face(surfacePts, "url(#surfaceGradientA)", 1, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", 1, waterUpFaces.length));
         };
 
         if (archOffsetFn) {
@@ -638,7 +645,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
             { x: xBot2, y: 0, z: z2 },
             { x: resFarX, y: 0, z: z2 },
           ];
-          waterUpFaces.push(face(bottomPts, "url(#fluidDepthA)", 0.78, "none", 0, { x: 0, y: -1, z: 0 }, "WATER"));
+          waterUpFaces.push(face(bottomPts, "url(#fluidDepthA)", 1, "none", 0, { x: 0, y: -1, z: 0 }, "WATER"));
         };
 
         if (archOffsetFn) {
@@ -660,7 +667,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: resFarX, y: upstreamLevel, z: zB },
           { x: resFarX, y: upstreamLevel, z: zF },
         ];
-        waterUpFaces.push(face(leftPts, "url(#fluidDepthA)", 0.78, "none", 0, { x: -1, y: 0, z: 0 }, "WATER"));
+        waterUpFaces.push(face(leftPts, "url(#fluidDepthA)", 1, "none", 0, { x: -1, y: 0, z: 0 }, "WATER"));
 
         // ✅ Contato com a barragem: UMA face só (remove “faixas”)
         const offF = archOffsetFn ? archOffsetFn(zF) : 0;
@@ -676,7 +683,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: xTopF, y: upstreamLevel, z: zF },
           { x: xBotF, y: 0, z: zF },
         ];
-        waterUpFaces.push(face(contactPts, "url(#fluidDepthA)", 0.78, "none", 0, { x: 1, y: 0, z: 0 }, "WATER"));
+        waterUpFaces.push(face(contactPts, "url(#fluidDepthA)", 1, "none", 0, { x: 1, y: 0, z: 0 }, "WATER"));
       } else {
         const waterProfile: { x: number; y: number }[] = [];
         waterProfile.push({ x: resFarX, y: 0 });
@@ -686,7 +693,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
         }
         waterProfile.push({ x: resFarX, y: upstreamLevel });
         const xContact = getDamFaceX(upstreamLevel);
-        waterUpFaces.push(face(waterProfile.map((p) => ({ ...p, z: 0 })), "url(#fluidDepthA)", 0.85, WATER_LINE_COLOR, 1, { x: 0, y: 0, z: 1 }, "WATER"));
+        waterUpFaces.push(face(waterProfile.map((p) => ({ ...p, z: 0 })), "url(#fluidDepthA)", 1, WATER_LINE_COLOR, 1, { x: 0, y: 0, z: 1 }, "WATER"));
         waterUpFaces.push(face([{ x: resFarX, y: upstreamLevel, z: 0 }, { x: xContact, y: upstreamLevel, z: 0 }], "url(#ripplePattern)", 1, "rgba(255,255,255,0.6)", 2, { x: 0, y: 0, z: 1 }, "WATER"));
       }
     }
@@ -712,8 +719,8 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
         const zB = -CHANNEL_WIDTH / 2;
 
         // Front/Back
-        waterDownFaces.push(face(waterProfile.map((p) => ({ ...p, z: zF })), "url(#fluidDepthB)", 0.78, "none", 0, { x: 0, y: 0, z: 1 }, "WATER"));
-        waterDownFaces.push(face(waterProfile.map((p) => ({ ...p, z: zB })).reverse(), "url(#fluidDepthB)", 0.78, "none", 0, { x: 0, y: 0, z: -1 }, "WATER"));
+        waterDownFaces.push(face(waterProfile.map((p) => ({ ...p, z: zF })), "url(#fluidDepthB)", 1, "none", 0, { x: 0, y: 0, z: 1 }, "WATER"));
+        waterDownFaces.push(face(waterProfile.map((p) => ({ ...p, z: zB })).reverse(), "url(#fluidDepthB)", 1, "none", 0, { x: 0, y: 0, z: -1 }, "WATER"));
 
         // Top (+ ripple)
         const xContactTop = contactPts[contactPts.length - 1].x;
@@ -723,8 +730,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: resRightFarX, y: downstreamLevel, z: zB },
           { x: xContactTop, y: downstreamLevel, z: zB },
         ];
-        waterDownFaces.push(face(surfacePts, "url(#surfaceGradientB)", 0.6, "none", 0, { x: 0, y: 1, z: 0 }, "WATER"));
-        waterDownFaces.push(face(surfacePts, "url(#ripplePattern)", 0.35, "none", 0, { x: 0, y: 1, z: 0 }, "WATER"));
+        waterDownFaces.push(face(surfacePts, "url(#surfaceGradientB)", 1, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", 1, waterDownFaces.length, "url(#ripplePattern)"));
 
         // Bottom
         const xContactBot = contactPts[0].x;
@@ -734,7 +740,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: resRightFarX, y: 0, z: zF },
           { x: xContactBot, y: 0, z: zF },
         ];
-        waterDownFaces.push(face(bottomPts, "url(#fluidDepthB)", 0.78, "none", 0, { x: 0, y: -1, z: 0 }, "WATER"));
+        waterDownFaces.push(face(bottomPts, "url(#fluidDepthB)", 1, "none", 0, { x: 0, y: -1, z: 0 }, "WATER"));
 
         // Far wall
         const rightPts = [
@@ -743,7 +749,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: resRightFarX, y: downstreamLevel, z: zF },
           { x: resRightFarX, y: downstreamLevel, z: zB },
         ];
-        waterDownFaces.push(face(rightPts, "url(#fluidDepthB)", 0.78, "none", 0, { x: 1, y: 0, z: 0 }, "WATER"));
+        waterDownFaces.push(face(rightPts, "url(#fluidDepthB)", 1, "none", 0, { x: 1, y: 0, z: 0 }, "WATER"));
 
         // ✅ Contato com a barragem: UMA face só (remove “faixas”)
         const xTop = getDamBackX(downstreamLevel);
@@ -754,10 +760,10 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: xTop, y: downstreamLevel, z: zF },
           { x: xBot, y: 0, z: zF },
         ];
-        waterDownFaces.push(face(contact, "url(#fluidDepthB)", 0.78, "none", 0, { x: -1, y: 0, z: 0 }, "WATER"));
+        waterDownFaces.push(face(contact, "url(#fluidDepthB)", 1, "none", 0, { x: -1, y: 0, z: 0 }, "WATER"));
       } else {
         const xContactBack = contactPts[contactPts.length - 1].x;
-        waterDownFaces.push(face(waterProfile.map((p) => ({ ...p, z: 0 })), "url(#fluidDepthB)", 0.85, WATER_LINE_COLOR, 1, { x: 0, y: 0, z: 1 }, "WATER"));
+        waterDownFaces.push(face(waterProfile.map((p) => ({ ...p, z: 0 })), "url(#fluidDepthB)", 1, WATER_LINE_COLOR, 1, { x: 0, y: 0, z: 1 }, "WATER"));
         waterDownFaces.push(face([{ x: xContactBack, y: downstreamLevel, z: 0 }, { x: resRightFarX, y: downstreamLevel, z: 0 }], "url(#ripplePattern)", 1, "rgba(255,255,255,0.6)", 2, { x: 0, y: 0, z: 1 }, "WATER"));
       }
     }
@@ -809,8 +815,17 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       return project({ x: xTop + s * tx, y: yTop + s * ty, z: 0 });
     };
 
+    const zGate = Math.min(gateWidth, CHANNEL_WIDTH);
+    const zFace = zGate / 2;
+
+    const pointOnGateFace = (s: number) => {
+      const tx = -cos;
+      const ty = -sin;
+      return project({ x: xTop + s * tx, y: yTop + s * ty, z: zFace });
+    };
+
     const pushArrow = (pStart: any, pEnd: any, color: string, val?: string, isResultant = false) => {
-      const marker = color === "#ef4444" ? "url(#arrowhead-red)" : color === "#3b82f6" ? "url(#arrowhead-blue)" : color === "#10b981" ? "url(#arrowhead-green)" : "url(#arrowhead-weight)";
+      const marker = color === "#1e40af" ? "url(#arrowhead-red)" : color === "#3b82f6" ? "url(#arrowhead-blue)" : color === "#10b981" ? "url(#arrowhead-green)" : "url(#arrowhead-weight)";
 
       const dx = pEnd.x - pStart.x;
       const dy = pEnd.y - pStart.y;
@@ -823,7 +838,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
 
       return (
         <g key={`vec-${Math.random()}`}>
-          <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke={color} strokeWidth={isResultant ? 3.5 : 1.6} markerEnd={marker} opacity={isResultant ? 1 : 0.45} />
+          <line x1={pStart.x} y1={pStart.y} x2={pEnd.x} y2={pEnd.y} stroke={color} strokeWidth={isResultant ? 3.5 : 1.6} markerEnd={marker} opacity={1} />
           <circle cx={pEnd.x} cy={pEnd.y} r={isResultant ? 3 : 1.6} fill={color} />
           {val && (
             <g transform={`translate(${labelX}, ${labelY})`}>
@@ -840,7 +855,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     const vecs: any[] = [];
     const clampS = (s: number) => Math.max(0, Math.min(gateHeight, s));
 
-    const pCP = pointOnGate(clampS(s_cp));
+    const pCP = pointOnGateFace(clampS(s_cp));
 
     const nx = Math.sin(th);
     const ny = -Math.cos(th);
@@ -851,12 +866,12 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     const start3D = {
       x: xTop + clampS(s_cp) * -cos - nx * (vecLen / SCALE),
       y: yTop + clampS(s_cp) * -sin - ny * (vecLen / SCALE),
-      z: 0,
+      z: zFace,
     };
     const pStart = project(start3D);
 
     if (forceMagnitude > 1e-3) {
-      vecs.push(pushArrow(pStart, pCP, "#ef4444", `${(force / 1000).toFixed(1)} kN/m`, true));
+      vecs.push(pushArrow(pStart, pCP, "#1e40af", `${(force / 1000).toFixed(1)} kN/m`, true));
     }
 
     // Hinge
@@ -910,7 +925,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       const s = (i / (N - 1)) * gateHeight;
       const pEnd = pointOnGate(s);
       const pStart = project({ x: xTop + s * -cos - nx * (20 / SCALE), y: yTop + s * -sin - ny * (20 / SCALE), z: 0 });
-      vecs.push(pushArrow(pStart, pEnd, "#ef4444"));
+      vecs.push(pushArrow(pStart, pEnd, "#1e40af"));
     }
 
     return <g className="pointer-events-none">{vecs}</g>;
@@ -1059,30 +1074,35 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
       <svg width="100%" height="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="xMidYMid meet" className="flex-1 touch-none">
         <defs>
           {/* Água */}
-          <linearGradient id="fluidDepthA" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#0284c7" stopOpacity="0.85" />
+          <linearGradient id="fluidDepthA" gradientUnits="userSpaceOnUse" x1="0" y1="150" x2="0" y2="450">
+            <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.6" />
           </linearGradient>
-          <linearGradient id="fluidDepthB" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.38" />
-            <stop offset="100%" stopColor="#0284c7" stopOpacity="0.78" />
+          <linearGradient id="fluidDepthB" gradientUnits="userSpaceOnUse" x1="0" y1="150" x2="0" y2="450">
+            <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.8" />
           </linearGradient>
-          <linearGradient id="surfaceGradientA" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.25" />
+          <linearGradient id="surfaceGradientA" gradientUnits="userSpaceOnUse" x1="100" y1="100" x2="700" y2="500">
+            <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.4" />
+            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.5" />
           </linearGradient>
-          <linearGradient id="surfaceGradientB" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.2" />
+          <linearGradient id="surfaceGradientB" gradientUnits="userSpaceOnUse" x1="100" y1="100" x2="700" y2="500">
+            <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.35" />
+            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.16" />
+            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.45" />
           </linearGradient>
 
           {/* Concreto */}
-          <pattern id="concretePattern" width="50" height="50" patternUnits="userSpaceOnUse">
-            <circle cx="10" cy="12" r="1.2" fill="#475569" opacity="0.35" />
-            <circle cx="32" cy="20" r="1.6" fill="#475569" opacity="0.28" />
-            <circle cx="18" cy="38" r="1.1" fill="#475569" opacity="0.32" />
-            <circle cx="42" cy="42" r="1.3" fill="#475569" opacity="0.26" />
-            <circle cx="25" cy="28" r="0.9" fill="#475569" opacity="0.25" />
+          <filter id="concreteNoise">
+            <feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="3" stitchTiles="stitch" />
+          </filter>
+          <pattern id="concretePattern" width="64" height="64" patternUnits="userSpaceOnUse">
+            <rect width="64" height="64" fill="#a3a3a3" />
+            <rect width="64" height="64" filter="url(#concreteNoise)" opacity="0.25" />
+            <path d="M10,20 Q15,15 20,20 T30,20" stroke="#525252" strokeWidth="0.5" fill="none" opacity="0.3" />
+            <circle cx="45" cy="50" r="1.5" fill="#525252" opacity="0.4" />
+            <circle cx="10" cy="50" r="1" fill="#e5e5e5" opacity="0.4" />
           </pattern>
 
           {/* Terra */}
@@ -1103,7 +1123,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           </pattern>
 
           <marker id="arrowhead-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <polygon points="0 0, 6 3, 0 6" fill="#ef4444" />
+            <polygon points="0 0, 6 3, 0 6" fill="#1e40af" />
           </marker>
           <marker id="arrowhead-blue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
             <polygon points="0 0, 6 3, 0 6" fill="#3b82f6" />

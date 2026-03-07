@@ -559,7 +559,7 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
           </filter>
 
           <marker id="arrow-red" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
-            <path d="M0,0 L6,2 L0,4 Z" fill="#ef4444" />
+            <path d="M0,0 L6,2 L0,4 Z" fill="#1e40af" />
           </marker>
 
           <marker id="arrow-green" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
@@ -851,14 +851,14 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
                   y1={center.y}
                   x2={center.x}
                   y2={center.y + arrowLenP}
-                  stroke="#ef4444"
+                  stroke="#1e40af"
                   strokeWidth="3"
                   markerEnd="url(#arrow-red)"
                 />
-                <circle cx={center.x} cy={center.y} r={3} fill="#ef4444" />
+                <circle cx={center.x} cy={center.y} r={3} fill="#1e40af" />
                 <g transform={`translate(${center.x + 10}, ${center.y + arrowLenP / 2})`}>
                   <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
-                  <text x="12" y="4" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="bold">
+                  <text x="12" y="4" textAnchor="middle" fill="#1e40af" fontSize="12" fontWeight="bold">
                     P
                   </text>
                 </g>
@@ -906,7 +906,7 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
                   fluidSurfaceY + pan.y,
                   originalFluidSurfaceY + pan.y,
                   `Δh = ${deltaH_cm.toFixed(1)}cm`,
-                  "#ef4444"
+                  "#1e40af"
                 )}
                 {enableTwoFluids &&
                   renderDimensionLine(

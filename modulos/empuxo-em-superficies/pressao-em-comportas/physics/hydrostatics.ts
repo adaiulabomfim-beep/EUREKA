@@ -43,65 +43,19 @@ export type PlaneSideResult = {
 export function hydroPlaneSide(
   gamma: number,
   sinTheta: number,
-  A_full: number,
-  ybar_full: number,
-  Ixx_full_about_centroid: number,
-  yFull: number,          // "altura" total ao longo da superfície (m)
-  h0: number              // profundidade do topo (m) em relação ao nível livre (gauge)
+  A_wet: number,         // Área molhada específica da geometria
+  ybar: number,          // CG molhado específico da geometria
+  Ixx: number,           // Inércia específica da geometria
+  yFull: number,         // "altura" total ao longo da superfície (m)
+  h0: number             // profundidade do topo (m) em relação ao nível livre (gauge)
 ): PlaneSideResult {
-  // 1) definir faixa molhada: onde h(y) > 0
-  // h(y)=h0 + y*sinθ > 0  =>  y > -h0/sinθ
-  const yStartWet = Math.max(0, safeDiv(-h0, sinTheta, 0));
-  const yEndWet = yFull;
-
-  const yWet = Math.max(0, yEndWet - yStartWet);
-
-  if (yWet <= 0 || A_full <= 0) {
-    return {
-      yWet: 0,
-      A_wet: 0,
-      ybar: 0,
-      hbar: 0,
-      p_top: 0,
-      p_bot: 0,
-      F: 0,
-      y_cp: 0,
-      h_cp: 0,
-      M_top: 0
-    };
-  }
-
-  /**
-   * 2) Recorte didático (e simples) para sua primeira versão:
-   * Para o modo "retângulo", esse recorte é exato se você calcular A_full, ybar_full e Ixx_full
-   * para o retângulo e depois substituir por A_wet = b*yWet, ybar = yStartWet + yWet/2, Ixx = b*yWet^3/12.
-   *
-   * Como seu projeto tem múltiplas formas, a forma correta é:
-   * - ter funções em shapes.ts/wetting.ts que devolvam A_wet, ybar_wet e Ixx_wet para o trecho molhado.
-   *
-   * Aqui, para não quebrar tudo agora, vou fazer um fallback linear:
-   * - escala de área proporcional ao comprimento molhado
-   * - centroid desloca para o meio do trecho molhado
-   * - Ixx proporcional ao cubo do comprimento (apenas aproximação)
-   *
-   * Isso já permite jusante + diagrama. Depois a gente troca pelo recorte exato por forma.
-   */
-  const wetRatio = yWet / yFull;
-  const A_wet = A_full * wetRatio;
-
-  // CG aproximado: no meio do trecho molhado
-  const ybar = yStartWet + yWet / 2;
-
-  // Ixx aproximado: escala ~ (yWet/yFull)^3
-  const Ixx = Ixx_full_about_centroid * Math.pow(wetRatio, 3);
-
-  // 3) profundidade vertical no CG e pressões
+  // 1) profundidade vertical no CG e pressões
   const hbar = h0 + ybar * sinTheta;
   const p_cg = gamma * Math.max(0, hbar);
 
   // Pressão no topo e na base do trecho molhado
-  const h_top = h0 + yStartWet * sinTheta;
-  const h_bot = h0 + yEndWet * sinTheta;
+  const h_top = h0; // h(y=0)
+  const h_bot = h0 + yFull * sinTheta; // h(y=yFull)
   const p_top = gamma * Math.max(0, h_top);
   const p_bot = gamma * Math.max(0, h_bot);
 
@@ -111,21 +65,16 @@ export function hydroPlaneSide(
 
   // 5) Centro de pressão ao longo da superfície
   // y_cp = ybar + Ixx/(A*ybar_eff)
-  // Aqui ybar_eff deve ser medido a partir da linha onde p=0.
-  // Se h0>=0, p=0 no topo (y=0). Se h0<0, p=0 ocorre em y = -h0/sinθ (= yStartWet).
-  // Então usamos y' = ybar - y0
-  const y0 = yStartWet;
-  const ybar_eff = Math.max(1e-9, ybar - y0);
+  const ybar_eff = Math.max(1e-9, ybar);
 
-  const y_cp_local = ybar_eff + safeDiv(Ixx, A_wet * ybar_eff, 0);
-  const y_cp = y0 + y_cp_local;
+  const y_cp = ybar + safeDiv(Ixx, A_wet * ybar_eff, 0);
 
   const h_cp = h0 + y_cp * sinTheta;
 
   // momento em relação ao topo (para composição): M = F * y_cp
   const M_top = F * y_cp;
 
-  return { yWet, A_wet, ybar, hbar, p_top, p_bot, F, y_cp, h_cp, M_top };
+  return { yWet: yFull, A_wet, ybar, hbar, p_top, p_bot, F, y_cp, h_cp, M_top };
 }
 
 /**
