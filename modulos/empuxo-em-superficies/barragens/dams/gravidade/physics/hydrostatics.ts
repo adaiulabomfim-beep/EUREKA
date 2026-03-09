@@ -1,4 +1,4 @@
-import { calculateNetForce } from '../../../../core/shared/damHydrostatics';
+import { calculateNetForce } from '../../../core/shared/damHydrostatics';
 
 export const calculateGravityHydrostatics = (
   damHeight: number,

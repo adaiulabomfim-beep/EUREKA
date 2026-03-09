@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Construction, Calculator, FileText, RotateCw, MoveVertical, Maximize, AlertCircle, ArrowDown } from 'lucide-react';
 import { DamType } from '../../core/types/DamType';
-import { DamSimulationConfig } from '../../core/interfaces/DamRendererProps';
+import { DamSimulationConfig } from '../../core/interfaces/DamSimulationConfig';
 import { useDamSimulation } from '../../hooks/useDamSimulation';
 import { DamRenderer } from '../scene/DamRenderer';
 import { ResultsPanel, ResultsCard } from '../../../../../components/ResultsPanel';

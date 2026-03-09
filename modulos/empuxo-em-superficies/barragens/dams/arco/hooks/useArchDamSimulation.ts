@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { DamViewProps } from '../../../core/interfaces';
+import { DamViewProps } from '../../../core/interfaces/DamRendererProps';
 import { buildArchDam } from '../physics/geometry';
 
 const CONCRETE_FILL = "#9ca3af";

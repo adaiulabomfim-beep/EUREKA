@@ -475,7 +475,7 @@ export const TankScene: React.FC<TankSceneProps> = (props) => {
 
       {/* botão soltar bloco / reiniciar no canto inferior direito */}
       <div 
-        className="absolute bottom-20 right-6 z-30"
+        className="absolute bottom-6 right-6 z-30"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {!isSimulating ? (

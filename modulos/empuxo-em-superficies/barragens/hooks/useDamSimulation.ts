@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { DamSimulationConfig } from '../core/interfaces/DamRendererProps';
+import { DamSimulationConfig } from '../core/interfaces/DamSimulationConfig';
 import { calculateNetForce } from '../core/shared/damHydrostatics';
 
 export const useDamSimulation = (config: DamSimulationConfig) => {

@@ -1,4 +1,5 @@
-import { DamSimulationConfig, DamType } from '../types';
+import { DamSimulationConfig } from '../interfaces/DamSimulationConfig';
+import { DamType } from '../types/DamType';
 
 export const DAM_PRESETS: Record<string, DamSimulationConfig> = {
   default: {

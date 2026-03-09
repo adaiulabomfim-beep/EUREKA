@@ -31,7 +31,7 @@ const App: React.FC = () => {
           >
             {/* Header */}
             <header className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 text-white shadow-lg sticky top-0 z-50">
-              <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
                     <Waves className="w-6 h-6 text-white" />
@@ -65,7 +65,7 @@ const App: React.FC = () => {
 
             {/* Navigation Tabs */}
             <div className="bg-white/75 backdrop-blur-md border-b border-blue-100/70 shadow-sm z-40 sticky top-16">
-              <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <nav className="flex space-x-2 py-2 overflow-x-auto custom-scrollbar" aria-label="Tabs">
                   <button
                     onClick={() => setCurrentMode(SimulationMode.FALLING_BODY)}
@@ -131,7 +131,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Main Content Area */}
-            <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Section Title */}
                 <div className="mb-8">

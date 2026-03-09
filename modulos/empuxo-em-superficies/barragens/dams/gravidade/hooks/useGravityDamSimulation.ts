@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { DamViewProps } from '../../../core/interfaces';
+import { DamViewProps } from '../../../core/interfaces/DamRendererProps';
 import { buildGravityDam } from '../physics/geometry';
 import { getDamXAtYGeneric } from '../../../core/shared/geometryUtils';
 
