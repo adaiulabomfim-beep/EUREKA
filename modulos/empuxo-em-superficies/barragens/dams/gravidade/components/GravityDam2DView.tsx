@@ -43,7 +43,7 @@ export const GravityDam2DView: React.FC<GravityDam2DViewProps> = (props) => {
     [damBaseWidth]
   );
 
-  const { worldGeometry, getDamXAtY, profile } = useGravityDamSimulation(
+  const { worldGeometry, getDamXAtY, profile, hydrostatics, stability } = useGravityDamSimulation(
     {
       damHeight,
       damBaseWidth,

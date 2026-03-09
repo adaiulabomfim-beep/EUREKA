@@ -91,7 +91,7 @@ export const prism = (
       const nx = dy / mag;
       const ny = -dx / mag;
 
-      faces.push(face([p1_z1, p2_z1, p2_z2, p1_z2], fill, opacity, fill, 1, { x: nx, y: ny, z: 0 }, kind, hatchPattern, p));
+      faces.push(face([p1_z1, p2_z1, p2_z2, p1_z2], fill, opacity, stroke, strokeWidth, { x: nx, y: ny, z: 0 }, kind, hatchPattern, p));
 
       // Draw longitudinal edges for the crest
       if (i === profile.length - 1) {

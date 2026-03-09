@@ -1,21 +1,24 @@
 import { useMemo } from 'react';
 import { DamSimulationConfig } from '../core/interfaces/DamSimulationConfig';
+import { calculateGravityHydrostatics } from '../dams/gravidade/physics/hydrostatics';
+import { calculateGravityStability } from '../dams/gravidade/physics/stability';
 import { calculateNetForce } from '../core/shared/damHydrostatics';
 
 export const useDamSimulation = (config: DamSimulationConfig) => {
-  // We avoid conditionally calling hooks by moving the useMemo here
-  // and calling the simulation logic inside it.
-  // Currently, all dam types use the same simulation logic, but if they
-  // diverge in the future, we can call specific functions (not hooks) here.
-  const { upstreamLevel, downstreamLevel, density, gravity, damHeight, inclinationAngle } = config;
+  const { upstreamLevel, downstreamLevel, density, gravity, damHeight, inclinationAngle, damBaseWidth, damCrestWidth } = config;
 
   return useMemo(() => {
-    // If we want to use specific simulation logic per dam type in the future,
-    // we would call a regular function from the registry here, e.g.:
-    // return damTypeRegistry[config.damType].simulate(config);
-    
     const gamma = density * gravity;
+    
+    if (config.damType === 'GRAVITY') {
+        const forceData = calculateGravityHydrostatics(damHeight, inclinationAngle, upstreamLevel, downstreamLevel, gamma);
+        const stabilityData = calculateGravityStability(damHeight, damBaseWidth, damCrestWidth, upstreamLevel, downstreamLevel, forceData.FR_net, forceData.y_cp_net);
+        
+        return { forceData, stabilityData };
+    }
+    
+    // Fallback for other types
     const forceData = calculateNetForce(damHeight, inclinationAngle, upstreamLevel, downstreamLevel, gamma);
     return { forceData };
-  }, [upstreamLevel, downstreamLevel, density, gravity, damHeight, inclinationAngle, config.damType]);
+  }, [upstreamLevel, downstreamLevel, density, gravity, damHeight, inclinationAngle, damBaseWidth, damCrestWidth, config.damType]);
 };

@@ -63,6 +63,7 @@ export const GravityDam3DView: React.FC<DamRendererProps & { is3D: boolean, setI
       const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
       
       // Visibility factor: 0 to 1 based on dot product with camera view direction (0,0,1)
+      if (rotatedNormal.z < 0) return;
       const visibilityFactor = Math.max(0.5, rotatedNormal.z);
 
       // Force direction should be pointing INTO the dam (opposite to normal)

@@ -74,6 +74,7 @@ export const ArchDam3DView: React.FC<DamRendererProps & { is3D: boolean, setIs3D
       const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
       
       // Visibility factor: 0 to 1 based on dot product with camera view direction (0,0,1)
+      if (rotatedNormal.z < 0) return;
       const visibilityFactor = Math.max(0.5, rotatedNormal.z);
 
       let finalMag = magWorld;

@@ -253,29 +253,60 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
                 {/* Center of Pressure Depth */}
                 <ResultsCard
                   title="Centro de Pressão (CP)"
-                  value={analyzedResults.forceData.s_cp_net.toFixed(2)}
+                  value={analyzedResults.forceData.y_cp_net.toFixed(2)}
                   unit="m"
                   theme="cyan"
                   icon={MoveVertical}
-                  secondaryValue="Posição ao longo da face (da superfície)"
+                  secondaryValue="Altura vertical a partir do fundo"
                 />
 
-                {/* Geometry Properties */}
+                {/* New Hydrostatic Cards */}
+                {'p_max_up' in analyzedResults.forceData && (
+                  <ResultsCard
+                    title="Pressão Máxima (Pé)"
+                    value={(analyzedResults.forceData.p_max_up / 1000).toFixed(2)}
+                    unit="kPa"
+                    theme="blue"
+                    icon={AlertCircle}
+                  />
+                )}
+                
                 <ResultsCard
-                  title="Área Molhada (Montante)"
+                  title="Área Molhada"
                   value={analyzedResults.forceData.up.area.toFixed(2)}
                   unit="m²/m"
                   theme="slate"
                   icon={Maximize}
                 />
-                
-                <ResultsCard
-                  title="Área Molhada (Jusante)"
-                  value={analyzedResults.forceData.down.area.toFixed(2)}
-                  unit="m²/m"
-                  theme="slate"
-                  icon={Maximize}
-                />
+
+                {/* Stability Cards */}
+                {analyzedResults.stabilityData && (
+                    <>
+                        <ResultsCard
+                        title="Peso Próprio"
+                        value={(analyzedResults.stabilityData.weight / 1000).toFixed(2)}
+                        unit="kN/m"
+                        theme="slate"
+                        icon={Construction}
+                        />
+
+                        <ResultsCard
+                        title="FS Tombamento"
+                        value={analyzedResults.stabilityData.fs_tomb.toFixed(2)}
+                        unit=""
+                        theme={analyzedResults.stabilityData.fs_tomb >= 2 ? "green" : analyzedResults.stabilityData.fs_tomb >= 1.5 ? "amber" : "red"}
+                        icon={RotateCw}
+                        />
+                        
+                        <ResultsCard
+                        title="FS Deslizamento"
+                        value={analyzedResults.stabilityData.fs_desl.toFixed(2)}
+                        unit=""
+                        theme={analyzedResults.stabilityData.fs_desl >= 1.5 ? "green" : "red"}
+                        icon={RotateCw}
+                        />
+                    </>
+                )}
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60 p-4 py-20">

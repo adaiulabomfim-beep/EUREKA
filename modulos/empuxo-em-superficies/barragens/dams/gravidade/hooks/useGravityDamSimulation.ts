@@ -2,6 +2,8 @@ import { useMemo, useCallback } from 'react';
 import { DamViewProps } from '../../../core/interfaces/DamRendererProps';
 import { buildGravityDam } from '../physics/geometry';
 import { getDamXAtYGeneric } from '../../../core/shared/geometryUtils';
+import { calculateGravityHydrostatics } from '../physics/hydrostatics';
+import { calculateGravityStability } from '../physics/stability';
 
 const CONCRETE_FILL = "#9ca3af";
 const CONCRETE_STROKE = "#334155";
@@ -26,6 +28,14 @@ export const useGravityDamSimulation = (props: DamViewProps, is3D: boolean) => {
     () => buildGravityDam(damHeight, damBaseWidth, damCrestWidth, inclinationAngle),
     [damHeight, damBaseWidth, damCrestWidth, inclinationAngle]
   );
+
+  const hydrostatics = useMemo(() => {
+    return calculateGravityHydrostatics(damHeight, inclinationAngle, upstreamLevel, downstreamLevel, 9810);
+  }, [damHeight, inclinationAngle, upstreamLevel, downstreamLevel]);
+
+  const stability = useMemo(() => {
+    return calculateGravityStability(damHeight, damBaseWidth, damCrestWidth, upstreamLevel, downstreamLevel, hydrostatics.FR_net, hydrostatics.y_cp_net);
+  }, [damHeight, damBaseWidth, damCrestWidth, upstreamLevel, downstreamLevel, hydrostatics.FR_net, hydrostatics.y_cp_net]);
 
   const getDamXAtY = useCallback(
     (y: number, side: "UPSTREAM" | "DOWNSTREAM") => {
@@ -197,5 +207,5 @@ export const useGravityDamSimulation = (props: DamViewProps, is3D: boolean) => {
     getDamXAtY,
   ]);
 
-  return { worldGeometry, getDamXAtY, profile };
+  return { worldGeometry, getDamXAtY, profile, hydrostatics, stability };
 };

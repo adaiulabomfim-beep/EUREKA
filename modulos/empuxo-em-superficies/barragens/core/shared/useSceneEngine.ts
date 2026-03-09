@@ -253,7 +253,13 @@ export const useSceneEngine = (
   }, []);
 
   const renderedFaces = useMemo(() => {
-    const projected: Face[] = worldGeometry.map((wf, index) => {
+    const projected: Face[] = [];
+    worldGeometry.forEach((wf, index) => {
+      if (wf.normal) {
+        const rotatedNormal = rotate(wf.normal);
+        if (rotatedNormal.z < 0) return;
+      }
+
       const proj = wf.pts3.map(project);
       // Usar o máximo zDepth (ponto mais próximo da câmera) ajuda a evitar que faces grandes fiquem atrás de faces menores
       const zDepth = Math.max(...proj.map((p) => p.zDepth));
@@ -275,7 +281,7 @@ export const useSceneEngine = (
         }
       }
 
-      return {
+      projected.push({
         id: index,
         pts: proj.map((p) => ({ x: p.x, y: p.y })),
         fill: fill,
@@ -287,7 +293,7 @@ export const useSceneEngine = (
         kind: wf.kind,
         hatchPattern: hatchPattern,
         priority: wf.priority ?? 0,
-      };
+      });
     });
 
     projected.sort((a, b) => {
