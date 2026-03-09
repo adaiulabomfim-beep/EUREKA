@@ -178,7 +178,7 @@ export const DamLab: React.FC<DamLabProps> = ({ onContextUpdate }) => {
                         </div>
                         <div>
                             <label className={labelClass}>Largura da Crista (m)</label>
-                            <NumberInput value={damCrestWidth} min={1} max={100} onChange={setDamCrestWidth} />
+                            <NumberInput value={damCrestWidth} min={0} max={100} onChange={setDamCrestWidth} />
                         </div>
                      </div>
                  </div>

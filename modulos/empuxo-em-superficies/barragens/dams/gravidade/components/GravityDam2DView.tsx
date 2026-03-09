@@ -148,7 +148,7 @@ export const GravityDam2DView: React.FC<GravityDam2DViewProps> = (props) => {
         color,
         isResultant,
         val: val || '',
-        opacity: isResultant ? 1 : 0.60,
+        opacity: isResultant ? 1 : 0.85,
         strokeWidth: isResultant ? 4 : 1.5,
       });
     };
@@ -228,7 +228,7 @@ export const GravityDam2DView: React.FC<GravityDam2DViewProps> = (props) => {
     upstreamLevel,
     downstreamLevel,
     force,
-    s_cp,
+    props.y_cp,
     up,
     damHeight,
     getDamXAtY,
@@ -238,6 +238,138 @@ export const GravityDam2DView: React.FC<GravityDam2DViewProps> = (props) => {
   ]);
 
   const originProj = project({ x: 0, y: 0, z: 0 });
+
+  const renderDimensions = () => {
+    if (is3D) return null;
+
+    const dims = [];
+
+    const drawDim = (
+      key: string,
+      p1World: { x: number; y: number },
+      p2World: { x: number; y: number },
+      text: string,
+      offsetPx: { x: number; y: number },
+      textOffsetPx: { x: number; y: number } = { x: 0, y: 0 }
+    ) => {
+      const p1 = project({ x: p1World.x, y: p1World.y, z: 0 });
+      const p2 = project({ x: p2World.x, y: p2World.y, z: 0 });
+      const p1Off = { x: p1.x + offsetPx.x, y: p1.y + offsetPx.y };
+      const p2Off = { x: p2.x + offsetPx.x, y: p2.y + offsetPx.y };
+
+      return (
+        <g key={key} stroke="#475569" strokeWidth="1.5" fill="none" opacity="0.8">
+          <line x1={p1.x} y1={p1.y} x2={p1Off.x} y2={p1Off.y} strokeDasharray="3 3" opacity="0.5" />
+          <line x1={p2.x} y1={p2.y} x2={p2Off.x} y2={p2Off.y} strokeDasharray="3 3" opacity="0.5" />
+          
+          <line 
+            x1={p1Off.x} y1={p1Off.y} 
+            x2={p2Off.x} y2={p2Off.y} 
+            markerStart="url(#arrow)" 
+            markerEnd="url(#arrow)" 
+          />
+          
+          <text
+            x={(p1Off.x + p2Off.x) / 2 + textOffsetPx.x}
+            y={(p1Off.y + p2Off.y) / 2 + textOffsetPx.y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#334155"
+            fontSize="12"
+            fontWeight="bold"
+            stroke="none"
+          >
+            {text}
+          </text>
+        </g>
+      );
+    };
+
+    // Altura da Barragem
+    dims.push(
+      drawDim(
+        'damHeight',
+        { x: toWorldX(getDamXAtY(0, 'DOWNSTREAM')), y: 0 },
+        { x: toWorldX(getDamXAtY(damHeight, 'DOWNSTREAM')), y: damHeight },
+        `${damHeight.toFixed(1)}m`,
+        { x: 60, y: 0 },
+        { x: 30, y: 0 }
+      )
+    );
+
+    // Largura da Base
+    dims.push(
+      drawDim(
+        'damBase',
+        { x: toWorldX(getDamXAtY(0, 'UPSTREAM')), y: 0 },
+        { x: toWorldX(getDamXAtY(0, 'DOWNSTREAM')), y: 0 },
+        `${damBaseWidth.toFixed(1)}m`,
+        { x: 0, y: 40 },
+        { x: 0, y: 15 }
+      )
+    );
+
+    // Largura da Crista
+    if (damCrestWidth > 0) {
+      dims.push(
+        drawDim(
+          'damCrest',
+          { x: toWorldX(getDamXAtY(damHeight, 'UPSTREAM')), y: damHeight },
+          { x: toWorldX(getDamXAtY(damHeight, 'DOWNSTREAM')), y: damHeight },
+          `${damCrestWidth.toFixed(1)}m`,
+          { x: 0, y: -40 },
+          { x: 0, y: -15 }
+        )
+      );
+    }
+
+    // Nível de Água a Montante
+    if (upstreamLevel > 0) {
+      const xBase = toWorldX(getDamXAtY(0, 'UPSTREAM'));
+      dims.push(
+        drawDim(
+          'upstreamLevel',
+          { x: xBase, y: 0 },
+          { x: xBase, y: upstreamLevel },
+          `NA=${upstreamLevel.toFixed(1)}m`,
+          { x: -60, y: 0 },
+          { x: -35, y: 0 }
+        )
+      );
+    }
+
+    // Nível de Água a Jusante
+    if (downstreamLevel > 0) {
+      const xBase = toWorldX(getDamXAtY(0, 'DOWNSTREAM'));
+      dims.push(
+        drawDim(
+          'downstreamLevel',
+          { x: xBase, y: 0 },
+          { x: xBase, y: downstreamLevel },
+          `NA=${downstreamLevel.toFixed(1)}m`,
+          { x: 60, y: 0 },
+          { x: 35, y: 0 }
+        )
+      );
+    }
+
+    // Yp (Ponto de Aplicação)
+    if (isAnalyzed && force !== 0 && props.y_cp > 0) {
+      const xBase = toWorldX(getDamXAtY(0, 'UPSTREAM'));
+      dims.push(
+        drawDim(
+          'yp',
+          { x: xBase, y: 0 },
+          { x: xBase, y: props.y_cp },
+          `Yp=${props.y_cp.toFixed(2)}m`,
+          { x: -120, y: 0 },
+          { x: -40, y: 0 }
+        )
+      );
+    }
+
+    return dims;
+  };
 
   return (
     <SceneContainer
@@ -256,6 +388,8 @@ export const GravityDam2DView: React.FC<GravityDam2DViewProps> = (props) => {
       SVG_H={SVG_H}
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
-    />
+    >
+      {renderDimensions()}
+    </SceneContainer>
   );
 };

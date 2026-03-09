@@ -149,11 +149,11 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
             onClick={footerButton.onClick}
             disabled={footerButton.disabled}
             className={`
-              w-full py-2.5 rounded-lg font-bold text-[11px]
-              flex items-center justify-center gap-2 uppercase tracking-wide transition-all
+              w-full py-2.5 rounded-full font-black text-xs tracking-wide uppercase
+              flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg
               ${footerButton.disabled
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow'}
+                : 'bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white shadow-blue-500/20'}
             `}
           >
 

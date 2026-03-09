@@ -9,7 +9,7 @@ export const GravityDam3DView: React.FC<DamRendererProps & { is3D: boolean, setI
   const {
     damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
     upstreamLevel, downstreamLevel = 0,
-    force, s_cp, up, isAnalyzed, onCalculate, onReset,
+    force, s_cp, y_cp, up, isAnalyzed, onCalculate, onReset,
     is3D, setIs3D, showVectors, setShowVectors
   } = props;
 
@@ -63,7 +63,7 @@ export const GravityDam3DView: React.FC<DamRendererProps & { is3D: boolean, setI
       const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
       
       // Visibility factor: 0 to 1 based on dot product with camera view direction (0,0,1)
-      const visibilityFactor = Math.max(0.2, rotatedNormal.z);
+      const visibilityFactor = Math.max(0.5, rotatedNormal.z);
 
       // Force direction should be pointing INTO the dam (opposite to normal)
       const fx = -nx;
@@ -92,8 +92,8 @@ export const GravityDam3DView: React.FC<DamRendererProps & { is3D: boolean, setI
         color,
         isResultant,
         val: val || "",
-        opacity: (isResultant ? 1 : 0.8) * visibilityFactor,
-        strokeWidth: isResultant ? 6 : 2,
+        opacity: (isResultant ? 1 : 0.85) * visibilityFactor,
+        strokeWidth: isResultant ? 3.5 : 1.35,
       });
     };
 
@@ -162,15 +162,15 @@ export const GravityDam3DView: React.FC<DamRendererProps & { is3D: boolean, setI
     if (isAnalyzed) {
       const zCenter = 0;
       if (up && force !== 0) {
-        const { nx, ny, nz } = localNormal(s_cp, "UPSTREAM");
-        const base = getDamXAtY(s_cp, "UPSTREAM");
+        const { nx, ny, nz } = localNormal(y_cp, "UPSTREAM");
+        const base = getDamXAtY(y_cp, "UPSTREAM");
         const x = toWorldX(base);
-        pushArrow(x, s_cp, zCenter, nx, ny, nz, 120 / SCALE, "#1e40af", true, "FR");
+        pushArrow(x, y_cp, zCenter, nx, ny, nz, 120 / SCALE, "#1e40af", true, "FR");
       }
     }
 
     return vecs;
-  }, [showVectors, upstreamLevel, downstreamLevel, isAnalyzed, force, s_cp, up, damHeight, getDamXAtY, toWorldX, project, rotate, SCALE]);
+  }, [showVectors, upstreamLevel, downstreamLevel, isAnalyzed, force, y_cp, up, damHeight, getDamXAtY, toWorldX, project, rotate, SCALE]);
 
   const originProj = project({ x: 0, y: 0, z: 0 });
 

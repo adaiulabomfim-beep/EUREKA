@@ -192,6 +192,17 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
   };
 
   const getDamProfile = () => {
+    if (hasGate) {
+      // Parede de concreto simples
+      const width = damCrestWidth;
+      return [
+        { x: 0, y: 0 },
+        { x: width, y: 0 },
+        { x: width, y: damHeight },
+        { x: 0, y: damHeight },
+      ];
+    }
+
     const xFaceBot = getDamFaceX(0);
     const xFaceTop = getDamFaceX(damHeight);
     const xBackBot = getDamBackX(0);
@@ -475,7 +486,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     const isUpstreamVisible = !is3D || rotUpNormal.z > 0;
 
     // 2) Gate
-    if (hasGate && gateWorld && isUpstreamVisible) {
+    if (hasGate && gateWorld) {
       const { xTop, yTop, xBot, yBot, th } = gateWorld;
       const thickness = 0.45;
       const nx = -Math.sin(th) * thickness;
@@ -490,7 +501,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
           { x: xTop + nx, y: yTop + ny },
           { x: xBot + nx, y: yBot + ny },
         ];
-        if (is3D) gateFaces.push(...prism(profile, zGate, gateFill, 1, OBJECT_BORDER_COLOR, 1.2, "GATE"));
+        if (is3D) gateFaces.push(...prism(profile, gateWidth, gateFill, 1, OBJECT_BORDER_COLOR, 1.2, "GATE"));
         else gateFaces.push(face(profile.map((p) => ({ ...p, z: 0 })), gateFill, 1, OBJECT_BORDER_COLOR, 1.5, { x: 0, y: 0, z: 1 }, "GATE"));
       } else {
         // Mantém seu código circular/semicircular (sem mudanças de “linhas”)
@@ -931,6 +942,29 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
     return <g className="pointer-events-none">{vecs}</g>;
   };
 
+  const renderWaterPath = () => {
+    if (!hasGate || !gateWorld) return null;
+    const { xTop, yTop, xBot, yBot } = gateWorld;
+    
+    const p1 = project({ x: xTop - 50, y: yTop, z: 0 });
+    const p2 = project({ x: xTop, y: yTop, z: 0 });
+    const p3 = project({ x: xBot, y: yBot, z: 0 });
+    const p4 = project({ x: xBot + 50, y: yBot, z: 0 });
+    
+    const path = `M${p1.x},${p1.y} L${p2.x},${p2.y} L${p3.x},${p3.y} L${p4.x},${p4.y}`;
+    
+    return (
+      <path
+        d={path}
+        stroke="#38bdf8"
+        strokeWidth="2"
+        fill="none"
+        strokeDasharray="4 4"
+        className="pointer-events-none"
+      />
+    );
+  };
+
   const renderFace = (f: Face, i: number, keyPrefix: string) => {
     // ✅ CORREÇÃO PRINCIPAL: culling também para WATER (remove “faixas” por alpha stacking)
     if (!f.isFrontFacing && f.kind !== "DAM") return null;
@@ -1138,6 +1172,7 @@ export const GatePressureScene: React.FC<GatePressureSceneProps> = (props) => {
 
         {rendered.allFaces.map((f, i) => renderFace(f, i, "face"))}
         {renderVectors()}
+        {renderWaterPath()}
       </svg>
     </div>
   );

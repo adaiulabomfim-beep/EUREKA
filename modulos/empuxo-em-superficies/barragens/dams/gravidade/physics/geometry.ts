@@ -39,13 +39,12 @@ export const buildGravityDam = (
   }
 
   // Caso normal: topo trapezoidal
-  const downstreamCrestX = safeCrestWidth / 2;
-
   const maxRun = safeBaseWidth - safeCrestWidth;
   const rawRun = safeHeight / Math.tan(angleRad);
   const run = Math.max(0, Math.min(rawRun, maxRun));
 
   let upstreamCrestX = upstreamBaseX + run;
+  let downstreamCrestX = upstreamCrestX + safeCrestWidth;
 
   // nunca deixar cruzar a crista de jusante
   upstreamCrestX = Math.min(upstreamCrestX, downstreamCrestX);
