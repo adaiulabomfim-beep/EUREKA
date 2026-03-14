@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BodyFallLab } from './modulos/corpo-em-queda/components/layout/BodyFallLab';
+import { ImmersedBodiesLab } from './modulos/corpos-imersos';
 import { DamLab } from './modulos/empuxo-em-superficies/barragens';
 import { GatePressureLab } from './modulos/empuxo-em-superficies/pressao-em-comportas';
-import { TheoryReference } from './components/TheoryReference';
-import { ChatBot } from './components/ChatBot';
-import { LandingPage } from './components/LandingPage';
+import { TheoryReference } from './interface/ReferenciaTeorica';
+import { ChatBot } from './interface/ChatBot';
+import { PaginaInicial } from './interface/PaginaInicial';
 import { SimulationMode } from './types';
 
 const App: React.FC = () => {
   const [hasStarted, setHasStarted] = useState<boolean>(false);
-  const [currentMode, setCurrentMode] = useState<SimulationMode>(SimulationMode.FALLING_BODY);
+  const [currentMode, setCurrentMode] = useState<SimulationMode>(SimulationMode.IMMERSED_BODIES);
   const [simulationContext, setSimulationContext] = useState<string>('');
 
   return (
@@ -19,7 +19,7 @@ const App: React.FC = () => {
       <AnimatePresence mode="wait">
         {!hasStarted ? (
           <motion.div key="landing" exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
-            <LandingPage onStart={() => setHasStarted(true)} />
+            <PaginaInicial onStart={() => setHasStarted(true)} />
           </motion.div>
         ) : (
           <motion.div
@@ -68,18 +68,18 @@ const App: React.FC = () => {
               <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <nav className="flex space-x-2 py-2 overflow-x-auto custom-scrollbar" aria-label="Tabs">
                   <button
-                    onClick={() => setCurrentMode(SimulationMode.FALLING_BODY)}
+                    onClick={() => setCurrentMode(SimulationMode.IMMERSED_BODIES)}
                     className={`
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                       ${
-                        currentMode === SimulationMode.FALLING_BODY
+                        currentMode === SimulationMode.IMMERSED_BODIES
                           ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
                           : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
                       }
                     `}
                   >
                     <Anchor className="w-4 h-4" />
-                    Corpo em Queda
+                    Corpos Imersos
                   </button>
 
                   <button
@@ -124,7 +124,7 @@ const App: React.FC = () => {
                     `}
                   >
                     <BookOpen className="w-4 h-4" />
-                    Teoria
+                    Fundamentos Teóricos
                   </button>
                 </nav>
               </div>
@@ -135,24 +135,24 @@ const App: React.FC = () => {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Section Title */}
                 <div className="mb-8">
-                  <h2 className="text-3xl font-black tracking-tight text-slate-800">
-                    {currentMode === SimulationMode.FALLING_BODY && 'Princípio de Arquimedes'}
+                  <h2 className="text-xl font-black tracking-normal uppercase text-cyan-500">
+                    {currentMode === SimulationMode.IMMERSED_BODIES && 'Princípio de Arquimedes'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Geometria e Análise de Barragens'}
                     {currentMode === SimulationMode.GATE_PRESSURE && 'Forças Hidrostáticas em Superfícies'}
-                    {currentMode === SimulationMode.THEORY && 'Fundamentação Teórica'}
+                    {currentMode === SimulationMode.THEORY && 'Fundamentos Teóricos'}
                   </h2>
                   <p className="text-slate-500 text-sm mt-2 font-medium">
-                    {currentMode === SimulationMode.FALLING_BODY &&
-                      'Simule flutuação, equilíbrio e submersão (Princípio de Arquimedes).'}
+                    {currentMode === SimulationMode.IMMERSED_BODIES &&
+                      'Simule flutuação, equilíbrio e submersão.'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Análise do reservatório e geometria da barragem.'}
                     {currentMode === SimulationMode.GATE_PRESSURE &&
-                      'Distribuição de pressão e força resultante em comportas planas/curvas.'}
+                      'Distribuição de pressão e força resultante em comportas planas e curvas.'}
                     {currentMode === SimulationMode.THEORY &&
-                      'Material de apoio e fórmulas essenciais para os experimentos.'}
+                      'Fundamentos teóricos e fórmulas essenciais para os experimentos.'}
                   </p>
                 </div>
 
-                {currentMode === SimulationMode.FALLING_BODY && <BodyFallLab onContextUpdate={setSimulationContext} />}
+                {currentMode === SimulationMode.IMMERSED_BODIES && <ImmersedBodiesLab onContextUpdate={setSimulationContext} />}
                 {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} />}
                 {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} />}
                 {currentMode === SimulationMode.THEORY && <TheoryReference />}

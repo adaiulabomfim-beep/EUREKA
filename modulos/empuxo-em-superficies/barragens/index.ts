@@ -1,2 +1,1 @@
-export { DamLab } from './components/layout/DamLab';
-export { damTypeRegistry } from './registry/damTypeRegistry';
+export { Laboratorio as DamLab } from './tela/Laboratorio';

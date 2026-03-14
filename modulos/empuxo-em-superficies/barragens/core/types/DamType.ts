@@ -1,6 +1,0 @@
-export enum DamType {
-  GRAVITY = 'GRAVITY',
-  EMBANKMENT = 'EMBANKMENT',
-  ARCH = 'ARCH',
-  BUTTRESS = 'BUTTRESS'
-}

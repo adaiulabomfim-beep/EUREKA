@@ -1,1 +1,1 @@
-export { GatePressureLab } from './components/layout/GatePressureLab';
+export { Laboratorio as GatePressureLab } from './tela/Laboratorio';

@@ -1,0 +1,117 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { TipoBarragem, ConfiguracaoSimulacaoBarragem, ResultadoSimulacaoBarragem } from '../dominio/tipos';
+import { simularBarragem } from '../calculos/simulador';
+import { RenderizadorBarragens } from '../visual/RenderizadorBarragens';
+import { registroTiposBarragem } from '../dominio/registroTipos';
+import { PainelControles } from './PainelControles';
+import { PainelResultados } from './PainelResultados';
+import { Memorial } from './Memorial';
+
+interface DamLabProps {
+    onContextUpdate?: (ctx: string) => void;
+}
+
+export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
+  // STATE
+  const [damType, setDamType] = useState<TipoBarragem>(TipoBarragem.GRAVIDADE);
+  const [damHeight, setDamHeight] = useState<number>(15);
+  const [damCrestWidth, setDamCrestWidth] = useState<number>(4);
+  const [damBaseWidth, setDamBaseWidth] = useState<number>(12); 
+  const [inclinationAngle, setInclinationAngle] = useState<number>(90);
+  
+  const [upstreamLevel, setUpstreamLevel] = useState<number>(12);
+  const [hasDownstream, setHasDownstream] = useState<boolean>(false);
+  const [downstreamLevel, setDownstreamLevel] = useState<number>(5); 
+  
+  const [density] = useState<number>(1000); 
+  const [gravity] = useState<number>(9.81);
+
+  // UI STATE
+  const [showDetails, setShowDetails] = useState<boolean>(false);
+  const [analyzedResults, setAnalyzedResults] = useState<ResultadoSimulacaoBarragem | null>(null);
+
+  // LOGIC
+  useEffect(() => {
+    const defaults = registroTiposBarragem[damType].getDefaults(damHeight);
+    setInclinationAngle(defaults.inclinationAngle);
+    setDamBaseWidth(defaults.damBaseWidth);
+    setDamCrestWidth(defaults.damCrestWidth);
+  }, [damType]); 
+
+  const maxWaterLevel = damHeight + 5; 
+
+  const effectiveDownstreamLevel = hasDownstream ? downstreamLevel : 0;
+  
+  const config: ConfiguracaoSimulacaoBarragem = {
+      damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
+      upstreamLevel, downstreamLevel: effectiveDownstreamLevel, density, gravity
+  };
+  
+  const liveResults = useMemo(() => simularBarragem(config), [damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, effectiveDownstreamLevel, density, gravity]);
+
+  useEffect(() => { setAnalyzedResults(null); }, [liveResults]);
+  const handleCalculate = () => { setAnalyzedResults(liveResults); };
+
+  const contextString = useMemo(() => `LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${damBaseWidth}m, Largura Crista=${damCrestWidth}m, θ=${inclinationAngle}°, Nível Montante=${upstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m`, [damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, effectiveDownstreamLevel]);
+
+  useEffect(() => {
+      if (onContextUpdate) {
+          onContextUpdate(contextString);
+      }
+  }, [contextString, onContextUpdate]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
+        
+        {/* --- LEFT SIDEBAR: CONTROLS --- */}
+        <PainelControles
+          damType={damType} setDamType={setDamType}
+          inclinationAngle={inclinationAngle} setInclinationAngle={setInclinationAngle}
+          damHeight={damHeight} setDamHeight={setDamHeight}
+          damBaseWidth={damBaseWidth} setDamBaseWidth={setDamBaseWidth}
+          damCrestWidth={damCrestWidth} setDamCrestWidth={setDamCrestWidth}
+          upstreamLevel={upstreamLevel} setUpstreamLevel={setUpstreamLevel}
+          hasDownstream={hasDownstream} setHasDownstream={setHasDownstream}
+          downstreamLevel={downstreamLevel} setDownstreamLevel={setDownstreamLevel}
+          maxWaterLevel={maxWaterLevel}
+        />
+
+        {/* --- CENTER: SCENE --- */}
+        <div className="lg:col-span-6 flex flex-col h-full bg-slate-50 rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20">
+             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-10"></div>
+            <RenderizadorBarragens
+                key={damType}
+                damType={damType} damHeight={damHeight} damBaseWidth={damBaseWidth} damCrestWidth={damCrestWidth}
+                inclinationAngle={inclinationAngle} upstreamLevel={upstreamLevel} downstreamLevel={effectiveDownstreamLevel}
+                force={analyzedResults ? analyzedResults.forceData.FR_net : 0} 
+                s_cp={analyzedResults ? analyzedResults.forceData.s_cp_net : 0}
+                y_cp={analyzedResults ? analyzedResults.forceData.y_cp_net : 0}
+                up={analyzedResults ? analyzedResults.forceData.up : undefined}
+                down={analyzedResults ? analyzedResults.forceData.down : undefined}
+                isAnalyzed={!!analyzedResults}
+                onCalculate={handleCalculate}
+                onReset={() => setAnalyzedResults(null)}
+            />
+             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-200/50 to-transparent pointer-events-none"></div>
+        </div>
+
+        {/* --- RIGHT SIDEBAR: RESULTS --- */}
+        <PainelResultados
+          analyzedResults={analyzedResults}
+          showDetails={showDetails}
+          setShowDetails={setShowDetails}
+        />
+      </div>
+
+      {/* Floating Details Panel */}
+      <Memorial
+        showDetails={showDetails}
+        setShowDetails={setShowDetails}
+        analyzedResults={analyzedResults}
+        density={density}
+        gravity={gravity}
+      />
+    </div>
+  );
+};
