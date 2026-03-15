@@ -232,7 +232,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   return (
     <svg
       width="100%"
-      height={svgHeight}
+      height="100%"
       className="overflow-visible"
       viewBox={`0 0 ${svgWidth} ${svgHeight}`}
       preserveAspectRatio="xMidYMid meet"

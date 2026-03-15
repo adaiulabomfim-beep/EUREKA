@@ -134,21 +134,21 @@ const App: React.FC = () => {
             <main className="flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Section Title */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-black tracking-normal uppercase text-cyan-500">
+                <div className="mb-6 flex flex-col gap-1">
+                  <h2 className="text-2xl md:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-cyan-500 uppercase drop-shadow-sm">
                     {currentMode === SimulationMode.IMMERSED_BODIES && 'Princípio de Arquimedes'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Geometria e Análise de Barragens'}
                     {currentMode === SimulationMode.GATE_PRESSURE && 'Forças Hidrostáticas em Superfícies'}
                     {currentMode === SimulationMode.THEORY && 'Fundamentos Teóricos'}
                   </h2>
-                  <p className="text-slate-500 text-sm mt-2 font-medium">
+                  <p className="text-slate-500 text-sm font-medium tracking-wide">
                     {currentMode === SimulationMode.IMMERSED_BODIES &&
                       'Simule flutuação, equilíbrio e submersão.'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Análise do reservatório e geometria da barragem.'}
                     {currentMode === SimulationMode.GATE_PRESSURE &&
-                      'Distribuição de pressão e força resultante em comportas planas e curvas.'}
+                      'Distribuição de pressão e força resultante em superfícies.'}
                     {currentMode === SimulationMode.THEORY &&
-                      'Fundamentos teóricos e fórmulas essenciais para os experimentos.'}
+                      'Fundamentos teóricos e fórmulas essenciais.'}
                   </p>
                 </div>
 

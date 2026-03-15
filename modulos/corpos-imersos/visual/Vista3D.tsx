@@ -98,7 +98,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   // câmera do 3D antigo
   const [rotX, setRotX] = useState<number>(15);
   const [rotY, setRotY] = useState<number>(0);
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: -50 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isPanning, setIsPanning] = useState<boolean>(false);
 
@@ -132,7 +132,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
       setRotY(startY + (nearestTargetY - startY) * ease);
       setPan({
         x: startPanX + (0 - startPanX) * ease,
-        y: startPanY + (0 - startPanY) * ease,
+        y: startPanY + (-50 - startPanY) * ease,
       });
 
       if (progress < 1) {
@@ -267,89 +267,82 @@ export const Vista3D: React.FC<Vista3DProps> = ({
 
   const tankPts = getPoints(0, 0, currentTankW, currentTankH, 0, visualTankDepth);
 
-  const TankBack = () => null;
+  const SceneLayers = () => {
+    const renderables: { z: number; element: React.ReactNode }[] = [];
 
-  const FluidsBack = () => {
+    const addPoly = (pts: Point[], element: React.ReactNode) => {
+      const z = pts.reduce((acc, p) => acc + (p.z || 0), 0) / pts.length;
+      renderables.push({ z, element });
+    };
+
+    const addEdge = (pA: Point, pB: Point, element: React.ReactNode) => {
+      const z = ((pA.z || 0) + (pB.z || 0)) / 2;
+      renderables.push({ z, element });
+    };
+
+    // 1. Tank Edges
+    const tankPts = getPoints(0, 0, currentTankW, currentTankH, 0, visualTankDepth);
+    const edges = [
+      [tankPts.p1, tankPts.p2], [tankPts.p2, tankPts.p3], [tankPts.p3, tankPts.p4], [tankPts.p4, tankPts.p1],
+      [tankPts.p1, tankPts.p5], [tankPts.p2, tankPts.p6], [tankPts.p3, tankPts.p7], [tankPts.p4, tankPts.p8],
+      [tankPts.p5, tankPts.p6], [tankPts.p6, tankPts.p7], [tankPts.p7, tankPts.p8], [tankPts.p8, tankPts.p5],
+    ];
+    edges.forEach((edge, i) => {
+      addEdge(edge[0], edge[1], <path key={`tank_edge_${i}`} d={`M${edge[0].x},${edge[0].y} L${edge[1].x},${edge[1].y}`} stroke={TANK_BORDER_COLOR} strokeWidth={1.5} pointerEvents="none" />);
+    });
+
+    // Tank Glass (Front face)
+    addPoly([tankPts.p5, tankPts.p6, tankPts.p7, tankPts.p8], <g key="tank_glass">{drawPoly([tankPts.p5, tankPts.p6, tankPts.p7, tankPts.p8], 'url(#glassGradient)', 0.2)}</g>);
+
+    // 2. Fluids
     const ptsB = getPoints(0, 0, currentTankW, effectiveHB_px, 0, visualTankDepth);
-    const ptsAOriginal = getPoints(
-      0,
-      effectiveHB_px,
-      currentTankW,
-      tankBottomY - originalFluidSurfaceY - effectiveHB_px,
-      0,
-      visualTankDepth
-    );
-    const ptsADelta = getPoints(
-      0,
-      tankBottomY - originalFluidSurfaceY,
-      currentTankW,
-      originalFluidSurfaceY - fluidSurfaceY,
-      0,
-      visualTankDepth
-    );
+    if (enableTwoFluids) {
+      addPoly([ptsB.p1, ptsB.p2, ptsB.p3, ptsB.p4], <g key="fb_back">{drawPoly([ptsB.p1, ptsB.p2, ptsB.p3, ptsB.p4], 'url(#fluidDepthB)', 1)}</g>);
+      addPoly([ptsB.p1, ptsB.p5, ptsB.p8, ptsB.p4], <g key="fb_left">{drawPoly([ptsB.p1, ptsB.p5, ptsB.p8, ptsB.p4], 'url(#fluidDepthB)', 1)}</g>);
+      addPoly([ptsB.p2, ptsB.p6, ptsB.p7, ptsB.p3], <g key="fb_right">{drawPoly([ptsB.p2, ptsB.p6, ptsB.p7, ptsB.p3], 'url(#fluidDepthB)', 1)}</g>);
+      addPoly([ptsB.p5, ptsB.p6, ptsB.p7, ptsB.p8], <g key="fb_front">{drawPoly([ptsB.p5, ptsB.p6, ptsB.p7, ptsB.p8], 'url(#fluidDepthB)', 1)}</g>);
+    }
 
-    return (
-      <g>
-        {enableTwoFluids && (
-          <g>
-            {drawPoly([ptsB.p1, ptsB.p2, ptsB.p3, ptsB.p4], 'url(#fluidDepthB)', 1)}
-            {drawPoly([ptsB.p1, ptsB.p5, ptsB.p8, ptsB.p4], 'url(#fluidDepthB)', 1)}
-            {drawPoly([ptsB.p2, ptsB.p6, ptsB.p7, ptsB.p3], 'url(#fluidDepthB)', 1)}
-          </g>
-        )}
+    const ptsAOriginal = getPoints(0, effectiveHB_px, currentTankW, tankBottomY - originalFluidSurfaceY - effectiveHB_px, 0, visualTankDepth);
+    addPoly([ptsAOriginal.p1, ptsAOriginal.p2, ptsAOriginal.p3, ptsAOriginal.p4], <g key="fa_back">{drawPoly([ptsAOriginal.p1, ptsAOriginal.p2, ptsAOriginal.p3, ptsAOriginal.p4], 'url(#fluidDepthA)', 1)}</g>);
+    addPoly([ptsAOriginal.p1, ptsAOriginal.p5, ptsAOriginal.p8, ptsAOriginal.p4], <g key="fa_left">{drawPoly([ptsAOriginal.p1, ptsAOriginal.p5, ptsAOriginal.p8, ptsAOriginal.p4], 'url(#fluidDepthA)', 1)}</g>);
+    addPoly([ptsAOriginal.p2, ptsAOriginal.p6, ptsAOriginal.p7, ptsAOriginal.p3], <g key="fa_right">{drawPoly([ptsAOriginal.p2, ptsAOriginal.p6, ptsAOriginal.p7, ptsAOriginal.p3], 'url(#fluidDepthA)', 1)}</g>);
+    addPoly([ptsAOriginal.p5, ptsAOriginal.p6, ptsAOriginal.p7, ptsAOriginal.p8], <g key="fa_front">{drawPoly([ptsAOriginal.p5, ptsAOriginal.p6, ptsAOriginal.p7, ptsAOriginal.p8], 'url(#fluidDepthA)', 1)}</g>);
 
-        <g>
-          {drawPoly([ptsAOriginal.p1, ptsAOriginal.p2, ptsAOriginal.p3, ptsAOriginal.p4], 'url(#fluidDepthA)', 1)}
-          {drawPoly([ptsAOriginal.p1, ptsAOriginal.p5, ptsAOriginal.p8, ptsAOriginal.p4], 'url(#fluidDepthA)', 1)}
-          {drawPoly([ptsAOriginal.p2, ptsAOriginal.p6, ptsAOriginal.p7, ptsAOriginal.p3], 'url(#fluidDepthA)', 1)}
-        </g>
+    if (isSimulating && deltaH_cm > 0.01) {
+      const ptsADelta = getPoints(0, tankBottomY - originalFluidSurfaceY, currentTankW, originalFluidSurfaceY - fluidSurfaceY, 0, visualTankDepth);
+      addPoly([ptsADelta.p1, ptsADelta.p2, ptsADelta.p3, ptsADelta.p4], <g key="fd_back">{drawPoly([ptsADelta.p1, ptsADelta.p2, ptsADelta.p3, ptsADelta.p4], colorA, 0.4)}</g>);
+      addPoly([ptsADelta.p1, ptsADelta.p5, ptsADelta.p8, ptsADelta.p4], <g key="fd_left">{drawPoly([ptsADelta.p1, ptsADelta.p5, ptsADelta.p8, ptsADelta.p4], colorA, 0.4)}</g>);
+      addPoly([ptsADelta.p2, ptsADelta.p6, ptsADelta.p7, ptsADelta.p3], <g key="fd_right">{drawPoly([ptsADelta.p2, ptsADelta.p6, ptsADelta.p7, ptsADelta.p3], colorA, 0.4)}</g>);
+      addPoly([ptsADelta.p5, ptsADelta.p6, ptsADelta.p7, ptsADelta.p8], <g key="fd_front">{drawPoly([ptsADelta.p5, ptsADelta.p6, ptsADelta.p7, ptsADelta.p8], colorA, 0.4)}</g>);
+    }
 
-        {isSimulating && deltaH_cm > 0.01 && (
-          <g>
-            {drawPoly([ptsADelta.p1, ptsADelta.p2, ptsADelta.p3, ptsADelta.p4], colorA, 0.4)}
-            {drawPoly([ptsADelta.p1, ptsADelta.p5, ptsADelta.p8, ptsADelta.p4], colorA, 0.4)}
-            {drawPoly([ptsADelta.p2, ptsADelta.p6, ptsADelta.p7, ptsADelta.p3], colorA, 0.4)}
-          </g>
-        )}
-      </g>
-    );
-  };
-
-  const FluidSurface = () => {
     const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, 0, visualTankDepth);
-    return (
-      <g>
-        {drawPoly(
-          [ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5],
-          'url(#surfaceGradientA)',
-          1,
-          'rgba(255,255,255,0.5)',
-          1
-        )}
-        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#ripplePattern)', 1)}
+    const surfacePoly = [ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5];
+    addPoly(surfacePoly, (
+      <g key="fluid_surface">
+        {drawPoly(surfacePoly, 'url(#surfaceGradientA)', 1, 'rgba(255,255,255,0.5)', 1)}
+        {drawPoly(surfacePoly, 'url(#ripplePattern)', 1)}
       </g>
-    );
-  };
+    ));
 
-  const Object3D = () => {
+    // 3. Object
     const center = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);
     const effectiveYBot = objBottomDistFromTankBottom;
     const objPts = getPoints(0, effectiveYBot, visualWidth, visualHeight, 0, objD_visual);
 
-    const faces: FaceDef[] = [
-      { pts: [objPts.p1, objPts.p2, objPts.p3, objPts.p4], n: { x: 0, y: 0, z: -1 } },
-      { pts: [objPts.p5, objPts.p6, objPts.p7, objPts.p8], n: { x: 0, y: 0, z: 1 } },
-      { pts: [objPts.p1, objPts.p2, objPts.p6, objPts.p5], n: { x: 0, y: 1, z: 0 } },
-      { pts: [objPts.p4, objPts.p3, objPts.p7, objPts.p8], n: { x: 0, y: -1, z: 0 } },
-      { pts: [objPts.p1, objPts.p5, objPts.p8, objPts.p4], n: { x: -1, y: 0, z: 0 } },
-      { pts: [objPts.p2, objPts.p6, objPts.p7, objPts.p3], n: { x: 1, y: 0, z: 0 } },
-    ];
+    if (shape === ObjectShape.CUBE) {
+      const faces: FaceDef[] = [
+        { pts: [objPts.p1, objPts.p2, objPts.p3, objPts.p4], n: { x: 0, y: 0, z: -1 } },
+        { pts: [objPts.p5, objPts.p6, objPts.p7, objPts.p8], n: { x: 0, y: 0, z: 1 } },
+        { pts: [objPts.p1, objPts.p2, objPts.p6, objPts.p5], n: { x: 0, y: 1, z: 0 } },
+        { pts: [objPts.p4, objPts.p3, objPts.p7, objPts.p8], n: { x: 0, y: -1, z: 0 } },
+        { pts: [objPts.p1, objPts.p5, objPts.p8, objPts.p4], n: { x: -1, y: 0, z: 0 } },
+        { pts: [objPts.p2, objPts.p6, objPts.p7, objPts.p3], n: { x: 1, y: 0, z: 0 } },
+      ];
 
-    const sortedFaces = faces
-      .map((f) => {
-        const z = f.pts.reduce((acc, p) => acc + (p.z || 0), 0) / 4;
+      faces.forEach((f, i) => {
         const rn = rotateVector(f.n);
-
         const lx = -0.5;
         const ly = 0.5;
         const lz = -0.8;
@@ -357,80 +350,40 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         const dot = (rn.x * lx + rn.y * ly + rn.z * lz) / mag;
         const brightness = Math.max(0.1, 0.5 + dot * 0.5);
 
-        return { ...f, z, brightness };
-      })
-      .sort((a, b) => b.z - a.z);
-
-    return (
-      <g>
-        {shape === ObjectShape.CUBE ? (
-          sortedFaces.map((f, i) => (
-            <g key={i}>
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill={renderFill}
-                stroke={OBJECT_BORDER_COLOR}
-                strokeWidth="1"
-                strokeLinejoin="round"
-              />
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill="black"
-                fillOpacity={1 - f.brightness}
-                stroke="none"
-                pointerEvents="none"
-              />
-            </g>
-          ))
-        ) : (
-          <g>
-            <circle
-              cx={center.x}
-              cy={center.y}
-              r={visualWidth / 2}
+        addPoly(f.pts, (
+          <g key={`obj_face_${i}`}>
+            <path
+              d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
               fill={renderFill}
               stroke={OBJECT_BORDER_COLOR}
-              strokeWidth={3}
+              strokeWidth="1"
+              strokeLinejoin="round"
             />
-            <circle
-              cx={center.x}
-              cy={center.y}
-              r={visualWidth / 2}
-              fill="url(#sphereLight)"
+            <path
+              d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+              fill="black"
+              fillOpacity={1 - brightness}
               stroke="none"
+              pointerEvents="none"
             />
           </g>
-        )}
-      </g>
-    );
-  };
+        ));
+      });
+    } else {
+      renderables.push({
+        z: center.z || 0,
+        element: (
+          <g key="obj_sphere">
+            <circle cx={center.x} cy={center.y} r={visualWidth / 2} fill={renderFill} stroke={OBJECT_BORDER_COLOR} strokeWidth={3} />
+            <circle cx={center.x} cy={center.y} r={visualWidth / 2} fill="url(#sphereLight)" stroke="none" />
+          </g>
+        )
+      });
+    }
 
-  const FluidsFront = () => {
-    const ptsB = getPoints(0, 0, currentTankW, effectiveHB_px, 0, visualTankDepth);
-    const ptsAOriginal = getPoints(
-      0,
-      effectiveHB_px,
-      currentTankW,
-      tankBottomY - originalFluidSurfaceY - effectiveHB_px,
-      0,
-      visualTankDepth
-    );
-    const ptsADelta = getPoints(
-      0,
-      tankBottomY - originalFluidSurfaceY,
-      currentTankW,
-      originalFluidSurfaceY - fluidSurfaceY,
-      0,
-      visualTankDepth
-    );
+    renderables.sort((a, b) => a.z - b.z);
 
-    return (
-      <g>
-        {enableTwoFluids && drawPoly([ptsB.p5, ptsB.p6, ptsB.p7, ptsB.p8], 'url(#fluidDepthB)', 1)}
-        {drawPoly([ptsAOriginal.p5, ptsAOriginal.p6, ptsAOriginal.p7, ptsAOriginal.p8], 'url(#fluidDepthA)', 1)}
-        {isSimulating && deltaH_cm > 0.01 && drawPoly([ptsADelta.p5, ptsADelta.p6, ptsADelta.p7, ptsADelta.p8], colorA, 0.4)}
-      </g>
-    );
+    return <>{renderables.map((r) => r.element)}</>;
   };
 
   const Vectors = () => {
@@ -496,30 +449,6 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     );
   };
 
-  const SceneLayers = () => {
-    if (isObjectAboveWater) {
-      return (
-        <>
-          <TankBack />
-          <FluidsBack />
-          <FluidSurface />
-          <Object3D />
-          <FluidsFront />
-        </>
-      );
-    } else {
-      return (
-        <>
-          <TankBack />
-          <Object3D />
-          <FluidsBack />
-          <FluidsFront />
-          <FluidSurface />
-        </>
-      );
-    }
-  };
-
   return (
     <div
       className={`relative flex flex-col items-center justify-center min-h-[600px] h-full p-2 overflow-hidden rounded-2xl bg-white/70 backdrop-blur-md border border-blue-100/70 shadow-2xl shadow-blue-200/25 transition-colors ${
@@ -570,25 +499,6 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         <SvgDefs />
 
         <SceneLayers />
-
-        <g pointerEvents="none">
-          {drawPoly([tankPts.p5, tankPts.p6, tankPts.p7, tankPts.p8], 'url(#glassGradient)', 0.2)}
-
-          <path d={`M${tankPts.p1.x},${tankPts.p1.y} L${tankPts.p2.x},${tankPts.p2.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-          <path d={`M${tankPts.p2.x},${tankPts.p2.y} L${tankPts.p3.x},${tankPts.p3.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-          <path d={`M${tankPts.p3.x},${tankPts.p3.y} L${tankPts.p4.x},${tankPts.p4.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-          <path d={`M${tankPts.p4.x},${tankPts.p4.y} L${tankPts.p1.x},${tankPts.p1.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-
-          <path d={`M${tankPts.p1.x},${tankPts.p1.y} L${tankPts.p5.x},${tankPts.p5.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-          <path d={`M${tankPts.p2.x},${tankPts.p2.y} L${tankPts.p6.x},${tankPts.p6.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-          <path d={`M${tankPts.p3.x},${tankPts.p3.y} L${tankPts.p7.x},${tankPts.p7.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-          <path d={`M${tankPts.p4.x},${tankPts.p4.y} L${tankPts.p8.x},${tankPts.p8.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="1" />
-
-          <path d={`M${tankPts.p5.x},${tankPts.p5.y} L${tankPts.p6.x},${tankPts.p6.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="2" />
-          <path d={`M${tankPts.p6.x},${tankPts.p6.y} L${tankPts.p7.x},${tankPts.p7.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="2" />
-          <path d={`M${tankPts.p7.x},${tankPts.p7.y} L${tankPts.p8.x},${tankPts.p8.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="2" />
-          <path d={`M${tankPts.p8.x},${tankPts.p8.y} L${tankPts.p5.x},${tankPts.p5.y}`} stroke={TANK_BORDER_COLOR} strokeWidth="2" />
-        </g>
 
         <Vectors />
       </svg>
