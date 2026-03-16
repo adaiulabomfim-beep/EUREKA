@@ -26,7 +26,6 @@ interface Vista3DProps {
   svgHeight: number;
   currentTankW: number;
   currentTankH: number;
-  tankDepth: number;
   effectiveHB_px: number;
   tankBottomY: number;
   tankOffsetX: number;
@@ -54,6 +53,7 @@ interface Vista3DProps {
   centerOfBuoyancyY_visual?: number;
   showCenterOfBuoyancy?: boolean;
   onToggleCenterOfBuoyancy?: () => void;
+  visualTankDepth: number;
 }
 
 type FaceDef = {
@@ -66,7 +66,6 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   svgHeight,
   currentTankW,
   currentTankH,
-  tankDepth,
   effectiveHB_px,
   tankBottomY,
   tankOffsetX,
@@ -94,11 +93,12 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   centerOfBuoyancyY_visual = 0,
   showCenterOfBuoyancy = true,
   onToggleCenterOfBuoyancy,
+  visualTankDepth,
 }) => {
   // câmera do 3D antigo
   const [rotX, setRotX] = useState<number>(15);
   const [rotY, setRotY] = useState<number>(0);
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: -50 });
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isPanning, setIsPanning] = useState<boolean>(false);
 
@@ -106,7 +106,6 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   const lastMouseRef = useRef({ x: 0, y: 0 });
   const cameraAnimRef = useRef<number | null>(null);
 
-  const visualTankDepth = currentTankW * 0.75;
   const renderFill = getMaterialPattern(selectedMaterial, objColor);
 
   const animateCameraReset = () => {
@@ -132,7 +131,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
       setRotY(startY + (nearestTargetY - startY) * ease);
       setPan({
         x: startPanX + (0 - startPanX) * ease,
-        y: startPanY + (-50 - startPanY) * ease,
+        y: startPanY + (0 - startPanY) * ease,
       });
 
       if (progress < 1) {

@@ -52,8 +52,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   // --- LAYOUT CALCULATIONS ---
   const svgHeight = 600;
   const svgWidth = 700;
-  const tankBottomY = 580;
-  const tankTopMargin = 220;
+  const tankBottomY = 510;
+  const tankTopMargin = 160;
   const availablePixelHeight = tankBottomY - tankTopMargin;
   const availablePixelWidth = svgWidth - 120;
 
@@ -335,7 +335,6 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 svgHeight={svgHeight}
                 currentTankW={currentTankW}
                 currentTankH={currentTankH}
-                tankDepth={tankDepth}
                 effectiveHB_px={enableTwoFluids ? depthB * visualScaleFactor : 0}
                 tankBottomY={tankBottomY}
                 tankOffsetX={tankOffsetX}
@@ -356,6 +355,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 visualHeight={visualHeight}
                 objBottomDistFromTankBottom={tankBottomY - (animBlockY + visualHeight)}
                 objD_visual={dim1 * visualScaleFactor}
+                visualTankDepth={tankDepth * visualScaleFactor}
               />
             ) : (
               <Vista2D
