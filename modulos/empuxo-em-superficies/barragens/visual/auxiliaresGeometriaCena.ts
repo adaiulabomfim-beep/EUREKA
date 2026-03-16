@@ -22,7 +22,11 @@ export const criarFace = (
   priority,
 });
 
-export const getDamXAtYGeneric = (profile: { x: number; y: number }[], y: number, side: "UPSTREAM" | "DOWNSTREAM") => {
+export const getDamXAtYGeneric = (
+  profile: { x: number; y: number }[],
+  y: number,
+  side: "UPSTREAM" | "DOWNSTREAM"
+) => {
   if (side === "UPSTREAM") {
     const p1 = profile[0]; // upstream bottom
     const p2 = profile[1]; // upstream top
@@ -35,6 +39,7 @@ export const getDamXAtYGeneric = (profile: { x: number; y: number }[], y: number
     return p1.x + t * (p2.x - p1.x);
   }
 };
+
 export const criarPrisma = (
   profile: { x: number; y: number }[],
   zWidth: number,
@@ -50,28 +55,84 @@ export const criarPrisma = (
   priority?: number
 ): WorldFace[] => {
   const faces: WorldFace[] = [];
-  const steps = xOffsetFn ? 16 : 1;
+
+  // Reduzido para minimizar facetamento visual excessivo
+  const steps = xOffsetFn ? 24 : 1;
   const dz = zWidth / steps;
   const zStart = zOffset - zWidth / 2;
   const p = priority !== undefined ? priority : (kind === "DAM" ? 2 : 1);
 
-  const mapPt = (p: { x: number; y: number }, z: number) => {
+  const mapPt = (pt: { x: number; y: number }, z: number) => {
     const off = xOffsetFn ? xOffsetFn(z) : 0;
-    return { x: toWorldX(p.x + off), y: p.y, z };
+    return { x: toWorldX(pt.x + off), y: pt.y, z };
   };
 
-  // Caps
   const zF = zOffset + zWidth / 2;
   const zB = zOffset - zWidth / 2;
-  faces.push(criarFace(profile.map((p) => mapPt(p, zF)), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: 1 }, kind, hatchPattern, p));
-  faces.push(criarFace(profile.map((p) => mapPt(p, zB)).reverse(), fill, opacity, stroke, strokeWidth, { x: 0, y: 0, z: -1 }, kind, hatchPattern, p));
 
-  // Crest edge (top of profile)
+  // Caps sem contorno para evitar marcação das divisões
+  faces.push(
+    criarFace(
+      profile.map((pt) => mapPt(pt, zF)),
+      fill,
+      opacity,
+      "none",
+      0,
+      { x: 0, y: 0, z: 1 },
+      kind,
+      hatchPattern,
+      p
+    )
+  );
+
+  faces.push(
+    criarFace(
+      profile.map((pt) => mapPt(pt, zB)).reverse(),
+      fill,
+      opacity,
+      "none",
+      0,
+      { x: 0, y: 0, z: -1 },
+      kind,
+      hatchPattern,
+      p
+    )
+  );
+
+  // Mantém apenas a leitura da crista
   const crestPts = [profile[profile.length - 1], profile[0]];
-  faces.push(criarFace(crestPts.map((p) => mapPt(p, zF)), "none", 1, stroke, strokeWidth * 1.5, { x: 0, y: 1, z: 0 }, kind, undefined, p + 1));
-  faces.push(criarFace(crestPts.map((p) => mapPt(p, zB)).reverse(), "none", 1, stroke, strokeWidth * 1.5, { x: 0, y: 1, z: 0 }, kind, undefined, p + 1));
 
-  // Sides
+  if (stroke !== "none" && strokeWidth > 0) {
+    faces.push(
+      criarFace(
+        crestPts.map((pt) => mapPt(pt, zF)),
+        "none",
+        1,
+        stroke,
+        strokeWidth * 1.5,
+        { x: 0, y: 1, z: 0 },
+        kind,
+        undefined,
+        p + 1
+      )
+    );
+
+    faces.push(
+      criarFace(
+        crestPts.map((pt) => mapPt(pt, zB)).reverse(),
+        "none",
+        1,
+        stroke,
+        strokeWidth * 1.5,
+        { x: 0, y: 1, z: 0 },
+        kind,
+        undefined,
+        p + 1
+      )
+    );
+  }
+
+  // Faces laterais sem stroke para não denunciar a segmentação
   for (let s = 0; s < steps; s++) {
     const sz1 = zStart + s * dz;
     const sz2 = zStart + (s + 1) * dz;
@@ -91,13 +152,19 @@ export const criarPrisma = (
       const nx = -dy / mag;
       const ny = dx / mag;
 
-      faces.push(criarFace([p1_z1, p2_z1, p2_z2, p1_z2], fill, opacity, stroke, strokeWidth, { x: nx, y: ny, z: 0 }, kind, hatchPattern, p));
-
-      // Draw longitudinal edges for the crest
-      if (i === profile.length - 1) {
-        faces.push(criarFace([p1_z1, p1_z2], "none", 1, stroke, strokeWidth, { x: nx, y: ny, z: 0 }, kind, undefined, p + 1));
-        faces.push(criarFace([p2_z1, p2_z2], "none", 1, stroke, strokeWidth, { x: nx, y: ny, z: 0 }, kind, undefined, p + 1));
-      }
+      faces.push(
+        criarFace(
+          [p1_z1, p2_z1, p2_z2, p1_z2],
+          fill,
+          opacity,
+          "none",
+          0,
+          { x: nx, y: ny, z: 0 },
+          kind,
+          hatchPattern,
+          p
+        )
+      );
     }
   }
 
@@ -115,7 +182,7 @@ export const poligonoAgua2D = (
   const faces: WorldFace[] = [];
   const farWorldX = toWorldX(farX);
   const fill = fillId === "A" ? "url(#fluidDepthA)" : "url(#fluidDepthB)";
-  const WATER_LINE_COLOR = "#38bdf8";
+  const WATER_LINE_COLOR = "#3b82f6";
 
   const numProfileSteps = 10;
   const profileYs: number[] = [];
@@ -133,14 +200,37 @@ export const poligonoAgua2D = (
     poly.reverse();
   }
 
-  faces.push(criarFace(poly, fill, 1, "none", 0, { x: 0, y: 0, z: 1 }, "WATER", undefined, 0));
+  faces.push(
+    criarFace(
+      poly,
+      fill,
+      1,
+      "none",
+      0,
+      { x: 0, y: 0, z: 1 },
+      "WATER",
+      undefined,
+      0
+    )
+  );
 
   const xC = toWorldX(getDamXAtY(waterLevelY, damFaceSide));
-  const linePts = damFaceSide === "UPSTREAM"
-    ? [{ x: farWorldX, y: waterLevelY, z: 0 }, { x: xC, y: waterLevelY, z: 0 }]
-    : [{ x: xC, y: waterLevelY, z: 0 }, { x: farWorldX, y: waterLevelY, z: 0 }];
-  
-  faces.push(criarFace(linePts, "none", 1, WATER_LINE_COLOR, 2, { x: 0, y: 0, z: 1 }, "WATER"));
+  const linePts =
+    damFaceSide === "UPSTREAM"
+      ? [{ x: farWorldX, y: waterLevelY, z: 0 }, { x: xC, y: waterLevelY, z: 0 }]
+      : [{ x: xC, y: waterLevelY, z: 0 }, { x: farWorldX, y: waterLevelY, z: 0 }];
+
+  faces.push(
+    criarFace(
+      linePts,
+      "none",
+      1,
+      WATER_LINE_COLOR,
+      2,
+      { x: 0, y: 0, z: 1 },
+      "WATER"
+    )
+  );
 
   return faces;
 };
@@ -156,31 +246,33 @@ export const caixaAgua3D = (
   fillId: "A" | "B" = "A"
 ): WorldFace[] => {
   const faces: WorldFace[] = [];
-  const steps = offsetFn ? 32 : 1;
+
+  // Poucos segmentos para não reaparecerem linhas, mas suficientes para seguir a curvatura
+  const steps = offsetFn ? 8 : 1;
   const dz = depth / steps;
   const zStart = -depth / 2;
+
   const farWorldX = toWorldX(farX);
   const fill = fillId === "A" ? "url(#fluidDepthA)" : "url(#fluidDepthB)";
   const surf = fillId === "A" ? "url(#surfaceGradientA)" : "url(#surfaceGradientB)";
 
-  // We need to sample the dam face profile from y=0 to y=waterLevelY
-  const numProfileSteps = 10; // To handle curves or segments
+  const numProfileSteps = 10;
   const profileYs: number[] = [];
   for (let i = 0; i <= numProfileSteps; i++) {
     profileYs.push((i / numProfileSteps) * waterLevelY);
   }
 
+const getContactX = (y: number, z: number) => {
+  const base = getDamXAtY(y, damFaceSide);
+  const off = offsetFn ? offsetFn(z) : 0;
+  return toWorldX(base + off);
+};
+
+  // 1) Parede curva de contato com a barragem
   for (let s = 0; s < steps; s++) {
     const z1 = zStart + s * dz;
     const z2 = zStart + (s + 1) * dz;
 
-    const getContactX = (y: number, z: number) => {
-      const base = getDamXAtY(y, damFaceSide);
-      const off = offsetFn ? offsetFn(z) : 0;
-      return toWorldX(base + off);
-    };
-
-    // Build the contact face by iterating over profileYs
     for (let i = 0; i < profileYs.length - 1; i++) {
       const y1 = profileYs[i];
       const y2 = profileYs[i + 1];
@@ -190,67 +282,207 @@ export const caixaAgua3D = (
       const xC2_y1 = getContactX(y1, z2);
       const xC2_y2 = getContactX(y2, z2);
 
-      const contactWallPts = damFaceSide === "UPSTREAM"
-        ? [{ x: xC1_y1, y: y1, z: z1 }, { x: xC1_y2, y: y2, z: z1 }, { x: xC2_y2, y: y2, z: z2 }, { x: xC2_y1, y: y1, z: z2 }]
-        : [{ x: xC2_y1, y: y1, z: z2 }, { x: xC2_y2, y: y2, z: z2 }, { x: xC1_y2, y: y2, z: z1 }, { x: xC1_y1, y: y1, z: z1 }];
-      
-      // Calculate normal for the contact face
+      const contactWallPts =
+        damFaceSide === "UPSTREAM"
+          ? [
+              { x: xC1_y1, y: y1, z: z1 },
+              { x: xC1_y2, y: y2, z: z1 },
+              { x: xC2_y2, y: y2, z: z2 },
+              { x: xC2_y1, y: y1, z: z2 },
+            ]
+          : [
+              { x: xC2_y1, y: y1, z: z2 },
+              { x: xC2_y2, y: y2, z: z2 },
+              { x: xC1_y2, y: y2, z: z1 },
+              { x: xC1_y1, y: y1, z: z1 },
+            ];
+
       const dx = xC1_y2 - xC1_y1;
       const dy = y2 - y1;
       const mag = Math.sqrt(dx * dx + dy * dy) || 1;
       const nx = damFaceSide === "UPSTREAM" ? dy / mag : -dy / mag;
       const ny = damFaceSide === "UPSTREAM" ? -dx / mag : dx / mag;
 
-      faces.push(criarFace(contactWallPts, fill, 1, "none", 0, { x: nx, y: ny, z: 0 }, "WATER"));
+      faces.push(
+        criarFace(contactWallPts, fill, 1, "none", 0, { x: nx, y: ny, z: 0 }, "WATER", undefined, -1)
+      );
+    }
+  }
+
+  // 2) Tampa traseira
+  {
+    const zBack = zStart;
+    const backPts = [{ x: farWorldX, y: 0, z: zBack }];
+
+    for (let i = 0; i <= numProfileSteps; i++) {
+      backPts.push({
+        x: getContactX(profileYs[i], zBack),
+        y: profileYs[i],
+        z: zBack,
+      });
     }
 
-    const xC1_bot = getContactX(0, z1);
-    const xC1_top = getContactX(waterLevelY, z1);
-    const xC2_bot = getContactX(0, z2);
-    const xC2_top = getContactX(waterLevelY, z2);
+    backPts.push({ x: farWorldX, y: waterLevelY, z: zBack });
 
-    // Back face (z1)
-    if (s === 0) {
-      const backPts = [{ x: farWorldX, y: 0, z: z1 }];
-      for (let i = 0; i <= numProfileSteps; i++) {
-        backPts.push({ x: getContactX(profileYs[i], z1), y: profileYs[i], z: z1 });
-      }
-      backPts.push({ x: farWorldX, y: waterLevelY, z: z1 });
-      
-      if (damFaceSide === "UPSTREAM") {
-        backPts.reverse();
-      }
-      faces.push(criarFace(backPts, fill, 1, "none", 0, { x: 0, y: 0, z: -1 }, "WATER"));
+    if (damFaceSide === "UPSTREAM") {
+      backPts.reverse();
     }
 
-    // Front face (z2)
-    if (s === steps - 1) {
-      const frontPts = [{ x: farWorldX, y: 0, z: z2 }];
-      for (let i = 0; i <= numProfileSteps; i++) {
-        frontPts.push({ x: getContactX(profileYs[i], z2), y: profileYs[i], z: z2 });
-      }
-      frontPts.push({ x: farWorldX, y: waterLevelY, z: z2 });
+    faces.push(
+      criarFace(backPts, fill, 1, "none", 0, { x: 0, y: 0, z: -1 }, "WATER", undefined, -1)
+    );
+  }
 
-      if (damFaceSide === "DOWNSTREAM") {
-        frontPts.reverse();
-      }
-      faces.push(criarFace(frontPts, fill, 1, "none", 0, { x: 0, y: 0, z: 1 }, "WATER"));
+  // 3) Tampa frontal
+  {
+    const zFront = zStart + depth;
+    const frontPts = [{ x: farWorldX, y: 0, z: zFront }];
+
+    for (let i = 0; i <= numProfileSteps; i++) {
+      frontPts.push({
+        x: getContactX(profileYs[i], zFront),
+        y: profileYs[i],
+        z: zFront,
+      });
     }
 
-    const topPts = damFaceSide === "UPSTREAM"
-      ? [{ x: farWorldX, y: waterLevelY, z: z2 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: xC1_top, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }]
-      : [{ x: xC1_top, y: waterLevelY, z: z1 }, { x: xC2_top, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z1 }];
-    faces.push(criarFace(topPts, surf, 1, "none", 0, { x: 0, y: 1, z: 0 }, "WATER"));
+    frontPts.push({ x: farWorldX, y: waterLevelY, z: zFront });
 
-    const botPts = damFaceSide === "UPSTREAM"
-      ? [{ x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }, { x: xC2_bot, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z2 }]
-      : [{ x: xC2_bot, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z2 }, { x: farWorldX, y: 0, z: z1 }, { x: xC1_bot, y: 0, z: z1 }];
-    faces.push(criarFace(botPts, fill, 1, "none", 0, { x: 0, y: -1, z: 0 }, "WATER"));
+    if (damFaceSide === "DOWNSTREAM") {
+      frontPts.reverse();
+    }
 
-    const farWallPts = damFaceSide === "UPSTREAM"
-      ? [{ x: farWorldX, y: 0, z: z2 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: waterLevelY, z: z1 }, { x: farWorldX, y: 0, z: z1 }]
-      : [{ x: farWorldX, y: 0, z: z1 }, { x: farWorldX, y: waterLevelY, z: z1 }, { x: farWorldX, y: waterLevelY, z: z2 }, { x: farWorldX, y: 0, z: z2 }];
-    faces.push(criarFace(farWallPts, fill, 1, "none", 0, { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 }, "WATER"));
+    faces.push(
+      criarFace(frontPts, fill, 1, "none", 0, { x: 0, y: 0, z: 1 }, "WATER", undefined, -1)
+    );
+  }
+
+  // 4) Superfície superior seguindo a curvatura da barragem
+  {
+    const topPts: Point3D[] = [];
+    const topSamples = Math.max(12, steps * 2);
+
+    if (damFaceSide === "UPSTREAM") {
+      for (let i = 0; i <= topSamples; i++) {
+        const z = zStart + (i / topSamples) * depth;
+        topPts.push({
+          x: farWorldX,
+          y: waterLevelY,
+          z,
+        });
+      }
+
+      for (let i = topSamples; i >= 0; i--) {
+        const z = zStart + (i / topSamples) * depth;
+        topPts.push({
+          x: getContactX(waterLevelY, z) - 0.1,
+          y: waterLevelY,
+          z,
+        });
+      }
+    } else {
+      for (let i = 0; i <= topSamples; i++) {
+        const z = zStart + (i / topSamples) * depth;
+        topPts.push({
+          x: getContactX(waterLevelY, z) + 0.1,
+          y: waterLevelY,
+          z,
+        });
+      }
+
+      for (let i = topSamples; i >= 0; i--) {
+        const z = zStart + (i / topSamples) * depth;
+        topPts.push({
+          x: farWorldX,
+          y: waterLevelY,
+          z,
+        });
+      }
+    }
+
+    faces.push(
+      criarFace(topPts, surf, 1, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", undefined, -1)
+    );
+  }
+
+  // 5) Base inferior
+  {
+    const botPts: Point3D[] = [];
+    const botSamples = Math.max(12, steps * 2);
+
+    if (damFaceSide === "UPSTREAM") {
+      for (let i = 0; i <= botSamples; i++) {
+        const z = zStart + (i / botSamples) * depth;
+        botPts.push({
+          x: farWorldX,
+          y: 0,
+          z,
+        });
+      }
+
+      for (let i = botSamples; i >= 0; i--) {
+        const z = zStart + (i / botSamples) * depth;
+        botPts.push({
+          x: getContactX(0, z),
+          y: 0,
+          z,
+        });
+      }
+    } else {
+      for (let i = 0; i <= botSamples; i++) {
+        const z = zStart + (i / botSamples) * depth;
+        botPts.push({
+          x: getContactX(0, z),
+          y: 0,
+          z,
+        });
+      }
+
+      for (let i = botSamples; i >= 0; i--) {
+        const z = zStart + (i / botSamples) * depth;
+        botPts.push({
+          x: farWorldX,
+          y: 0,
+          z,
+        });
+      }
+    }
+
+    faces.push(
+      criarFace(botPts, fill, 1, "none", 0, { x: 0, y: -1, z: 0 }, "WATER", undefined, -1)
+    );
+  }
+
+  // 6) Parede distante
+  {
+    const farWallPts =
+      damFaceSide === "UPSTREAM"
+        ? [
+            { x: farWorldX, y: 0, z: zStart + depth },
+            { x: farWorldX, y: waterLevelY, z: zStart + depth },
+            { x: farWorldX, y: waterLevelY, z: zStart },
+            { x: farWorldX, y: 0, z: zStart },
+          ]
+        : [
+            { x: farWorldX, y: 0, z: zStart },
+            { x: farWorldX, y: waterLevelY, z: zStart },
+            { x: farWorldX, y: waterLevelY, z: zStart + depth },
+            { x: farWorldX, y: 0, z: zStart + depth },
+          ];
+
+    faces.push(
+      criarFace(
+        farWallPts,
+        fill,
+        1,
+        "none",
+        0,
+        { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 },
+        "WATER",
+        undefined,
+        -1
+      )
+    );
   }
 
   return faces;

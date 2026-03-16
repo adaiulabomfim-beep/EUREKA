@@ -50,14 +50,14 @@ export const useSceneEngine = (
 ) => {
   // Ângulo inicial mais próximo da versão antiga boa:
   // menos "deitado", mais frontal e mais legível para barragens.
-  const [rotX, setRotX] = useState(18);
-  const [rotY, setRotY] = useState(is3D ? 32 : 0);
+  const [rotX, setRotX] = useState(10);
+  const [rotY, setRotY] = useState(is3D ? 20 : 0);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
     if (is3D) {
-      setRotY(32);
-      setRotX(18);
+      setRotY(20);
+      setRotX(10);
     } else {
       setRotY(0);
       setRotX(0);
@@ -97,8 +97,8 @@ export const useSceneEngine = (
 
     // Pequeno deslocamento para reproduzir a composição antiga:
     // barragem mais centralizada e com a face principal respirando melhor.
-    const panX = is3D ? 36 : 0;
-    const panY = is3D ? 18 : 0;
+    const panX = is3D ? 20 : 0;
+    const panY = is3D ? 40 : 0;
 
     return {
       autoScale: scale,
@@ -144,11 +144,13 @@ export const useSceneEngine = (
 
       const r = rotate(local);
 
-      // Em 3D, usar ORIGIN_X / ORIGIN_Y em vez de SVG_W/2 e SVG_H/2
-      // aproxima a composição da versão antiga boa.
+      // Em 3D, usar o centro do SVG (SVG_W/2, SVG_H/2) centraliza melhor a cena
+      const cx = is3D ? SVG_W / 2 : ORIGIN_X;
+      const cy = is3D ? SVG_H / 2 : ORIGIN_Y;
+
       return {
-        x: ORIGIN_X + finalPan.x + r.x * SCALE,
-        y: ORIGIN_Y + finalPan.y - r.y * SCALE,
+        x: cx + finalPan.x + r.x * SCALE,
+        y: cy + finalPan.y - r.y * SCALE,
         zDepth: r.z,
       };
     },

@@ -20,6 +20,10 @@ export const getMaterialPattern = (materialName: string, baseColor: string) => {
     return 'url(#woodPattern2D)';
   }
 
+  if (n.includes('isopor') || n.includes('espuma')) {
+    return 'url(#styrofoamPattern)';
+  }
+
   if (
     n.includes('concreto') ||
     n.includes('asfalto') ||

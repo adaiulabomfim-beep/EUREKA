@@ -57,23 +57,23 @@ export const SVGDefs: React.FC = () => (
 
     {/* Água */}
     <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.15" />
-      <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.6" />
-    </linearGradient>
-
-    <linearGradient id="fluidDepthB" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.8" />
-    </linearGradient>
-
-    <linearGradient id="surfaceGradientA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.4" />
+      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
       <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.7" />
     </linearGradient>
 
+    <linearGradient id="fluidDepthB" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
+      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.9" />
+    </linearGradient>
+
+    <linearGradient id="surfaceGradientA" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.5" />
+      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.8" />
+    </linearGradient>
+
     <linearGradient id="surfaceGradientB" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.35" />
-      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.65" />
+      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45" />
+      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.75" />
     </linearGradient>
 
     {/* Ondas animadas */}

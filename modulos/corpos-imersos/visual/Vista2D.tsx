@@ -31,6 +31,7 @@ interface Vista2DProps {
   enableTwoFluids: boolean;
 
   deltaH_cm: number;
+  vol_deslocado?: number;
   isSimulating: boolean;
 
   selectedFluid: string;
@@ -121,7 +122,29 @@ const renderDimensionLine = (
   const midY = (y1 + y2) / 2;
   const height = Math.abs(y2 - y1);
 
-  if (height < 5) return null;
+  if (height < 2) return null;
+
+  if (height < 20) {
+    return (
+      <g>
+        <line x1={x - 8} y1={y1} x2={x + 8} y2={y1} stroke={color} strokeWidth="1" />
+        <line x1={x - 8} y1={y2} x2={x + 8} y2={y2} stroke={color} strokeWidth="1" />
+        <g transform={`translate(${x - 16}, ${midY}) rotate(-90)`}>
+          <rect x="-55" y="-10" width="110" height="20" fill="white" opacity="0.82" rx="4" />
+          <text
+            x="0"
+            y="4"
+            textAnchor="middle"
+            fontSize="13"
+            fontWeight="bold"
+            fill={color}
+          >
+            {label}
+          </text>
+        </g>
+      </g>
+    );
+  }
 
   return (
     <g>
@@ -175,6 +198,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   depthB,
   enableTwoFluids,
   deltaH_cm,
+  vol_deslocado,
   isSimulating,
   pan = { x: 0, y: 0 },
   objColor,
@@ -513,12 +537,19 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       </g>
 
       {/* Cotas */}
+      {isSimulating && deltaH_cm > 0.01 && renderDimensionLine(
+        tankLeft - 20,
+        fluidSurfaceY + pan.y,
+        originalFluidSurfaceY + pan.y,
+        vol_deslocado ? `ΔV = ${(vol_deslocado * 1000).toFixed(1)}L` : `Δh = ${deltaH_cm.toFixed(1)}cm`,
+        colorA
+      )}
       {renderDimensionLine(
         tankLeft - 20,
         originalFluidSurfaceY + pan.y,
         tankBottomY + pan.y,
         `hA = ${depthA.toFixed(1)}cm`,
-        '#60a5fa'
+        colorA
       )}
     </svg>
   );

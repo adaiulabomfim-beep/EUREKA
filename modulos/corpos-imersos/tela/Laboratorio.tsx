@@ -53,7 +53,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const svgHeight = 600;
   const svgWidth = 700;
   const tankBottomY = 580;
-  const tankTopMargin = 160;
+  const tankTopMargin = 220;
   const availablePixelHeight = tankBottomY - tankTopMargin;
   const availablePixelWidth = svgWidth - 120;
 
@@ -328,7 +328,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
         {/* --- CENTER: SCENE --- */}
         <div className="lg:col-span-6 flex flex-col h-full rounded-3xl border border-white/50 overflow-hidden relative shadow-2xl shadow-blue-500/10 bg-white/60 backdrop-blur-md">
-          <div className="mt-20">
+          <div className="w-full h-full">
             {is3D ? (
               <Vista3D
                 svgWidth={svgWidth}
@@ -346,7 +346,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 deltaH_cm={physics.deltaH_cm}
                 colorA={colorA}
                 colorB={colorB}
-                isObjectAboveWater={animBlockY + visualHeight < fluidSurfaceY}
+                isObjectAboveWater={animBlockY < fluidSurfaceY}
                 TANK_BORDER_COLOR={TANK_BORDER_COLOR}
                 OBJECT_BORDER_COLOR={OBJECT_BORDER_COLOR}
                 objColor={objColor}
@@ -378,6 +378,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 depthB={depthB}
                 enableTwoFluids={enableTwoFluids}
                 deltaH_cm={physics.deltaH_cm}
+                vol_deslocado={physics.vol_deslocado}
                 isSimulating={isSimulating}
                 objColor={objColor}
                 TANK_BORDER_COLOR={TANK_BORDER_COLOR}
@@ -397,16 +398,16 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
           <div className="absolute top-6 left-1/2 -translate-x-1/2 flex z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1">
             <button 
               onClick={() => setIs3D(!is3D)} 
-              className={`px-6 py-2 rounded-full font-bold transition-all text-sm flex items-center gap-2 ${is3D ? 'bg-blue-100/80 text-blue-700 shadow-inner' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}
+              className={`px-4 py-1.5 rounded-full font-bold transition-all text-xs flex items-center gap-2 ${is3D ? 'bg-blue-100/80 text-blue-700 shadow-inner' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}
             >
-              <Box className="w-4 h-4" />
+              <Box className="w-3.5 h-3.5" />
               {is3D ? '3D ON' : '3D OFF'}
             </button>
             <button 
               onClick={() => setShowFBD(!showFBD)} 
-              className={`px-6 py-2 rounded-full font-bold transition-all text-sm flex items-center gap-2 ${showFBD ? 'bg-blue-100/80 text-blue-700 shadow-inner' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}
+              className={`px-4 py-1.5 rounded-full font-bold transition-all text-xs flex items-center gap-2 ${showFBD ? 'bg-blue-100/80 text-blue-700 shadow-inner' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}
             >
-              <ArrowLeftRight className="w-4 h-4" />
+              <ArrowLeftRight className="w-3.5 h-3.5" />
               VETORES
             </button>
           </div>
@@ -416,7 +417,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             <button 
               onClick={() => setIsSimulating(!isSimulating)} 
               className={`
-                flex items-center gap-2 px-8 py-3 rounded-full font-black text-xs tracking-wide uppercase transition-all active:scale-95 shadow-lg
+                flex items-center gap-2 px-6 py-2.5 rounded-full font-black text-xs tracking-wide uppercase transition-all active:scale-95 shadow-lg
                 ${isSimulating 
                   ? 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-slate-200/50' 
                   : 'bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-600 text-white shadow-blue-500/20'

@@ -40,8 +40,8 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
   const SCALE = 20;
 
   // Calculate dam face points
-  const damLeftBaseX = ORIGIN_X - props.damBaseWidth * SCALE / 2;
-  const damRightBaseX = ORIGIN_X + props.damBaseWidth * SCALE / 2;
+  const damLeftBaseX = ORIGIN_X - (props.damBaseWidth * SCALE / 2) * 0.6;
+  const damRightBaseX = ORIGIN_X + (props.damBaseWidth * SCALE / 2) * 0.6;
   
   // Calculate crest points based on inclination
   const rad = (props.inclinationAngle * Math.PI) / 180;
@@ -58,8 +58,8 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
       pts: [
         { x: damLeftBaseX, y: ORIGIN_Y },
         { x: damRightBaseX, y: ORIGIN_Y },
-        { x: damRightCrestX, y: damCrestY },
-        { x: damLeftCrestX, y: damCrestY },
+        { x: damRightBaseX, y: damCrestY },
+        { x: damLeftBaseX, y: damCrestY },
       ],
       fill: '#94a3b8',
       stroke: '#475569',
@@ -99,42 +99,49 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
     });
   }
 
+  const vectors: any[] = [];
+  const overlayElements: React.ReactNode[] = [];
+
   if (props.hasGate) {
-    const gateTopY = damCrestY + props.gateDepthFromCrest * SCALE;
+    // Gate structure (rectangular)
+    const gateWidth = props.gateWidth * SCALE;
+    const gateHeight = props.gateHeight * SCALE;
     const gateTopX = damLeftCrestX - (props.gateDepthFromCrest * SCALE) / Math.tan(rad);
-    
-    const gateBottomY = gateTopY + props.gateHeight * SCALE;
-    const gateBottomX = gateTopX - (props.gateHeight * SCALE) / Math.tan(rad);
+    const gateTopY = damCrestY + props.gateDepthFromCrest * SCALE;
 
     renderedFaces.push({
       id: 'gate',
       pts: [
         { x: gateTopX, y: gateTopY },
-        { x: gateTopX - 4, y: gateTopY }, // Thickness
-        { x: gateBottomX - 4, y: gateBottomY },
-        { x: gateBottomX, y: gateBottomY },
+        { x: gateTopX + gateWidth, y: gateTopY },
+        { x: gateTopX + gateWidth, y: gateTopY + gateHeight },
+        { x: gateTopX, y: gateTopY + gateHeight },
       ],
       fill: '#1e293b',
       stroke: '#0f172a',
       strokeWidth: 1,
       opacity: 1,
     });
-  }
 
-  const vectors: any[] = [];
-  const overlayElements: React.ReactNode[] = [];
-
-  if (props.hasGate) {
-    const gateTopY = damCrestY + props.gateDepthFromCrest * SCALE;
-    const gateTopX = damLeftCrestX - (props.gateDepthFromCrest * SCALE) / Math.tan(rad);
-    
-    const gateBottomY = gateTopY + props.gateHeight * SCALE;
-    const gateBottomX = gateTopX - (props.gateHeight * SCALE) / Math.tan(rad);
+    // Dashed line for water flow path
+    const flowPath = (
+      <line
+        key="flow-path"
+        x1={gateTopX + gateWidth / 2}
+        y1={gateTopY + gateHeight / 2}
+        x2={gateTopX + gateWidth / 2 + 100}
+        y2={gateTopY + gateHeight / 2 + 50}
+        stroke="#3b82f6"
+        strokeWidth="2"
+        strokeDasharray="5 5"
+      />
+    );
+    overlayElements.push(flowPath);
 
     // Hinge Visual
     if (props.hingePosition !== PosicaoDobradica.NONE) {
-      const hx = props.hingePosition === PosicaoDobradica.TOP ? gateTopX : gateBottomX;
-      const hy = props.hingePosition === PosicaoDobradica.TOP ? gateTopY : gateBottomY;
+      const hx = props.hingePosition === PosicaoDobradica.TOP ? gateTopX : gateTopX + gateWidth;
+      const hy = props.hingePosition === PosicaoDobradica.TOP ? gateTopY : gateTopY + gateHeight;
       
       overlayElements.push(
         <circle key="hinge" cx={hx} cy={hy} r={6} fill="#f59e0b" stroke="#b45309" strokeWidth={2} />
@@ -143,14 +150,14 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
 
     // Tie Rod Visual
     if (props.hasTieRod) {
-      const tx = gateTopX + (gateBottomX - gateTopX) * props.tieRodPosRel;
-      const ty = gateTopY + (gateBottomY - gateTopY) * props.tieRodPosRel;
+      const tx = gateTopX + gateWidth * props.tieRodPosRel;
+      const ty = gateTopY + gateHeight * props.tieRodPosRel;
       
       const tieRad = (props.tieRodAngle * Math.PI) / 180;
       const tieLen = 80;
       const endX = tx + Math.cos(tieRad) * tieLen;
       const endY = ty - Math.sin(tieRad) * tieLen;
-
+      
       overlayElements.push(
         <g key="tierod">
           <line x1={tx} y1={ty} x2={endX} y2={endY} stroke="#64748b" strokeWidth={3} strokeDasharray="5 5" />
@@ -178,6 +185,8 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
       });
     }
   }
+
+
 
   // Add water level indicators
   const waterLevels = [

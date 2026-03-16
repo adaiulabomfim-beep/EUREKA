@@ -138,7 +138,9 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
       });
     });
 
-    return { minX, maxX, minY, maxY, minZ, maxZ };
+    const params = { minX, maxX, minY, maxY, minZ, maxZ };
+    console.log('Gravity Dam autoFitParams:', params);
+    return params;
   }, [profile, toWorldX]);
 
   const { renderedFaces, project, rotate, SCALE, handlers, resetView } =
@@ -262,7 +264,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
           const z = zMin + (j / (Nz - 1)) * (zMax - zMin);
           const base = getDamXAtY(y, 'UPSTREAM');
           const x = toWorldX(base);
-          pushArrow(x, y, z, nx, ny, nz, Lw, '#1e40af', false);
+          pushArrow(x, y, z, nx, ny, nz, Lw, '#2563eb', false);
         }
       }
     }
@@ -279,7 +281,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
           const z = zMin + (j / (Nz - 1)) * (zMax - zMin);
           const base = getDamXAtY(y, 'DOWNSTREAM');
           const x = toWorldX(base);
-          pushArrow(x, y, z, nx, ny, nz, Lw, '#1e40af', false);
+          pushArrow(x, y, z, nx, ny, nz, Lw, '#3b82f6', false);
         }
       }
     }
@@ -289,7 +291,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
       const { nx, ny, nz } = localNormal(y_cp, 'UPSTREAM');
       const base = getDamXAtY(y_cp, 'UPSTREAM');
       const x = toWorldX(base);
-      pushArrow(x, y_cp, zCenter, nx, ny, nz, 120 / SCALE, '#1e40af', true, 'FR');
+      pushArrow(x, y_cp, zCenter, nx, ny, nz, 120 / SCALE, '#2563eb', true, 'FR');
     }
 
     return vecs;

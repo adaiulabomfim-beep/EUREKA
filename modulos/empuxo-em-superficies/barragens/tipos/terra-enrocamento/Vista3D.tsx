@@ -183,7 +183,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           const z = zMin + (j / (Nz - 1)) * (zMax - zMin);
           const base = getDamXAtY(y, "UPSTREAM");
           const x = toWorldX(base);
-          pushArrow(x, y, z, nx, ny, nz, Lw, "#1e40af", false);
+          pushArrow(x, y, z, nx, ny, nz, Lw, "#2563eb", false);
         }
       }
     }
@@ -211,7 +211,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         const { nx, ny, nz } = localNormal(y_cp, "UPSTREAM");
         const base = getDamXAtY(y_cp, "UPSTREAM");
         const x = toWorldX(base);
-        pushArrow(x, y_cp, zCenter, nx, ny, nz, 120 / SCALE, "#1e40af", true, "FR");
+        pushArrow(x, y_cp, zCenter, nx, ny, nz, 120 / SCALE, "#2563eb", true, "FR");
       }
     }
 

@@ -271,7 +271,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
 
         const base = getDamXAtY(y, 'UPSTREAM');
         const x = toWorldX(base);
-        pushArrow(x, y, 0, nx, ny, Lw, '#1e40af', false);
+        pushArrow(x, y, 0, nx, ny, Lw, '#2563eb', false);
       }
     }
 
@@ -293,7 +293,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       const { nx, ny } = localNormal(y_cp, 'UPSTREAM');
       const base = getDamXAtY(y_cp, 'UPSTREAM');
       const x = toWorldX(base);
-      pushArrow(x, y_cp, 0, nx, ny, 120 / SCALE, '#1e40af', true, 'FR');
+      pushArrow(x, y_cp, 0, nx, ny, 120 / SCALE, '#2563eb', true, 'FR');
     }
 
     return vecs;

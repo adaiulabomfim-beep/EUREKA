@@ -21,12 +21,13 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
 
   const toWorldX = useCallback((x: number) => x - damBaseWidth / 2, [damBaseWidth]);
 
-  const archRadius = useMemo(() => Math.max(CHANNEL_WIDTH * 0.6, damBaseWidth * 1.5), [damBaseWidth, CHANNEL_WIDTH]);
+  const archRadius = useMemo(() => Math.max(CHANNEL_WIDTH * 2.2, damBaseWidth * 4.5), [damBaseWidth, CHANNEL_WIDTH]);
   const archOffsetFn = useMemo(() => {
     return (z: number) => {
       const rr = archRadius * archRadius;
       const zz = z * z;
-      return archRadius - Math.sqrt(Math.max(0, rr - zz));
+      const baseCurve = archRadius - Math.sqrt(Math.max(0, rr - zz));
+      return baseCurve * 0.72;
     };
   }, [archRadius]);
 
@@ -43,8 +44,8 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         CHANNEL_WIDTH,
         '#94a3b8',
         1,
-        '#475569',
-        1,
+        'none',
+        0,
         'DAM',
         archOffsetFn,
         0,
@@ -187,7 +188,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           const base = getDamXAtY(y, "UPSTREAM");
           const off = archOffsetFn ? archOffsetFn(z) : 0;
           const x = toWorldX(base + off);
-          pushArrow(x, y, z, nx, ny, Lw, "#1e40af", false);
+          pushArrow(x, y, z, nx, ny, Lw, "#2563eb", false);
         }
       }
     }
@@ -217,7 +218,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         const base = getDamXAtY(y_cp, "UPSTREAM");
         const off = archOffsetFn ? archOffsetFn(zCenter) : 0;
         const x = toWorldX(base + off);
-        pushArrow(x, y_cp, zCenter, nx, ny, 120 / SCALE, "#1e40af", true, "FR");
+        pushArrow(x, y_cp, zCenter, nx, ny, 120 / SCALE, "#2563eb", true, "FR");
       }
     }
 
