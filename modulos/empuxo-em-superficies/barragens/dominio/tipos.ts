@@ -29,6 +29,7 @@ export interface RenderizadorBarragensProps {
   damBaseWidth: number;
   damCrestWidth: number;
   inclinationAngle: number;
+  buttressAngle?: number;
   upstreamLevel: number;
   downstreamLevel?: number;
   force: number;
@@ -46,6 +47,7 @@ export interface VistaBarragemProps {
   damBaseWidth: number;
   damCrestWidth: number;
   inclinationAngle: number;
+  buttressAngle?: number;
   upstreamLevel: number;
   downstreamLevel: number;
   forceData?: any;
@@ -64,6 +66,7 @@ export interface ConfiguracaoSimulacaoBarragem {
   damBaseWidth: number;
   damCrestWidth: number;
   inclinationAngle: number;
+  buttressAngle?: number;
   upstreamLevel: number;
   downstreamLevel: number;
   density: number;

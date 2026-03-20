@@ -1,6 +1,7 @@
 export enum ObjectShape {
   CUBE = 'CUBE',
   SPHERE = 'SPHERE',
+  CYLINDER = 'CYLINDER',
 }
 
 export interface Material {

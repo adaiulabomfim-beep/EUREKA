@@ -65,7 +65,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
         CHANNEL_WIDTH,
         '#9ca3af',
         1,
-        '#475569',
+        '#6b7280',
         1,
         'DAM',
         undefined,
@@ -147,7 +147,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
     useSceneEngine(true, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams);
 
   const vectors = useMemo(() => {
-    if (!showVectors) return [];
+    if (!showVectors || !isAnalyzed) return [];
 
     const vecs: Array<{
       start: { x: number; y: number };

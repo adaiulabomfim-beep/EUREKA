@@ -7,7 +7,7 @@ import { SceneContainer } from '../../visual/ContainerCena';
 
 export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, setIs3D: any, showVectors: boolean, setShowVectors: any }> = (props) => {
   const {
-    damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
+    damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle,
     upstreamLevel, downstreamLevel = 0,
     force, s_cp, y_cp, up, isAnalyzed, onCalculate, onReset,
     is3D, setIs3D, showVectors, setShowVectors
@@ -19,46 +19,46 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
   const ORIGIN_Y = SVG_H * 0.82;
   const CHANNEL_WIDTH = 40;
 
-  const toWorldX = useCallback((x: number) => x - damBaseWidth / 2, [damBaseWidth]);
+  const { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX } = useMemo(() => {
+    const { wallProfile, buttressProfile3D, actualBaseWidth } = construirGeometria(damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle);
 
-  const { worldGeometry, getDamXAtY, profile, actualBaseWidth } = useMemo(() => {
-    const { wallProfile, buttressProfile, actualBaseWidth } = construirGeometria(damHeight, damBaseWidth, damCrestWidth, inclinationAngle);
+    const toWorldX = (x: number) => x - actualBaseWidth / 2;
 
     const getDamXAtY = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => {
       return getDamXAtYGeneric(wallProfile, y, side);
     };
 
-    const buttressWidth = CHANNEL_WIDTH * 0.1;
+    const buttressWidth = CHANNEL_WIDTH * 0.04;
     const buttressOffsets = [-0.4, -0.2, 0, 0.2, 0.4].map(f => f * CHANNEL_WIDTH);
     
     const buttresses = buttressOffsets.flatMap(offset => 
       criarPrisma(
-        buttressProfile,
+        buttressProfile3D,
         buttressWidth,
-        '#64748b',
+        '#9ca3af',
         1,
-        '#334155',
+        '#6b7280',
         1,
         'DAM',
         undefined,
         offset,
-        undefined,
+        'url(#concretePattern)',
         toWorldX
-      )
+      ).filter(face => !(face.normal && face.normal.x === -1 && face.normal.y === 0))
     );
 
     const worldGeometry = [
       ...criarPrisma(
         wallProfile,
         CHANNEL_WIDTH,
-        '#94a3b8',
+        '#9ca3af',
         1,
-        '#475569',
+        '#6b7280',
         1,
         'DAM',
         undefined,
         0,
-        undefined,
+        'url(#concretePattern)',
         toWorldX
       ),
       ...buttresses,
@@ -94,8 +94,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       );
     }
 
-    return { worldGeometry, getDamXAtY, profile: wallProfile, actualBaseWidth };
-  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, downstreamLevel, toWorldX]);
+    return { worldGeometry, getDamXAtY, profile: wallProfile, actualBaseWidth, toWorldX };
+  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle, upstreamLevel, downstreamLevel]);
 
   const autoFitParams = useMemo(() => {
     let minX = Infinity, maxX = -Infinity;
@@ -103,7 +103,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     let minZ = Infinity, maxZ = -Infinity;
 
     const zs = [-CHANNEL_WIDTH / 2, CHANNEL_WIDTH / 2];
-    const fullProfile = [...profile];
+    const fullProfile = [...profile, { x: actualBaseWidth, y: 0 }];
     fullProfile.forEach((p: any) => {
       zs.forEach((z) => {
         const wx = toWorldX(p.x);
@@ -124,7 +124,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
   );
 
   const vectors = useMemo(() => {
-    if (!showVectors) return [];
+    if (!showVectors || !isAnalyzed) return [];
 
     const vecs: any[] = [];
     const isInside = (p: { x: number; y: number }) => p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
@@ -139,12 +139,12 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
 
       let finalMag = magWorld;
       const pEnd = project({ x, y, z });
-      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z: z - nz * finalMag });
+      let pStart = project({ x: x + nx * finalMag, y: y + ny * finalMag, z: z + nz * finalMag });
 
       if (!isInside(pStart)) {
         for (let f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
           const testMag = magWorld * f;
-          const testStart = project({ x: x - nx * testMag, y: y - ny * testMag, z: z - nz * testMag });
+          const testStart = project({ x: x + nx * testMag, y: y + ny * testMag, z: z + nz * testMag });
           if (isInside(testStart)) {
             finalMag = testMag;
             pStart = testStart;

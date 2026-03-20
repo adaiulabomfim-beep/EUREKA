@@ -67,7 +67,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         CHANNEL_WIDTH,
         '#9ca3af',
         1,
-        '#475569',
+        '#6b7280',
         1,
         'DAM',
         undefined,
@@ -202,14 +202,14 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     ) => {
       let finalMag = magWorld;
       const pEnd = project({ x, y, z });
-      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z });
+      let pStart = project({ x: x + nx * finalMag, y: y + ny * finalMag, z });
 
       if (!isInside(pStart)) {
         for (const f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
           const testMag = magWorld * f;
           const testStart = project({
-            x: x - nx * testMag,
-            y: y - ny * testMag,
+            x: x + nx * testMag,
+            y: y + ny * testMag,
             z,
           });
           if (isInside(testStart)) {
@@ -244,12 +244,12 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       let ny = dx;
 
       if (side === 'UPSTREAM') {
-        if (nx < 0) {
+        if (nx > 0) {
           nx = -nx;
           ny = -ny;
         }
       } else {
-        if (nx > 0) {
+        if (nx < 0) {
           nx = -nx;
           ny = -ny;
         }

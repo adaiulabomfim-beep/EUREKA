@@ -42,14 +42,14 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
-        '#94a3b8',
+        '#9ca3af',
         1,
-        'none',
-        0,
+        '#6b7280',
+        1,
         'DAM',
         archOffsetFn,
         0,
-        undefined,
+        'url(#concretePattern)',
         toWorldX
       ),
     ];
@@ -115,7 +115,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
   );
 
   const vectors = useMemo(() => {
-    if (!showVectors) return [];
+    if (!showVectors || !isAnalyzed) return [];
 
     const vecs: any[] = [];
     const isInside = (p: { x: number; y: number }) => p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
@@ -123,12 +123,12 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     const pushArrow = (x: number, y: number, z: number, nx: number, ny: number, magWorld: number, color: string, isResultant: boolean, val?: string) => {
       let finalMag = magWorld;
       const pEnd = project({ x, y, z });
-      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z });
+      let pStart = project({ x: x + nx * finalMag, y: y + ny * finalMag, z });
 
       if (!isInside(pStart)) {
         for (let f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
           const testMag = magWorld * f;
-          const testStart = project({ x: x - nx * testMag, y: y - ny * testMag, z });
+          const testStart = project({ x: x + nx * testMag, y: y + ny * testMag, z });
           if (isInside(testStart)) {
             finalMag = testMag;
             pStart = testStart;
@@ -161,9 +161,9 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       let ny = dx;
 
       if (side === "UPSTREAM") {
-        if (nx < 0) { nx = -nx; ny = -ny; }
-      } else {
         if (nx > 0) { nx = -nx; ny = -ny; }
+      } else {
+        if (nx < 0) { nx = -nx; ny = -ny; }
       }
 
       const mag = Math.sqrt(nx * nx + ny * ny) || 1;

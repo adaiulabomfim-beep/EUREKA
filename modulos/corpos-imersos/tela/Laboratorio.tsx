@@ -13,7 +13,7 @@ import { Memorial } from './Memorial';
 import { Vista2D } from '../visual/Vista2D';
 import { Vista3D } from '../visual/Vista3D';
 import { simularCorposImersos } from '../calculos/simulador';
-import { getPoints, getFluidColor } from '../visual/visualUtils';
+import { getFluidColor } from '../visual/visualUtils';
 
 interface BodyFallLabProps {
   onContextUpdate?: (ctx: string) => void;
@@ -37,8 +37,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [depthB, setDepthB] = useState<number>(100);
 
   const [gravity] = useState<number>(9.81);
-  const [tankWidth, setTankWidth] = useState<number>(600);
-  const [tankDepth, setTankDepth] = useState<number>(100);
+  const [tankWidth, setTankWidth] = useState<number>(500);
+  const [tankDepth, setTankDepth] = useState<number>(500);
   const [tankHeight, setTankHeight] = useState<number>(500);
 
   // --- STATE: UI & CONTROL ---
@@ -203,7 +203,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     setEnableTwoFluids(false);
     setDepthA(50);
     setTankWidth(100);
-    setTankHeight(80);
+    setTankDepth(100);
+    setTankHeight(100);
     setToastMsg('Exercício 5 Carregado!');
     setTimeout(() => setToastMsg(null), 1500);
   };
@@ -258,8 +259,6 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
   const colorA = getFluidColor(selectedFluid);
   const colorB = getFluidColor(selectedFluidB);
-
-  const tankPts = getPoints(0, 0, tankWidth, autoTankHeight, 0, tankDepth, tankOffsetX, tankBottomY);
 
   const geom = {
     formula: shape === ObjectShape.CUBE ? 'L³' : shape === ObjectShape.SPHERE ? '4/3 · π · r³' : 'L · P · H',
@@ -356,13 +355,18 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 objBottomDistFromTankBottom={tankBottomY - (animBlockY + visualHeight)}
                 objD_visual={dim1 * visualScaleFactor}
                 visualTankDepth={tankDepth * visualScaleFactor}
+                showFBD={showFBD}
+                objectWeight={physics.objectWeight}
+                buoyancyForce={physics.buoyancyForce}
+                centerOfBuoyancyY_visual={tankBottomY - (physics.centerOfBuoyancyY * visualScaleFactor)}
+                showCenterOfBuoyancy={showCenterOfBuoyancy}
+                onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}
+                h_sub_actual={physics.h_sub_actual}
               />
             ) : (
               <Vista2D
                 svgWidth={svgWidth}
                 svgHeight={svgHeight}
-                tankWidth={tankWidth}
-                tankHeight={autoTankHeight}
                 tankBottomY={tankBottomY}
                 tankOffsetX={tankOffsetX}
                 currentTankW={currentTankW}
@@ -389,6 +393,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 colorB={colorB}
                 effectiveHB_px={enableTwoFluids ? depthB * visualScaleFactor : 0}
                 hA_dynamic_px={depthA * visualScaleFactor}
+                showFBD={showFBD}
+                objectWeight={physics.objectWeight}
+                buoyancyForce={physics.buoyancyForce}
+                centerOfBuoyancyY_visual={tankBottomY - (physics.centerOfBuoyancyY * visualScaleFactor)}
+                h_sub_actual={physics.h_sub_actual}
+                showCenterOfBuoyancy={showCenterOfBuoyancy}
+                onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}
               />
             )}
           </div>

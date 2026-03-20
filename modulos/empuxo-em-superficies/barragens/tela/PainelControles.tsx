@@ -15,6 +15,8 @@ interface PainelControlesProps {
   setDamType: (type: TipoBarragem) => void;
   inclinationAngle: number;
   setInclinationAngle: (val: number) => void;
+  buttressAngle?: number;
+  setButtressAngle?: (val: number) => void;
   damHeight: number;
   setDamHeight: (val: number) => void;
   damBaseWidth: number;
@@ -33,6 +35,7 @@ interface PainelControlesProps {
 export const PainelControles: React.FC<PainelControlesProps> = ({
   damType, setDamType,
   inclinationAngle, setInclinationAngle,
+  buttressAngle, setButtressAngle,
   damHeight, setDamHeight,
   damBaseWidth, setDamBaseWidth,
   damCrestWidth, setDamCrestWidth,
@@ -63,15 +66,23 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                 <label className={labelClass}>Inclinação da Face (θ)</label>
                 <NumberInput value={inclinationAngle} min={1} max={160} onChange={setInclinationAngle} />
               </div>
+              {damType === TipoBarragem.CONTRAFORTE && setButtressAngle && buttressAngle !== undefined && (
+                <div>
+                  <label className={labelClass}>Inclinação dos Contrafortes (°)</label>
+                  <NumberInput value={buttressAngle} min={1} max={160} onChange={setButtressAngle} />
+                </div>
+              )}
               <div className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/50 space-y-3">
                 <div>
                     <label className={labelClass}>Altura Total (m)</label>
                     <NumberInput value={damHeight} min={1} max={200} onChange={setDamHeight} />
                 </div>
-                <div>
-                    <label className={labelClass}>Largura da Base (m)</label>
-                    <NumberInput value={damBaseWidth} min={1} max={200} onChange={setDamBaseWidth} />
-                </div>
+                {damType !== TipoBarragem.CONTRAFORTE && (
+                  <div>
+                      <label className={labelClass}>Largura da Base (m)</label>
+                      <NumberInput value={damBaseWidth} min={1} max={200} onChange={setDamBaseWidth} />
+                  </div>
+                )}
                 <div>
                     <label className={labelClass}>Largura da Crista (m)</label>
                     <NumberInput value={damCrestWidth} min={0} max={100} onChange={setDamCrestWidth} />

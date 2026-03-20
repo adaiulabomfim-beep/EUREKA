@@ -280,9 +280,15 @@ export const useSceneEngine = (
 
       // z médio tende a estabilizar melhor a pilha visual em cenas de barragens
       // do que usar apenas o ponto mais próximo.
-      const zDepth =
+      let zDepth =
         proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
 
+      // Pequeno bias para linhas (arestas explícitas) para evitar z-fighting com as faces adjacentes
+      // O bias deve ser pequeno o suficiente para não trazer linhas de trás para frente de objetos finos
+      if (proj.length === 2) {
+        zDepth += 0.5;
+      }
+      
       let b = 1;
       if (wf.normal) {
         b = brightness(wf.normal);
@@ -290,9 +296,9 @@ export const useSceneEngine = (
 
       let hatchPattern = wf.hatchPattern;
 
+      // Removemos o ripplePattern da água em 3D para evitar linhas horizontais indesejadas
       if (wf.kind === 'WATER') {
-        const isTop = wf.normal && wf.normal.y > 0.9;
-        hatchPattern = isTop ? 'url(#ripplePattern)' : undefined;
+        hatchPattern = undefined;
       }
 
       projected.push({
@@ -311,7 +317,9 @@ export const useSceneEngine = (
     });
 
     projected.sort((a, b) => {
-      if (a.zDepth !== b.zDepth) return a.zDepth - b.zDepth;
+      const zDiff = a.zDepth - b.zDepth;
+      // Tolerância para evitar z-fighting em faces coplanares ou muito próximas
+      if (Math.abs(zDiff) > 0.01) return zDiff;
       if (a.kind !== b.kind) return a.kind === 'WATER' ? -1 : 1;
       if (a.priority !== b.priority) return a.priority - b.priority;
       return a.id - b.id;

@@ -1,5 +1,5 @@
 import { ObjectShape } from '../dominio/tipos';
-import { calculateVolume, calculateBaseArea, calculateHeight, calculateVolumeFromBottom } from './volume';
+import { calculateVolume, calculateBaseArea, calculateHeight, calculateVolumeFromBottom, calculateCenterOfBuoyancy } from './volume';
 import { calculateMass, calculateWeight } from './massa';
 import { calculateBuoyancyForce, calculateApparentWeight } from './empuxo';
 import { calculateDeltaH, calculateTankBaseArea } from './deslocamento';
@@ -19,14 +19,14 @@ export const simularCorposImersos = (props: any) => {
 
   const volume = calculateVolume(shape, toM(dim1), toM(dim2));
   const baseArea = calculateBaseArea(shape, toM(dim1));
-  const H_cm = calculateHeight(shape, toM(dim1)) * 100;
+  const H_cm = calculateHeight(shape, toM(dim1), toM(dim2)) * 100;
   const objectMass = calculateMass(volume, objectDensity);
   const objectWeight = calculateWeight(objectMass, gravity);
 
   const { d_eq, status } = calcularEquilibrio(shape, H_cm, objectDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids);
 
-  const vol_sub_B = calculateVolumeFromBottom(shape, toM(dim1), toM(h_in_B));
-  const vol_total_sub = calculateVolumeFromBottom(shape, toM(dim1), toM(h_in_A + h_in_B));
+  const vol_sub_B = calculateVolumeFromBottom(shape, toM(dim1), toM(h_in_B), toM(dim2));
+  const vol_total_sub = calculateVolumeFromBottom(shape, toM(dim1), toM(h_in_A + h_in_B), toM(dim2));
   const vol_sub_A = Math.max(0, vol_total_sub - vol_sub_B);
 
   const vol_deslocado = vol_total_sub;
@@ -38,6 +38,9 @@ export const simularCorposImersos = (props: any) => {
   const E_B = enableTwoFluids ? calculateBuoyancyForce(rhoB, vol_sub_B, gravity) : 0;
   const buoyancyForce = E_A + E_B;
   const apparentWeight = calculateApparentWeight(objectWeight, buoyancyForce);
+
+  // Calculate center of buoyancy (in cm)
+  const centerOfBuoyancyY = calculateCenterOfBuoyancy(shape, toM(dim1), toM(h_in_A + h_in_B), toM(dim2)) * 100;
 
   return {
     volume,
@@ -58,6 +61,7 @@ export const simularCorposImersos = (props: any) => {
     E_B,
     buoyancyForce,
     apparentWeight,
-    d_eq
+    d_eq,
+    centerOfBuoyancyY
   };
 };

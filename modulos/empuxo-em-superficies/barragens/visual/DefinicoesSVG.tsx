@@ -128,22 +128,22 @@ export const SVGDefs: React.FC = () => (
 
     {/* Terra / Enrocamento */}
     <pattern
-      id="earthHatch"
+      id="earthPattern"
       width="20"
       height="20"
       patternUnits="userSpaceOnUse"
       patternTransform="rotate(12)"
     >
-      <rect width="20" height="20" fill="#a16207" />
+      <rect width="20" height="20" fill="#78350f" />
       <path
         d="M0,5 Q10,2 20,5 M0,15 Q10,18 20,15"
-        stroke="#78350f"
+        stroke="#451a03"
         strokeWidth="0.8"
         fill="none"
         opacity="0.35"
       />
-      <circle cx="5" cy="5" r="1" fill="#d97706" opacity="0.5" />
-      <circle cx="15" cy="15" r="0.8" fill="#b45309" opacity="0.4" />
+      <circle cx="5" cy="5" r="1" fill="#451a03" opacity="0.5" />
+      <circle cx="15" cy="15" r="0.8" fill="#451a03" opacity="0.4" />
     </pattern>
 
     {/* Madeira e metal, caso queira reaproveitar */}

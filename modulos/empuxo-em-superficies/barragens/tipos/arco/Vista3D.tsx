@@ -93,14 +93,14 @@ export const Vista3D: React.FC<
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
+        '#9ca3af',
+        1,
         '#6b7280',
         1,
-        'none',
-        0,
         'DAM',
         archOffsetFn,
         0,
-        undefined,
+        'url(#concretePattern)',
         toWorldX
       ),
     ];
@@ -194,7 +194,7 @@ export const Vista3D: React.FC<
   );
 
   const vectors = useMemo(() => {
-    if (!showVectors || !is3D) return [];
+    if (!showVectors || !is3D || !isAnalyzed) return [];
 
     const vecs: SceneVector[] = [];
 
@@ -222,18 +222,18 @@ export const Vista3D: React.FC<
       let finalMag = magWorld;
       const pEnd = project({ x, y, z });
       let pStart = project({
-        x: x - nx * finalMag,
-        y: y - ny * finalMag,
-        z: z - nz * finalMag,
+        x: x + nx * finalMag,
+        y: y + ny * finalMag,
+        z: z + nz * finalMag,
       });
 
       if (!isInside(pStart)) {
         for (const f of [0.8, 0.6, 0.4, 0.25, 0.12]) {
           const testMag = magWorld * f;
           const testStart = project({
-            x: x - nx * testMag,
-            y: y - ny * testMag,
-            z: z - nz * testMag,
+            x: x + nx * testMag,
+            y: y + ny * testMag,
+            z: z + nz * testMag,
           });
 
           if (isInside(testStart)) {

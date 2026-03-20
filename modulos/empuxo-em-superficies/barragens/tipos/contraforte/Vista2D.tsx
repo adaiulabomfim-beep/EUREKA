@@ -7,7 +7,7 @@ import { SceneContainer } from '../../visual/ContainerCena';
 
 export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, setIs3D: any, showVectors: boolean, setShowVectors: any }> = (props) => {
   const {
-    damHeight, damBaseWidth, damCrestWidth, inclinationAngle,
+    damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle,
     upstreamLevel, downstreamLevel = 0,
     force, s_cp, y_cp, up, isAnalyzed, onCalculate, onReset,
     is3D, setIs3D, showVectors, setShowVectors
@@ -19,11 +19,11 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
   const ORIGIN_Y = SVG_H * 0.82;
   const CHANNEL_WIDTH = 40;
 
-  const toWorldX = useCallback((x: number) => x - damBaseWidth / 2, [damBaseWidth]);
-
-  const { worldGeometry, getDamXAtY, profile, actualBaseWidth } = useMemo(() => {
-    const { wallProfile, buttressProfile, actualBaseWidth } = construirGeometria(damHeight, damBaseWidth, damCrestWidth, inclinationAngle);
+  const { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX } = useMemo(() => {
+    const { wallProfile, buttressProfile2D, actualBaseWidth } = construirGeometria(damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle);
     const profile = wallProfile;
+
+    const toWorldX = (x: number) => x - actualBaseWidth / 2;
 
     const getDamXAtY = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => {
       return getDamXAtYGeneric(wallProfile, y, side);
@@ -33,29 +33,29 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       ...criarPrisma(
         wallProfile,
         CHANNEL_WIDTH,
-        '#94a3b8',
+        '#9ca3af',
         1,
-        '#475569',
+        '#6b7280',
         1,
         'DAM',
         undefined,
         0,
-        undefined,
+        'url(#concretePattern)',
         toWorldX
       ),
       ...criarPrisma(
-        buttressProfile,
+        buttressProfile2D,
         CHANNEL_WIDTH,
-        '#64748b',
+        '#9ca3af',
         0.8,
-        '#334155',
+        '#6b7280',
         1,
         'DAM',
         undefined,
         0,
-        undefined,
+        'url(#concretePattern)',
         toWorldX
-      ),
+      ).filter(face => !(face.normal && face.normal.x === -1 && face.normal.y === 0)),
     ];
 
     if (upstreamLevel > 0) {
@@ -88,8 +88,8 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       );
     }
 
-    return { worldGeometry, getDamXAtY, profile, actualBaseWidth };
-  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, downstreamLevel, toWorldX]);
+    return { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX };
+  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle, upstreamLevel, downstreamLevel]);
 
   const autoFitParams = useMemo(() => {
     let minX = Infinity, maxX = -Infinity;
@@ -118,7 +118,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
   );
 
   const vectors = useMemo(() => {
-    if (!showVectors) return [];
+    if (!showVectors || !isAnalyzed) return [];
 
     const vecs: any[] = [];
     const isInside = (p: { x: number; y: number }) => p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
@@ -126,12 +126,12 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     const pushArrow = (x: number, y: number, z: number, nx: number, ny: number, magWorld: number, color: string, isResultant: boolean, val?: string) => {
       let finalMag = magWorld;
       const pEnd = project({ x, y, z });
-      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z });
+      let pStart = project({ x: x + nx * finalMag, y: y + ny * finalMag, z });
 
       if (!isInside(pStart)) {
         for (let f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
           const testMag = magWorld * f;
-          const testStart = project({ x: x - nx * testMag, y: y - ny * testMag, z });
+          const testStart = project({ x: x + nx * testMag, y: y + ny * testMag, z });
           if (isInside(testStart)) {
             finalMag = testMag;
             pStart = testStart;
@@ -164,9 +164,9 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       let ny = dx;
 
       if (side === "UPSTREAM") {
-        if (nx < 0) { nx = -nx; ny = -ny; }
-      } else {
         if (nx > 0) { nx = -nx; ny = -ny; }
+      } else {
+        if (nx < 0) { nx = -nx; ny = -ny; }
       }
 
       const mag = Math.sqrt(nx * nx + ny * ny) || 1;
@@ -329,7 +329,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         'damBase',
         { x: toWorldX(getDamXAtY(0, 'UPSTREAM')), y: 0 },
         { x: toWorldX(actualBaseWidth), y: 0 },
-        `${damBaseWidth.toFixed(1)}m`,
+        `${actualBaseWidth.toFixed(1)}m`,
         { x: 0, y: 40 },
         { x: 0, y: 15 }
       )
@@ -400,7 +400,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       const pToeWorld = { x: toWorldX(getDamXAtY(0, 'UPSTREAM')), y: 0 };
       const pToe = project({ ...pToeWorld, z: 0 });
       
-      const rWorld = Math.min(damHeight, damBaseWidth) * 0.15;
+      const rWorld = Math.min(damHeight, actualBaseWidth) * 0.15;
       const r = rWorld * SCALE;
       
       if (inclinationAngle === 90) {

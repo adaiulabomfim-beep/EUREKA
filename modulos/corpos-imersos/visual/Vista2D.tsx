@@ -1,5 +1,8 @@
 import React, { useId, useMemo } from 'react';
+import { Box as BoxIcon } from 'lucide-react';
 import { ObjectShape } from '../dominio/tipos';
+import { SvgDefs } from './SvgDefs';
+import { getMaterialPattern } from './visualUtils';
 
 type Point2D = {
   x: number;
@@ -10,8 +13,6 @@ interface Vista2DProps {
   svgWidth: number;
   svgHeight: number;
 
-  tankWidth: number;
-  tankHeight: number;
   tankBottomY: number;
   tankOffsetX: number;
   currentTankW: number;
@@ -51,6 +52,8 @@ interface Vista2DProps {
   buoyancyForce?: number;
   centerOfBuoyancyY_visual?: number;
   h_sub_actual?: number;
+  showCenterOfBuoyancy?: boolean;
+  onToggleCenterOfBuoyancy?: () => void;
 
   pan?: { x: number; y: number };
 }
@@ -73,43 +76,6 @@ const drawPoly = (
       strokeLinejoin="round"
     />
   );
-};
-
-const getMaterialFill = (materialName: string, baseColor: string) => {
-  const n = materialName.toLowerCase();
-
-  if (
-    n.includes('ouro') ||
-    n.includes('latão') ||
-    n.includes('bronze') ||
-    n.includes('cobre')
-  ) {
-    return 'url(#goldGradient2D)';
-  }
-
-  if (n.includes('madeira') || n.includes('cortiça')) {
-    return 'url(#woodPattern2D)';
-  }
-
-  if (
-    n.includes('concreto') ||
-    n.includes('asfalto') ||
-    n.includes('granito') ||
-    n.includes('pedra')
-  ) {
-    return 'url(#concretePattern2D)';
-  }
-
-  if (
-    n.includes('aço') ||
-    n.includes('alumínio') ||
-    n.includes('ferro') ||
-    n.includes('prata')
-  ) {
-    return 'url(#metalLinear2D)';
-  }
-
-  return baseColor;
 };
 
 const renderDimensionLine = (
@@ -213,6 +179,8 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   buoyancyForce = 0,
   centerOfBuoyancyY_visual = 0,
   h_sub_actual = 0,
+  showCenterOfBuoyancy = true,
+  onToggleCenterOfBuoyancy,
 }) => {
   const clipId = useId().replace(/:/g, '');
   const clipUnderWaterId = `clip-under-water-${clipId}`;
@@ -222,7 +190,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
 
   const cx = tankOffsetX + currentTankW / 2 + pan.x;
   const cy = blockY + pan.y;
-  const renderFill = getMaterialFill(selectedMaterial, objColor);
+  const renderFill = getMaterialPattern(selectedMaterial, objColor);
 
   const tankLeft = tankOffsetX + pan.x;
   const tankTop = tankBottomY - currentTankH + pan.y;
@@ -248,19 +216,34 @@ export const Vista2D: React.FC<Vista2DProps> = ({
     [cx, centerOfBuoyancyY_visual, pan.y]
   );
 
-  const arrowLenP = Math.min(200, Math.max(50, objectWeight * 0.01));
-  const arrowLenE = Math.min(200, Math.max(50, buoyancyForce * 0.01));
+  const arrowLenP = Math.min(120, Math.max(30, objectWeight * 0.005));
+  const arrowLenE = Math.min(120, Math.max(30, buoyancyForce * 0.005));
 
   const showBuoyancyVector = isSimulating && h_sub_actual > 0.001;
 
   return (
-    <svg
-      width="100%"
-      height="100%"
-      className="overflow-visible"
-      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-      preserveAspectRatio="xMidYMid meet"
-    >
+    <div className="relative w-full h-full">
+      {onToggleCenterOfBuoyancy && (
+        <div className="absolute top-4 right-4 flex gap-2 z-30" onMouseDown={(e) => e.stopPropagation()}>
+          <button
+            onClick={onToggleCenterOfBuoyancy}
+            className={`bg-white/85 p-2 rounded-full shadow-md border border-blue-100/70 backdrop-blur ${
+              showCenterOfBuoyancy ? 'text-blue-600' : 'text-slate-400'
+            }`}
+            title="Mostrar Centro de Carena"
+          >
+            <BoxIcon className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      <svg
+        width="100%"
+        height="100%"
+        className="overflow-visible"
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+      <SvgDefs colorA={colorA} colorB={colorB} />
       <defs>
         <marker id={arrowRedId} markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
           <path d="M0,0 L6,2 L0,4 Z" fill="#ef4444" />
@@ -269,95 +252,6 @@ export const Vista2D: React.FC<Vista2DProps> = ({
         <marker id={arrowGreenId} markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
           <path d="M0,0 L6,2 L0,4 Z" fill="#16a34a" />
         </marker>
-
-        <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={colorA} stopOpacity="0.15" />
-          <stop offset="100%" stopColor={colorA} stopOpacity="0.6" />
-        </linearGradient>
-
-        <linearGradient id="fluidDepthB" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={colorB} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={colorB} stopOpacity="0.8" />
-        </linearGradient>
-
-        <linearGradient id="goldGradient2D" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#fef3c7" />
-          <stop offset="50%" stopColor="#f59e0b" />
-          <stop offset="100%" stopColor="#b45309" />
-        </linearGradient>
-
-        <linearGradient id="metalLinear2D" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#e2e8f0" />
-          <stop offset="50%" stopColor="#94a3b8" />
-          <stop offset="100%" stopColor="#475569" />
-        </linearGradient>
-
-        <pattern
-          id="woodPattern2D"
-          width="20"
-          height="20"
-          patternUnits="userSpaceOnUse"
-          patternTransform="rotate(10)"
-        >
-          <rect width="20" height="20" fill="#d97706" />
-          <path
-            d="M0,5 Q10,2 20,5 M0,15 Q10,18 20,15"
-            stroke="#92400e"
-            strokeWidth="1"
-            fill="none"
-            opacity="0.5"
-          />
-          <path
-            d="M5,0 Q2,10 5,20"
-            stroke="#b45309"
-            strokeWidth="0.5"
-            fill="none"
-            opacity="0.3"
-          />
-        </pattern>
-
-        <filter id="concreteNoise2D">
-          <feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="3" stitchTiles="stitch" />
-        </filter>
-
-        <pattern id="concretePattern2D" width="64" height="64" patternUnits="userSpaceOnUse">
-          <rect width="64" height="64" fill="#a3a3a3" />
-          <rect width="64" height="64" filter="url(#concreteNoise2D)" opacity="0.25" />
-          <path
-            d="M10,20 Q15,15 20,20 T30,20"
-            stroke="#525252"
-            strokeWidth="0.5"
-            fill="none"
-            opacity="0.3"
-          />
-          <circle cx="45" cy="50" r="1.5" fill="#525252" opacity="0.4" />
-          <circle cx="10" cy="50" r="1" fill="#e5e5e5" opacity="0.4" />
-        </pattern>
-
-        <pattern id="ripplePattern" width="120" height="40" patternUnits="userSpaceOnUse">
-          <animateTransform
-            attributeName="patternTransform"
-            type="translate"
-            from="0 0"
-            to="120 20"
-            dur="8s"
-            repeatCount="indefinite"
-          />
-          <path
-            d="M0,20 Q30,10 60,20 T120,20"
-            fill="none"
-            stroke="white"
-            strokeWidth="1"
-            opacity="0.4"
-          />
-          <path
-            d="M-60,0 Q-30,-10 0,0 T60,0"
-            fill="none"
-            stroke="white"
-            strokeWidth="0.5"
-            opacity="0.2"
-          />
-        </pattern>
 
         <clipPath id={clipUnderWaterId}>
           <rect x="-2000" y={fluidSurfaceY + pan.y} width="5000" height="5000" />
@@ -377,8 +271,10 @@ export const Vista2D: React.FC<Vista2DProps> = ({
             { x: tankLeft + currentTankW, y: tankTop },
             { x: tankLeft, y: tankTop },
           ],
-          '#ffffff',
-          1
+          'url(#glassGradient)',
+          0.2,
+          TANK_BORDER_COLOR,
+          2
         )}
       </g>
 
@@ -399,48 +295,181 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       {/* Parte submersa do objeto */}
       <g clipPath={`url(#${clipUnderWaterId})`}>
         {shape === ObjectShape.SPHERE ? (
-          <circle
-            cx={cx}
-            cy={cy + visualHeight / 2}
-            r={visualWidth / 2}
-            fill={renderFill}
-            stroke={OBJECT_BORDER_COLOR}
-            strokeWidth="1"
-          />
+          <>
+            <circle
+              cx={cx}
+              cy={cy + visualHeight / 2}
+              r={visualWidth / 2}
+              fill={objColor}
+              stroke="none"
+            />
+            <circle
+              cx={cx}
+              cy={cy + visualHeight / 2}
+              r={visualWidth / 2}
+              fill={renderFill}
+              stroke={OBJECT_BORDER_COLOR}
+              strokeWidth="1"
+            />
+            <circle
+              cx={cx}
+              cy={cy + visualHeight / 2}
+              r={visualWidth / 2}
+              fill="url(#sphereLight)"
+              stroke="none"
+            />
+          </>
+        ) : shape === ObjectShape.CYLINDER ? (
+          <>
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={objColor}
+              stroke="none"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={renderFill}
+              stroke={OBJECT_BORDER_COLOR}
+              strokeWidth="1"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill="url(#metalLinear2D)"
+              stroke="none"
+              opacity="0.4"
+              pointerEvents="none"
+            />
+          </>
         ) : (
-          <rect
-            x={cx - visualWidth / 2}
-            y={cy}
-            width={visualWidth}
-            height={visualHeight}
-            fill={renderFill}
-            stroke={OBJECT_BORDER_COLOR}
-            strokeWidth="1"
-          />
+          <>
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={objColor}
+              stroke="none"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={renderFill}
+              stroke={OBJECT_BORDER_COLOR}
+              strokeWidth="1"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill="url(#sphereLight)"
+              stroke="none"
+              opacity="0.3"
+              pointerEvents="none"
+            />
+          </>
         )}
       </g>
 
       {/* Parte emersa do objeto */}
       <g clipPath={`url(#${clipAboveWaterId})`}>
         {shape === ObjectShape.SPHERE ? (
-          <circle
-            cx={cx}
-            cy={cy + visualHeight / 2}
-            r={visualWidth / 2}
-            fill={renderFill}
-            stroke={OBJECT_BORDER_COLOR}
-            strokeWidth="1"
-          />
+          <>
+            <circle
+              cx={cx}
+              cy={cy + visualHeight / 2}
+              r={visualWidth / 2}
+              fill={objColor}
+              stroke="none"
+            />
+            <circle
+              cx={cx}
+              cy={cy + visualHeight / 2}
+              r={visualWidth / 2}
+              fill={renderFill}
+              stroke={OBJECT_BORDER_COLOR}
+              strokeWidth="1"
+            />
+            <circle
+              cx={cx}
+              cy={cy + visualHeight / 2}
+              r={visualWidth / 2}
+              fill="url(#sphereLight)"
+              stroke="none"
+              pointerEvents="none"
+            />
+          </>
+        ) : shape === ObjectShape.CYLINDER ? (
+          <>
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={objColor}
+              stroke="none"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={renderFill}
+              stroke={OBJECT_BORDER_COLOR}
+              strokeWidth="1"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill="url(#metalLinear2D)"
+              stroke="none"
+              opacity="0.4"
+              pointerEvents="none"
+            />
+          </>
         ) : (
-          <rect
-            x={cx - visualWidth / 2}
-            y={cy}
-            width={visualWidth}
-            height={visualHeight}
-            fill={renderFill}
-            stroke={OBJECT_BORDER_COLOR}
-            strokeWidth="1"
-          />
+          <>
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={objColor}
+              stroke="none"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill={renderFill}
+              stroke={OBJECT_BORDER_COLOR}
+              strokeWidth="1"
+            />
+            <rect
+              x={cx - visualWidth / 2}
+              y={cy}
+              width={visualWidth}
+              height={visualHeight}
+              fill="url(#sphereLight)"
+              stroke="none"
+              opacity="0.3"
+              pointerEvents="none"
+            />
+          </>
         )}
       </g>
 
@@ -458,7 +487,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
           />
           <circle cx={centerOfMass.x} cy={centerOfMass.y} r={3} fill="#ef4444" />
           <g transform={`translate(${centerOfMass.x + 10}, ${centerOfMass.y + arrowLenP / 2})`}>
-            <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.85" rx="4" />
+            <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
             <text x="12" y="4" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="bold">
               P
             </text>
@@ -477,12 +506,23 @@ export const Vista2D: React.FC<Vista2DProps> = ({
               />
               <circle cx={centerOfBuoyancy.x} cy={centerOfBuoyancy.y} r={3} fill="#16a34a" />
               <g transform={`translate(${centerOfBuoyancy.x + 10}, ${centerOfBuoyancy.y - arrowLenE / 2})`}>
-                <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.85" rx="4" />
+                <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
                 <text x="12" y="4" textAnchor="middle" fill="#16a34a" fontSize="12" fontWeight="bold">
                   E
                 </text>
               </g>
             </>
+          )}
+
+          {showCenterOfBuoyancy && h_sub_actual > 0.001 && (
+            <circle
+              cx={centerOfBuoyancy.x}
+              cy={centerOfBuoyancy.y}
+              r={6}
+              fill="white"
+              stroke="#16a34a"
+              strokeWidth="2"
+            />
           )}
         </g>
       )}
@@ -514,6 +554,17 @@ export const Vista2D: React.FC<Vista2DProps> = ({
           width={currentTankW}
           height={rippleHeight}
           fill="url(#ripplePattern)"
+        />
+        
+        <rect
+          x={tankLeft}
+          y={fluidSurfaceY + pan.y}
+          width={currentTankW}
+          height={rippleHeight}
+          fill="url(#surfaceGradientA)"
+          opacity="1"
+          stroke="rgba(255,255,255,0.5)"
+          strokeWidth="1"
         />
 
         {enableTwoFluids && (
@@ -552,5 +603,6 @@ export const Vista2D: React.FC<Vista2DProps> = ({
         colorA
       )}
     </svg>
+    </div>
   );
 };

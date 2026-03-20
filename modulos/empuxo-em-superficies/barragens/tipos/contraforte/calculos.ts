@@ -20,6 +20,7 @@ export const simular = (config: ConfiguracaoSimulacaoBarragem): ResultadoSimulac
     damBaseWidth,
     damCrestWidth,
     inclinationAngle,
+    buttressAngle = 45,
     upstreamLevel,
     downstreamLevel,
     density,
@@ -28,7 +29,7 @@ export const simular = (config: ConfiguracaoSimulacaoBarragem): ResultadoSimulac
 
   const gamma = density * gravity;
 
-  const { wallProfile, buttressProfile, actualBaseWidth } = construirGeometria(damHeight, damBaseWidth, damCrestWidth, inclinationAngle);
+  const { wallProfile, buttressProfile2D, buttressProfile3D, actualBaseWidth } = construirGeometria(damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle);
 
   const forceData = calcularHidrostatica(
     damHeight,
@@ -44,14 +45,16 @@ export const simular = (config: ConfiguracaoSimulacaoBarragem): ResultadoSimulac
     forceData,
     stabilityData: null,
     geometryModel: {
-      profile: [...wallProfile, ...buttressProfile],
+      profile: [...wallProfile, ...buttressProfile2D],
       wallProfile,
-      buttressProfile,
+      buttressProfile: buttressProfile3D,
+      buttressProfile2D,
       actualBaseWidth,
       damHeight,
       damBaseWidth,
       damCrestWidth,
-      inclinationAngle
+      inclinationAngle,
+      buttressAngle
     },
     annotationModel: {},
     warnings: []

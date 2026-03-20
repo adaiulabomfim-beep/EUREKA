@@ -32,9 +32,9 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
-        '#d97706',
+        '#78350f',
         1,
-        '#b45309',
+        '#451a03',
         1,
         'DAM',
         undefined,
@@ -103,7 +103,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
   );
 
   const vectors = useMemo(() => {
-    if (!showVectors) return [];
+    if (!showVectors || !isAnalyzed) return [];
 
     const vecs: any[] = [];
     const isInside = (p: { x: number; y: number }) => p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
@@ -118,12 +118,12 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
 
       let finalMag = magWorld;
       const pEnd = project({ x, y, z });
-      let pStart = project({ x: x - nx * finalMag, y: y - ny * finalMag, z: z - nz * finalMag });
+      let pStart = project({ x: x + nx * finalMag, y: y + ny * finalMag, z: z + nz * finalMag });
 
       if (!isInside(pStart)) {
         for (let f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
           const testMag = magWorld * f;
-          const testStart = project({ x: x - nx * testMag, y: y - ny * testMag, z: z - nz * testMag });
+          const testStart = project({ x: x + nx * testMag, y: y + ny * testMag, z: z + nz * testMag });
           if (isInside(testStart)) {
             finalMag = testMag;
             pStart = testStart;

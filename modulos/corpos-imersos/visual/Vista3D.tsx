@@ -431,6 +431,30 @@ export const Vista3D: React.FC<Vista3DProps> = ({
               />
             </g>
           ))
+        ) : shape === ObjectShape.CYLINDER ? (
+          sortedFaces.map((f, i) => (
+            <g key={i}>
+              <path
+                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+                fill={objColor}
+                stroke="none"
+              />
+              <path
+                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+                fill={renderFill}
+                stroke={OBJECT_BORDER_COLOR}
+                strokeWidth="1"
+                strokeLinejoin="round"
+              />
+              <path
+                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+                fill="url(#metalLinear2D)"
+                stroke="none"
+                opacity="0.4"
+                pointerEvents="none"
+              />
+            </g>
+          ))
         ) : (
           <g>
             <circle
@@ -446,7 +470,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
               r={visualWidth / 2}
               fill={renderFill}
               stroke={OBJECT_BORDER_COLOR}
-              strokeWidth={3}
+              strokeWidth="1"
             />
             <circle
               cx={center.x}
@@ -454,6 +478,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
               r={visualWidth / 2}
               fill="url(#sphereLight)"
               stroke="none"
+              pointerEvents="none"
             />
           </g>
         )}

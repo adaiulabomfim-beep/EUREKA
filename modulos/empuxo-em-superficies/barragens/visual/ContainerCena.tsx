@@ -263,24 +263,27 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
         </g>
 
         {renderedFaces.map((f, index) => {
-          if (!f.pts || f.pts.length < 3) return null;
+          if (!f.pts || f.pts.length < 2) return null;
 
-          const d = `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
+          const isLine = f.pts.length === 2;
+          const d = isLine 
+            ? `M ${f.pts[0].x},${f.pts[0].y} L ${f.pts[1].x},${f.pts[1].y}`
+            : `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
 
           const isDam = f.kind === 'DAM';
           const isWater = f.kind === 'WATER';
 
-          const baseFill = f.fill ?? 'none';
+          const baseFill = isLine ? 'none' : (f.fill ?? 'none');
           const baseOpacity = f.opacity ?? 1;
 
           // stroke técnico para esconder seams do SVG entre faces adjacentes
           const seamStroke =
-            isDam && baseFill !== 'none'
+            !isLine && (isDam || isWater) && baseFill !== 'none' && (!f.stroke || f.stroke === 'none')
               ? baseFill
               : (f.stroke ?? 'none');
 
           const seamStrokeWidth =
-            isDam && baseFill !== 'none'
+            !isLine && (isDam || isWater) && baseFill !== 'none' && (!f.stroke || f.stroke === 'none')
               ? Math.max(1.15, f.strokeWidth ?? 0)
               : (f.strokeWidth ?? 0);
 
