@@ -6,7 +6,7 @@ export const MATERIALS: Material[] = [
   { name: 'Madeira (Carvalho)', density: 750, color: '#a16207' },
   { name: 'Gelo', density: 917, color: '#bfdbfe' },
   { name: 'Plástico (PVC)', density: 1380, color: '#0ea5e9' },
-  { name: 'Concreto', density: 2400, color: '#57534e' },
+  { name: 'Concreto', density: 2400, color: '#9ca3af' },
   { name: 'Alumínio', density: 2700, color: '#94a3b8' },
   { name: 'Ferro', density: 7870, color: '#3f3f46' },
   { name: 'Cobre', density: 8960, color: '#b45309' },

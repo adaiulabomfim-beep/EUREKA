@@ -58,8 +58,8 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
       pts: [
         { x: damLeftBaseX, y: ORIGIN_Y },
         { x: damRightBaseX, y: ORIGIN_Y },
-        { x: damRightBaseX, y: damCrestY },
-        { x: damLeftBaseX, y: damCrestY },
+        { x: damRightCrestX, y: damCrestY },
+        { x: damLeftCrestX, y: damCrestY },
       ],
       fill: '#94a3b8',
       stroke: '#475569',

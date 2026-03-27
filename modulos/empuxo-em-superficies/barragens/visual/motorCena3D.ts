@@ -30,6 +30,7 @@ export interface Face {
   hatchPattern?: string;
   id: number;
   priority: number;
+  normal?: Point3D;
 }
 
 export const useSceneEngine = (
@@ -271,7 +272,7 @@ export const useSceneEngine = (
     const projected: Face[] = [];
 
     worldGeometry.forEach((wf, index) => {
-      if (wf.normal) {
+      if (wf.normal && wf.kind !== 'WATER') {
         const rotatedNormal = rotate(wf.normal);
         if (rotatedNormal.z < 0) return;
       }
@@ -282,6 +283,14 @@ export const useSceneEngine = (
       // do que usar apenas o ponto mais próximo.
       let zDepth =
         proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
+
+      // Bias para garantir que a água fique atrás do concreto quando estão no mesmo plano
+      // ou muito próximos, ajudando o Painter's Algorithm.
+      if (wf.kind === 'WATER') {
+        zDepth -= 0.1;
+      } else if (wf.kind === 'DAM') {
+        zDepth += 0.1;
+      }
 
       // Pequeno bias para linhas (arestas explícitas) para evitar z-fighting com as faces adjacentes
       // O bias deve ser pequeno o suficiente para não trazer linhas de trás para frente de objetos finos
@@ -296,11 +305,6 @@ export const useSceneEngine = (
 
       let hatchPattern = wf.hatchPattern;
 
-      // Removemos o ripplePattern da água em 3D para evitar linhas horizontais indesejadas
-      if (wf.kind === 'WATER') {
-        hatchPattern = undefined;
-      }
-
       projected.push({
         id: index,
         pts: proj.map((p) => ({ x: p.x, y: p.y })),
@@ -313,13 +317,15 @@ export const useSceneEngine = (
         kind: wf.kind,
         hatchPattern,
         priority: wf.priority ?? 0,
+        normal: wf.normal,
       });
     });
 
     projected.sort((a, b) => {
       const zDiff = a.zDepth - b.zDepth;
-      // Tolerância para evitar z-fighting em faces coplanares ou muito próximas
-      if (Math.abs(zDiff) > 0.01) return zDiff;
+      // Tolerância para evitar z-fighting em faces coplanares ou muito próximas.
+      // Reduzido para 0.1 para que a subdivisão em Y e o bias de kind funcionem melhor.
+      if (Math.abs(zDiff) > 0.1) return zDiff;
       if (a.kind !== b.kind) return a.kind === 'WATER' ? -1 : 1;
       if (a.priority !== b.priority) return a.priority - b.priority;
       return a.id - b.id;

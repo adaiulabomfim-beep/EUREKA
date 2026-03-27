@@ -7,6 +7,7 @@ export interface ConfiguracaoSimulacaoComporta {
     larguraBase: number;
     larguraCrista: number;
     anguloInclinacao: number;
+    buttressAngle?: number;
   };
   fluido: {
     nivelMontante: number;

@@ -53,12 +53,13 @@ export const criarPrisma = (
   hatchPattern?: string,
   toWorldX: (x: number) => number = (x) => x,
   priority?: number,
-  stepsZ?: number
+  stepsZ?: number,
+  stepsY: number = 1
 ): WorldFace[] => {
   const faces: WorldFace[] = [];
 
-  // Reduzido para minimizar facetamento visual excessivo
-  const steps = stepsZ !== undefined ? stepsZ : (xOffsetFn ? 24 : 1);
+  // Reduzido para minimizar facetamento visual excessivo, mas mantido em 24 para DAM para z-sorting
+  const steps = stepsZ !== undefined ? stepsZ : (xOffsetFn || kind === 'DAM' ? 24 : 1);
   const dz = zWidth / steps;
   const zStart = zOffset - zWidth / 2;
   const p = priority !== undefined ? priority : (kind === "DAM" ? 2 : 1);
@@ -77,7 +78,7 @@ export const criarPrisma = (
 
   faces.push(
     criarFace(
-      profile.map((pt) => mapPt(pt, zF)),
+      profile.map((pt) => mapPt(pt, zF)).reverse(),
       fill,
       opacity,
       capStroke,
@@ -91,7 +92,7 @@ export const criarPrisma = (
 
   faces.push(
     criarFace(
-      profile.map((pt) => mapPt(pt, zB)).reverse(),
+      profile.map((pt) => mapPt(pt, zB)),
       fill,
       opacity,
       capStroke,
@@ -103,7 +104,7 @@ export const criarPrisma = (
     )
   );
 
-  // Faces laterais sem stroke para não denunciar a segmentação
+  // Faces laterais com stroke para definir as arestas
   const latStroke = "none";
   const latStrokeWidth = 0;
 
@@ -115,30 +116,38 @@ export const criarPrisma = (
       const p1 = profile[i];
       const p2 = profile[(i + 1) % profile.length];
 
-      const p1_z1 = mapPt(p1, sz1);
-      const p2_z1 = mapPt(p2, sz1);
-      const p2_z2 = mapPt(p2, sz2);
-      const p1_z2 = mapPt(p1, sz2);
-
       const dx = p2.x - p1.x;
       const dy = p2.y - p1.y;
       const mag = Math.sqrt(dx * dx + dy * dy) || 1;
       const nx = -dy / mag;
       const ny = dx / mag;
 
-      faces.push(
-        criarFace(
-          [p1_z1, p2_z1, p2_z2, p1_z2],
-          fill,
-          opacity,
-          latStroke,
-          latStrokeWidth,
-          { x: nx, y: ny, z: 0 },
-          kind,
-          hatchPattern,
-          p
-        )
-      );
+      for (let j = 0; j < stepsY; j++) {
+        const t1 = j / stepsY;
+        const t2 = (j + 1) / stepsY;
+
+        const subP1 = { x: p1.x + t1 * dx, y: p1.y + t1 * dy };
+        const subP2 = { x: p1.x + t2 * dx, y: p1.y + t2 * dy };
+
+        const p1_z1 = mapPt(subP1, sz1);
+        const p2_z1 = mapPt(subP2, sz1);
+        const p2_z2 = mapPt(subP2, sz2);
+        const p1_z2 = mapPt(subP1, sz2);
+
+        faces.push(
+          criarFace(
+            [p1_z1, p2_z1, p2_z2, p1_z2],
+            fill,
+            opacity,
+            latStroke,
+            latStrokeWidth,
+            { x: nx, y: ny, z: 0 },
+            kind,
+            hatchPattern,
+            p
+          )
+        );
+      }
     }
   }
 
@@ -255,6 +264,35 @@ export const poligonoAgua2D = (
   );
 
   const xC = toWorldX(getDamXAtY(waterLevelY, damFaceSide));
+  const rippleHeight = Math.min(30, waterLevelY);
+  const ripplePoly = damFaceSide === "UPSTREAM"
+    ? [
+        { x: farWorldX, y: waterLevelY, z: 0 },
+        { x: xC, y: waterLevelY, z: 0 },
+        { x: toWorldX(getDamXAtY(waterLevelY - rippleHeight, damFaceSide)), y: waterLevelY - rippleHeight, z: 0 },
+        { x: farWorldX, y: waterLevelY - rippleHeight, z: 0 }
+      ]
+    : [
+        { x: xC, y: waterLevelY, z: 0 },
+        { x: farWorldX, y: waterLevelY, z: 0 },
+        { x: farWorldX, y: waterLevelY - rippleHeight, z: 0 },
+        { x: toWorldX(getDamXAtY(waterLevelY - rippleHeight, damFaceSide)), y: waterLevelY - rippleHeight, z: 0 }
+      ];
+
+  faces.push(
+    criarFace(
+      ripplePoly,
+      "none",
+      1,
+      "none",
+      0,
+      { x: 0, y: 0, z: 1 },
+      "WATER",
+      "url(#ripplePattern)",
+      1
+    )
+  );
+
   const linePts =
     damFaceSide === "UPSTREAM"
       ? [{ x: farWorldX, y: waterLevelY, z: 0 }, { x: xC, y: waterLevelY, z: 0 }]
@@ -265,10 +303,12 @@ export const poligonoAgua2D = (
       linePts,
       "none",
       1,
-      WATER_LINE_COLOR,
-      2,
+      "rgba(255,255,255,0.5)",
+      1,
       { x: 0, y: 0, z: 1 },
-      "WATER"
+      "WATER",
+      undefined,
+      2
     )
   );
 
@@ -297,12 +337,13 @@ export const caixaAgua3D = (
   const fill = fillId === "A" ? "url(#fluidDepthA)" : "url(#fluidDepthB)";
   
   // Cores sólidas para topo e base para evitar artefatos de repetição de gradiente em malhas segmentadas
-  const surfColor = fillId === "A" ? "#60a5fa" : "#3b82f6";
-  const surfOpacity = 0.65;
+  const surfColor = "none";
+  const surfOpacity = 1;
   const botColor = fillId === "A" ? "#2563eb" : "#1d4ed8";
   const botOpacity = 0.8;
+  const ripplePattern = "url(#ripplePattern)";
 
-  const numProfileSteps = 1;
+  const numProfileSteps = 12;
   const profileYs: number[] = [];
   for (let i = 0; i <= numProfileSteps; i++) {
     profileYs.push((i / numProfileSteps) * waterLevelY);
@@ -328,19 +369,21 @@ const getContactX = (y: number, z: number) => {
       const xC2_y1 = getContactX(y1, z2);
       const xC2_y2 = getContactX(y2, z2);
 
+      const offset = damFaceSide === "UPSTREAM" ? -0.05 : 0.05;
+
       const contactWallPts =
         damFaceSide === "UPSTREAM"
           ? [
-              { x: xC1_y1, y: y1, z: z1 },
-              { x: xC1_y2, y: y2, z: z1 },
-              { x: xC2_y2, y: y2, z: z2 },
-              { x: xC2_y1, y: y1, z: z2 },
+              { x: xC1_y1 + offset, y: y1, z: z1 },
+              { x: xC1_y2 + offset, y: y2, z: z1 },
+              { x: xC2_y2 + offset, y: y2, z: z2 },
+              { x: xC2_y1 + offset, y: y1, z: z2 },
             ]
           : [
-              { x: xC2_y1, y: y1, z: z2 },
-              { x: xC2_y2, y: y2, z: z2 },
-              { x: xC1_y2, y: y2, z: z1 },
-              { x: xC1_y1, y: y1, z: z1 },
+              { x: xC2_y1 + offset, y: y1, z: z2 },
+              { x: xC2_y2 + offset, y: y2, z: z2 },
+              { x: xC1_y2 + offset, y: y2, z: z1 },
+              { x: xC1_y1 + offset, y: y1, z: z1 },
             ];
 
       const dx = xC1_y2 - xC1_y1;
@@ -406,7 +449,7 @@ const getContactX = (y: number, z: number) => {
     );
   }
 
-  // 4) Superfície superior seguindo a curvatura da barragem (segmentada apenas em Z para Z-sorting correto)
+  // 4) Superfície superior seguindo a curvatura da barragem
   {
     for (let s = 0; s < steps; s++) {
       const z1 = zStart + s * dz;
@@ -415,7 +458,7 @@ const getContactX = (y: number, z: number) => {
       const cx1 = getContactX(waterLevelY, z1);
       const cx2 = getContactX(waterLevelY, z2);
 
-      const pts = damFaceSide === "UPSTREAM" 
+      const pts = damFaceSide === "UPSTREAM"
         ? [
             { x: farWorldX, y: waterLevelY, z: z1 },
             { x: cx1, y: waterLevelY, z: z1 },
@@ -430,7 +473,25 @@ const getContactX = (y: number, z: number) => {
           ];
 
       faces.push(
-        criarFace(pts, surfColor, surfOpacity, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", undefined, -1)
+        criarFace(pts, surfColor, surfOpacity, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", ripplePattern, -1)
+      );
+    }
+
+    // Arestas da superfície superior
+    faces.push(
+      criarFace([{ x: farWorldX, y: waterLevelY, z: zStart }, { x: farWorldX, y: waterLevelY, z: zStart + depth }], "none", 1, "rgba(255,255,255,0.5)", 1, undefined, "WATER", undefined, 0)
+    );
+    faces.push(
+      criarFace([{ x: farWorldX, y: waterLevelY, z: zStart }, { x: getContactX(waterLevelY, zStart), y: waterLevelY, z: zStart }], "none", 1, "rgba(255,255,255,0.5)", 1, undefined, "WATER", undefined, 0)
+    );
+    faces.push(
+      criarFace([{ x: farWorldX, y: waterLevelY, z: zStart + depth }, { x: getContactX(waterLevelY, zStart + depth), y: waterLevelY, z: zStart + depth }], "none", 1, "rgba(255,255,255,0.5)", 1, undefined, "WATER", undefined, 0)
+    );
+    for (let s = 0; s < steps; s++) {
+      const z1 = zStart + s * dz;
+      const z2 = zStart + (s + 1) * dz;
+      faces.push(
+        criarFace([{ x: getContactX(waterLevelY, z1), y: waterLevelY, z: z1 }, { x: getContactX(waterLevelY, z2), y: waterLevelY, z: z2 }], "none", 1, "rgba(255,255,255,0.5)", 1, undefined, "WATER", undefined, 0)
       );
     }
   }
@@ -464,36 +525,41 @@ const getContactX = (y: number, z: number) => {
     }
   }
 
-  // 6) Parede distante
+  // 6) Parede distante (segmentada em Z para consistência)
   {
-    const farWallPts =
-      damFaceSide === "UPSTREAM"
-        ? [
-            { x: farWorldX, y: 0, z: zStart + depth },
-            { x: farWorldX, y: waterLevelY, z: zStart + depth },
-            { x: farWorldX, y: waterLevelY, z: zStart },
-            { x: farWorldX, y: 0, z: zStart },
-          ]
-        : [
-            { x: farWorldX, y: 0, z: zStart },
-            { x: farWorldX, y: waterLevelY, z: zStart },
-            { x: farWorldX, y: waterLevelY, z: zStart + depth },
-            { x: farWorldX, y: 0, z: zStart + depth },
-          ];
+    for (let s = 0; s < steps; s++) {
+      const z1 = zStart + s * dz;
+      const z2 = zStart + (s + 1) * dz;
 
-    faces.push(
-      criarFace(
-        farWallPts,
-        fill,
-        1,
-        "none",
-        0,
-        { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 },
-        "WATER",
-        undefined,
-        -1
-      )
-    );
+      const farWallPts =
+        damFaceSide === "UPSTREAM"
+          ? [
+              { x: farWorldX, y: 0, z: z2 },
+              { x: farWorldX, y: waterLevelY, z: z2 },
+              { x: farWorldX, y: waterLevelY, z: z1 },
+              { x: farWorldX, y: 0, z: z1 },
+            ]
+          : [
+              { x: farWorldX, y: 0, z: z1 },
+              { x: farWorldX, y: waterLevelY, z: z1 },
+              { x: farWorldX, y: waterLevelY, z: z2 },
+              { x: farWorldX, y: 0, z: z2 },
+            ];
+
+      faces.push(
+        criarFace(
+          farWallPts,
+          fill,
+          1,
+          "none",
+          0,
+          { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 },
+          "WATER",
+          undefined,
+          -1
+        )
+      );
+    }
   }
 
   return faces;

@@ -237,17 +237,28 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       const xLeft = project({ x: toWorldX(farX), y: upstreamLevel, z: 0 }).x;
       const xRight = project({ x: toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM')), y: upstreamLevel, z: 0 }).x;
       const yTop = project({ x: toWorldX(farX), y: upstreamLevel, z: 0 }).y;
+      const rippleHeight = Math.min(30, upstreamLevel * SCALE);
       
       dims.push(
-        <rect
-          key="ripple-up"
-          x={xLeft}
-          y={yTop}
-          width={xRight - xLeft}
-          height={Math.min(30, upstreamLevel * SCALE)}
-          fill="url(#ripplePattern)"
-          pointerEvents="none"
-        />
+        <g key="ripple-up">
+          <rect
+            x={xLeft}
+            y={yTop}
+            width={xRight - xLeft}
+            height={rippleHeight}
+            fill="url(#ripplePattern)"
+            pointerEvents="none"
+          />
+          <line
+            x1={xLeft}
+            y1={yTop}
+            x2={xRight}
+            y2={yTop}
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth="1"
+            pointerEvents="none"
+          />
+        </g>
       );
     }
 
@@ -256,17 +267,28 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       const xLeft = project({ x: toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM')), y: downstreamLevel, z: 0 }).x;
       const xRight = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).x;
       const yTop = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).y;
+      const rippleHeight = Math.min(30, downstreamLevel * SCALE);
       
       dims.push(
-        <rect
-          key="ripple-down"
-          x={xLeft}
-          y={yTop}
-          width={xRight - xLeft}
-          height={Math.min(30, downstreamLevel * SCALE)}
-          fill="url(#ripplePattern)"
-          pointerEvents="none"
-        />
+        <g key="ripple-down">
+          <rect
+            x={xLeft}
+            y={yTop}
+            width={xRight - xLeft}
+            height={rippleHeight}
+            fill="url(#ripplePattern)"
+            pointerEvents="none"
+          />
+          <line
+            x1={xLeft}
+            y1={yTop}
+            x2={xRight}
+            y2={yTop}
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth="1"
+            pointerEvents="none"
+          />
+        </g>
       );
     }
 

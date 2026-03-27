@@ -24,6 +24,7 @@ type RenderedFace = {
   brightness?: number;
   kind?: 'DAM' | 'WATER' | string;
   hatchPattern?: string;
+  normal?: { x: number; y: number; z: number };
 };
 
 type VectorItem = {
@@ -284,7 +285,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
 
           const seamStrokeWidth =
             !isLine && (isDam || isWater) && baseFill !== 'none' && (!f.stroke || f.stroke === 'none')
-              ? Math.max(1.15, f.strokeWidth ?? 0)
+              ? 0.8
               : (f.strokeWidth ?? 0);
 
           // reduz fortemente a segmentação visual causada por overlay por face

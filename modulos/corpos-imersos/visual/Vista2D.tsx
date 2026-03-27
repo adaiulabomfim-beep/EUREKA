@@ -88,8 +88,6 @@ const renderDimensionLine = (
   const midY = (y1 + y2) / 2;
   const height = Math.abs(y2 - y1);
 
-  if (height < 2) return null;
-
   if (height < 20) {
     return (
       <g>
@@ -195,8 +193,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   const tankLeft = tankOffsetX + pan.x;
   const tankTop = tankBottomY - currentTankH + pan.y;
 
-  const fluidAHeight = Math.max(0, tankBottomY - originalFluidSurfaceY - effectiveHB_px);
-  const deltaFluidHeight = Math.max(0, originalFluidSurfaceY - fluidSurfaceY);
+  const fluidAHeight = Math.max(0, tankBottomY - fluidSurfaceY - (effectiveHB_px || 0));
   const rippleHeight = Math.max(0, Math.min(30, hA_dynamic_px));
   const fluidBTop = fluidSurfaceY + hA_dynamic_px + pan.y;
 
@@ -279,7 +276,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       </g>
 
       {/* Linha de nível original */}
-      {isSimulating && deltaH_cm > 0.01 && (
+      {isSimulating && deltaH_cm > 0 && (
         <line
           x1={tankLeft}
           y1={originalFluidSurfaceY + pan.y}
@@ -476,17 +473,18 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       {/* Vetores */}
       {showFBD && (
         <g pointerEvents="none">
+          {/* Peso (P) - Acima do bloco apontando para baixo */}
           <line
-            x1={centerOfMass.x}
-            y1={centerOfMass.y}
-            x2={centerOfMass.x}
-            y2={centerOfMass.y + arrowLenP}
+            x1={cx}
+            y1={cy - arrowLenP}
+            x2={cx}
+            y2={cy}
             stroke="#ef4444"
             strokeWidth="3"
             markerEnd={`url(#${arrowRedId})`}
           />
-          <circle cx={centerOfMass.x} cy={centerOfMass.y} r={3} fill="#ef4444" />
-          <g transform={`translate(${centerOfMass.x + 10}, ${centerOfMass.y + arrowLenP / 2})`}>
+          <circle cx={cx} cy={cy} r={3} fill="#ef4444" />
+          <g transform={`translate(${cx + 10}, ${cy - arrowLenP / 2})`}>
             <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
             <text x="12" y="4" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="bold">
               P
@@ -495,17 +493,18 @@ export const Vista2D: React.FC<Vista2DProps> = ({
 
           {showBuoyancyVector && (
             <>
+              {/* Empuxo (E) - Abaixo do bloco apontando para cima */}
               <line
-                x1={centerOfBuoyancy.x}
-                y1={centerOfBuoyancy.y}
-                x2={centerOfBuoyancy.x}
-                y2={centerOfBuoyancy.y - arrowLenE}
+                x1={cx}
+                y1={cy + visualHeight + arrowLenE}
+                x2={cx}
+                y2={cy + visualHeight}
                 stroke="#16a34a"
                 strokeWidth="3"
                 markerEnd={`url(#${arrowGreenId})`}
               />
-              <circle cx={centerOfBuoyancy.x} cy={centerOfBuoyancy.y} r={3} fill="#16a34a" />
-              <g transform={`translate(${centerOfBuoyancy.x + 10}, ${centerOfBuoyancy.y - arrowLenE / 2})`}>
+              <circle cx={cx} cy={cy + visualHeight} r={3} fill="#16a34a" />
+              <g transform={`translate(${cx + 10}, ${cy + visualHeight + arrowLenE / 2})`}>
                 <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
                 <text x="12" y="4" textAnchor="middle" fill="#16a34a" fontSize="12" fontWeight="bold">
                   E
@@ -531,22 +530,11 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       <g pointerEvents="none">
         <rect
           x={tankLeft}
-          y={originalFluidSurfaceY + pan.y}
+          y={fluidSurfaceY + pan.y}
           width={currentTankW}
           height={fluidAHeight}
           fill="url(#fluidDepthA)"
         />
-
-        {isSimulating && deltaH_cm > 0.01 && (
-          <rect
-            x={tankLeft}
-            y={fluidSurfaceY + pan.y}
-            width={currentTankW}
-            height={deltaFluidHeight}
-            fill={colorA}
-            opacity="0.4"
-          />
-        )}
 
         <rect
           x={tankLeft}
@@ -556,13 +544,11 @@ export const Vista2D: React.FC<Vista2DProps> = ({
           fill="url(#ripplePattern)"
         />
         
-        <rect
-          x={tankLeft}
-          y={fluidSurfaceY + pan.y}
-          width={currentTankW}
-          height={rippleHeight}
-          fill="url(#surfaceGradientA)"
-          opacity="1"
+        <line
+          x1={tankLeft}
+          y1={fluidSurfaceY + pan.y}
+          x2={tankLeft + currentTankW}
+          y2={fluidSurfaceY + pan.y}
           stroke="rgba(255,255,255,0.5)"
           strokeWidth="1"
         />
@@ -588,19 +574,38 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       </g>
 
       {/* Cotas */}
-      {isSimulating && deltaH_cm > 0.01 && renderDimensionLine(
+      {isSimulating && deltaH_cm > 0 && renderDimensionLine(
         tankLeft - 20,
         fluidSurfaceY + pan.y,
         originalFluidSurfaceY + pan.y,
-        vol_deslocado ? `ΔV = ${(vol_deslocado * 1000).toFixed(1)}L` : `Δh = ${deltaH_cm.toFixed(1)}cm`,
+        `Δh = ${deltaH_cm.toFixed(2)}cm`,
         colorA
       )}
-      {renderDimensionLine(
-        tankLeft - 20,
-        originalFluidSurfaceY + pan.y,
-        tankBottomY + pan.y,
-        `hA = ${depthA.toFixed(1)}cm`,
-        colorA
+      {enableTwoFluids ? (
+        <>
+          {renderDimensionLine(
+            tankLeft - 20,
+            originalFluidSurfaceY + pan.y,
+            tankBottomY - effectiveHB_px + pan.y,
+            `hA = ${depthA.toFixed(1)}cm`,
+            colorA
+          )}
+          {renderDimensionLine(
+            tankLeft - 20,
+            tankBottomY - effectiveHB_px + pan.y,
+            tankBottomY + pan.y,
+            `hB = ${depthB.toFixed(1)}cm`,
+            colorB
+          )}
+        </>
+      ) : (
+        renderDimensionLine(
+          tankLeft - 20,
+          originalFluidSurfaceY + pan.y,
+          tankBottomY + pan.y,
+          `hA = ${depthA.toFixed(1)}cm`,
+          colorA
+        )
       )}
     </svg>
     </div>

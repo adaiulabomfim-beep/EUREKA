@@ -66,16 +66,17 @@ export const SvgDefs = ({ colorA = '#3b82f6', colorB = '#2563eb' }: SvgDefsProps
     </filter>
 
     <pattern id="concretePattern2D" width="64" height="64" patternUnits="userSpaceOnUse">
-      <rect width="64" height="64" filter="url(#concreteNoise2D)" opacity="0.15" />
+      <rect width="64" height="64" fill="#a3a3a3" />
+      <rect width="64" height="64" filter="url(#concreteNoise2D)" opacity="0.25" />
       <path
         d="M10,20 Q15,15 20,20 T30,20"
-        stroke="black"
+        stroke="#525252"
         strokeWidth="0.5"
         fill="none"
-        opacity="0.1"
+        opacity="0.3"
       />
-      <circle cx="45" cy="50" r="1.5" fill="black" opacity="0.15" />
-      <circle cx="10" cy="50" r="1" fill="white" opacity="0.2" />
+      <circle cx="45" cy="50" r="1.5" fill="#525252" opacity="0.4" />
+      <circle cx="10" cy="50" r="1" fill="#e5e5e5" opacity="0.4" />
     </pattern>
 
     <pattern id="ripplePattern" width="120" height="40" patternUnits="userSpaceOnUse">

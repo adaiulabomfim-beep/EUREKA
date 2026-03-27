@@ -1,7 +1,7 @@
 import { FLUIDS, MATERIALS } from '../dominio/configuracao';
 import { Point, TankPoints } from './Vista3D';
 
-export const getFluidColor = (name: string) => FLUIDS.find((f) => f.name === name)?.color || '#000000';
+export const getFluidColor = (name: string) => FLUIDS.find((f) => f.name === name)?.color || '#38bdf8';
 export const getMaterialStyle = (matName: string, baseColor: string) => baseColor;
 
 export const getMaterialPattern = (materialName: string, baseColor: string) => {

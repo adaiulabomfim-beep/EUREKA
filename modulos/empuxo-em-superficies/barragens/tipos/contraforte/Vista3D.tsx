@@ -43,8 +43,11 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         undefined,
         offset,
         'url(#concretePattern)',
-        toWorldX
-      ).filter(face => !(face.normal && face.normal.x === -1 && face.normal.y === 0))
+        toWorldX,
+        2,
+        undefined,
+        12
+      )
     );
 
     const worldGeometry = [
@@ -59,7 +62,10 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         undefined,
         0,
         'url(#concretePattern)',
-        toWorldX
+        toWorldX,
+        2,
+        24,
+        12
       ),
       ...buttresses,
     ];
@@ -74,7 +80,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           getDamXAtY,
           toWorldX,
           undefined,
-          'A'
+          'A',
+          24
         )
       );
     }
@@ -89,7 +96,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           getDamXAtY,
           toWorldX,
           undefined,
-          'B'
+          'B',
+          24
         )
       );
     }

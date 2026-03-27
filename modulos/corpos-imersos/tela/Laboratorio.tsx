@@ -192,22 +192,96 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     }
   };
 
-  const loadExercise5 = () => {
-    setIsSimulating(false);
-    setSelectedMaterial('Custom');
-    setCustomObjDensity(650);
-    setShape(ObjectShape.CUBE);
-    setDim1(20);
-    setSelectedFluid('Água Doce');
-    setCustomFluidDensity(1000);
-    setEnableTwoFluids(false);
-    setDepthA(50);
-    setTankWidth(100);
-    setTankDepth(100);
-    setTankHeight(100);
-    setToastMsg('Exercício 5 Carregado!');
-    setTimeout(() => setToastMsg(null), 1500);
-  };
+  const EXERCISES = [
+    {
+      id: 'ex5',
+      title: 'Bloco de Madeira',
+      subtitle: 'Slide 30 (γ = 650)',
+      load: () => {
+        setIsSimulating(false);
+        setSelectedMaterial('Madeira (Pinho)');
+        setCustomObjDensity(650);
+        setShape(ObjectShape.CUBE);
+        setDim1(20);
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(1000);
+        setEnableTwoFluids(false);
+        setDepthA(50);
+        setTankWidth(100);
+        setTankDepth(100);
+        setTankHeight(100);
+        setToastMsg('Exercício 5 Carregado!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'ex_sphere',
+      title: 'Esfera de Aço',
+      subtitle: 'Afunda na água',
+      load: () => {
+        setIsSimulating(false);
+        setSelectedMaterial('Ferro');
+        setCustomObjDensity(7850);
+        setShape(ObjectShape.SPHERE);
+        setDim1(10); // raio 10
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(1000);
+        setEnableTwoFluids(false);
+        setDepthA(50);
+        setTankWidth(100);
+        setTankDepth(100);
+        setTankHeight(100);
+        setToastMsg('Esfera de Aço Carregada!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'ex_two_fluids',
+      title: 'Cubo em 2 Fluidos',
+      subtitle: 'Óleo e Água',
+      load: () => {
+        setIsSimulating(false);
+        setSelectedMaterial('Madeira (Pinho)');
+        setCustomObjDensity(600);
+        setShape(ObjectShape.CUBE);
+        setDim1(20); // aresta 20
+        setDim2(20);
+        setSelectedFluid('Óleo de Soja');
+        setCustomFluidDensity(800);
+        setDepthA(30);
+        setEnableTwoFluids(true);
+        setSelectedFluidB('Água Doce');
+        setCustomFluidDensityB(1000);
+        setDepthB(40);
+        setTankWidth(100);
+        setTankDepth(100);
+        setTankHeight(100);
+        setToastMsg('Cubo em 2 Fluidos Carregado!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'ex_iceberg',
+      title: 'Iceberg',
+      subtitle: 'Gelo na Água do Mar',
+      load: () => {
+        setIsSimulating(false);
+        setSelectedMaterial('Gelo');
+        setCustomObjDensity(917);
+        setShape(ObjectShape.CUBE);
+        setDim1(30); 
+        setSelectedFluid('Água do Mar');
+        setCustomFluidDensity(1025);
+        setEnableTwoFluids(false);
+        setDepthA(60);
+        setTankWidth(100);
+        setTankDepth(100);
+        setTankHeight(100);
+        setToastMsg('Iceberg Carregado!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    }
+  ];
 
   useEffect(() => {
     if (onContextUpdate) {
@@ -248,7 +322,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
   const objectWidthCm = shape === ObjectShape.CUBE ? dim1 : dim1 * 2;
   const isObjectTooWide = objectWidthCm > tankWidth;
-  const objColor = MATERIALS.find((m) => m.name === selectedMaterial)?.color || '#000000';
+  const objColor = MATERIALS.find((m) => m.name === selectedMaterial)?.color || '#475569';
   const TANK_BORDER_COLOR = '#06b6d4';
   const OBJECT_BORDER_COLOR = '#475569';
   const forceText = isSimulating
@@ -270,22 +344,27 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:h-[750px]">
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
         <div className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto pr-1 custom-scrollbar">
-          {/* EXERCÍCIO DO SLIDE */}
+          {/* SIMULAÇÕES PRONTAS */}
           <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white">
             <div className="flex items-center gap-2 mb-3 text-sm font-bold tracking-wider opacity-90">
               <BookOpen className="w-4 h-4" />
-              EXERCÍCIO DO SLIDE
+              SIMULAÇÕES PRONTAS
             </div>
-            <button
-              onClick={loadExercise5}
-              className="w-full bg-white/20 hover:bg-white/30 transition-colors rounded-lg p-3 text-left flex items-center gap-3 border border-white/30"
+            <select
+              className="w-full bg-white/20 hover:bg-white/30 transition-colors rounded-lg p-3 text-left flex items-center gap-3 border border-white/30 text-white outline-none cursor-pointer"
+              onChange={(e) => {
+                const ex = EXERCISES.find(x => x.id === e.target.value);
+                if (ex) ex.load();
+              }}
+              defaultValue=""
             >
-              <div className="bg-white text-blue-600 font-bold px-2 py-1 rounded text-xs">Ex.5</div>
-              <div>
-                <div className="font-bold text-sm">Bloco de Madeira</div>
-                <div className="text-xs opacity-80">Slide 30 (γ = 650)</div>
-              </div>
-            </button>
+              <option value="" disabled className="text-gray-800">Selecione uma simulação...</option>
+              {EXERCISES.map(ex => (
+                <option key={ex.id} value={ex.id} className="text-gray-800">
+                  {ex.title} ({ex.subtitle})
+                </option>
+              ))}
+            </select>
           </div>
 
           <PainelControles
@@ -358,7 +437,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 showFBD={showFBD}
                 objectWeight={physics.objectWeight}
                 buoyancyForce={physics.buoyancyForce}
-                centerOfBuoyancyY_visual={tankBottomY - (physics.centerOfBuoyancyY * visualScaleFactor)}
+                centerOfBuoyancyY_visual={(animBlockY + visualHeight) - (physics.centerOfBuoyancyY * visualScaleFactor)}
                 showCenterOfBuoyancy={showCenterOfBuoyancy}
                 onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}
                 h_sub_actual={physics.h_sub_actual}
@@ -396,7 +475,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 showFBD={showFBD}
                 objectWeight={physics.objectWeight}
                 buoyancyForce={physics.buoyancyForce}
-                centerOfBuoyancyY_visual={tankBottomY - (physics.centerOfBuoyancyY * visualScaleFactor)}
+                centerOfBuoyancyY_visual={(animBlockY + visualHeight) - (physics.centerOfBuoyancyY * visualScaleFactor)}
                 h_sub_actual={physics.h_sub_actual}
                 showCenterOfBuoyancy={showCenterOfBuoyancy}
                 onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}

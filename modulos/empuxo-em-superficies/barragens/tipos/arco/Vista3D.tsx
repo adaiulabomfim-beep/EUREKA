@@ -101,7 +101,10 @@ export const Vista3D: React.FC<
         archOffsetFn,
         0,
         'url(#concretePattern)',
-        toWorldX
+        toWorldX,
+        2,
+        24,
+        12
       ),
     ];
 
@@ -115,7 +118,8 @@ export const Vista3D: React.FC<
           getDamXAtY,
           toWorldX,
           archOffsetFn,
-          'A'
+          'A',
+          24
         )
       );
     }
@@ -130,7 +134,8 @@ export const Vista3D: React.FC<
           getDamXAtY,
           toWorldX,
           archOffsetFn,
-          'B'
+          'B',
+          24
         )
       );
     }

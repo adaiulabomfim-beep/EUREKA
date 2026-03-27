@@ -71,7 +71,10 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
         undefined,
         0,
         'url(#concretePattern)',
-        toWorldX
+        toWorldX,
+        2,
+        24,
+        12
       ),
     ];
 
@@ -85,7 +88,8 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
           getDamXAtY,
           toWorldX,
           undefined,
-          'A'
+          'A',
+          24
         )
       );
     }
@@ -100,7 +104,8 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
           getDamXAtY,
           toWorldX,
           undefined,
-          'B'
+          'B',
+          24
         )
       );
     }

@@ -40,7 +40,10 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         undefined,
         0,
         'url(#earthPattern)',
-        toWorldX
+        toWorldX,
+        2,
+        24,
+        12
       ),
     ];
 
@@ -54,7 +57,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           getDamXAtY,
           toWorldX,
           undefined,
-          'A'
+          'A',
+          24
         )
       );
     }
@@ -69,7 +73,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           getDamXAtY,
           toWorldX,
           undefined,
-          'B'
+          'B',
+          24
         )
       );
     }

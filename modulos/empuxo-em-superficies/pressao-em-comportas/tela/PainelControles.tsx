@@ -14,7 +14,8 @@ interface PainelControlesProps {
   maxGateHeight: number;
   maxWaterLevel: number;
   toggleGate: (active: boolean) => void;
-  loadExercise6: () => void;
+  loadPreset: (key: string) => void;
+  presets: { [key: string]: ConfiguracaoSimulacaoComporta & { title: string, subtitle: string } };
   handleHeightChange: (val: number) => void;
   handleShapeChange: (newShape: FormaComporta) => void;
 }
@@ -34,28 +35,47 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
   return (
     <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
       
-      {/* Aula Prática */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-          <SectionHeader icon={<BookOpen className="w-4 h-4" />} title="Aula Prática" />
-          <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-blue-100 bg-white">
-                  <div className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-md">#06</div>
-                  <div>
-                      <div className="text-sm font-bold text-slate-800">Exercício 30º</div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comporta Articulada</div>
-                  </div>
-              </div>
-              <button onClick={props.loadExercise6} className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 p-2.5 rounded-xl text-xs font-bold transition-colors">
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Resetar Cenário
-              </button>
-          </div>
+      {/* SIMULAÇÕES PRONTAS */}
+      <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white">
+        <div className="flex items-center gap-2 mb-3 text-sm font-bold tracking-wider opacity-90">
+          <BookOpen className="w-4 h-4" />
+          SIMULAÇÕES PRONTAS
+        </div>
+        <select
+          className="w-full bg-white/20 hover:bg-white/30 transition-colors rounded-lg p-3 text-left flex items-center gap-3 border border-white/30 text-white outline-none cursor-pointer text-xs"
+          onChange={(e) => {
+            if (e.target.value) {
+              props.loadPreset(e.target.value);
+            }
+          }}
+          defaultValue=""
+        >
+          <option value="" disabled className="text-gray-800">Selecione uma simulação...</option>
+          {Object.entries(props.presets).map(([key, preset]) => (
+            <option key={key} value={key} className="text-gray-800">
+              {preset.title} ({preset.subtitle})
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Estrutura */}
       <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
           <SectionHeader icon={<Construction className="w-4 h-4" />} title="Estrutura" />
           <div className="space-y-4">
+              <div>
+                  <label className={labelClass}>Tipo de Barragem</label>
+                  <select 
+                      value={config.barragem.tipo} 
+                      onChange={(e) => setConfig(prev => ({...prev, barragem: {...prev.barragem, tipo: e.target.value as TipoBarragem}}))}
+                      className={selectClass}
+                  >
+                      <option value={TipoBarragem.GRAVIDADE}>Gravidade</option>
+                      <option value={TipoBarragem.TERRA_ENROCAMENTO}>Terra / Enrocamento</option>
+                      <option value={TipoBarragem.ARCO}>Arco</option>
+                      <option value={TipoBarragem.CONTRAFORTE}>Contraforte</option>
+                  </select>
+              </div>
               <div>
                 <label className={labelClass}>Inclinação da Parede (θ)</label>
                 <NumberInput value={config.barragem.anguloInclinacao} min={1} max={160} onChange={(val) => setConfig(prev => ({...prev, barragem: {...prev.barragem, anguloInclinacao: val}}))} />
@@ -64,6 +84,12 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                   <label className={labelClass}>Altura Total (m)</label>
                   <NumberInput value={config.barragem.altura} min={1} max={200} onChange={(val) => setConfig(prev => ({...prev, barragem: {...prev.barragem, altura: val}}))} />
               </div>
+              {config.barragem.tipo === TipoBarragem.CONTRAFORTE && (
+                  <div>
+                      <label className={labelClass}>Ângulo do Contraforte</label>
+                      <NumberInput value={config.barragem.buttressAngle || 60} min={10} max={90} onChange={(val) => setConfig(prev => ({...prev, barragem: {...prev.barragem, buttressAngle: val}}))} />
+                  </div>
+              )}
           </div>
       </div>
 

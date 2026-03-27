@@ -303,27 +303,17 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     const ptsB = getPoints(0, 0, currentTankW, effectiveHB_px, 0, visualTankDepth);
     const fluidBFaces = enableTwoFluids ? getBoxFaces(ptsB, 'url(#fluidDepthB)', 1, 'none', 0, 'fluidB') : [];
 
-    const ptsAOriginal = getPoints(
+    const ptsA = getPoints(
       0,
       effectiveHB_px,
       currentTankW,
-      tankBottomY - originalFluidSurfaceY - effectiveHB_px,
+      tankBottomY - fluidSurfaceY - effectiveHB_px,
       0,
       visualTankDepth
     );
-    const fluidAOriginalFaces = getBoxFaces(ptsAOriginal, 'url(#fluidDepthA)', 1, 'none', 0, 'fluidA');
+    const fluidAFaces = getBoxFaces(ptsA, 'url(#fluidDepthA)', 1, 'none', 0, 'fluidA');
 
-    const ptsADelta = getPoints(
-      0,
-      tankBottomY - originalFluidSurfaceY,
-      currentTankW,
-      originalFluidSurfaceY - fluidSurfaceY,
-      0,
-      visualTankDepth
-    );
-    const fluidADeltaFaces = (isSimulating && deltaH_cm > 0.01) ? getBoxFaces(ptsADelta, colorA, 0.4, 'none', 0, 'fluidADelta') : [];
-
-    const allFaces = [...tankFaces, ...fluidBFaces, ...fluidAOriginalFaces, ...fluidADeltaFaces];
+    const allFaces = [...tankFaces, ...fluidBFaces, ...fluidAFaces];
 
     const filteredFaces = allFaces.filter(f => {
       const isFront = rotateVector(f.n).z > 0;
@@ -351,18 +341,30 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     );
   };
 
-  const FluidSurface = () => {
-    const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, 0, visualTankDepth);
+  const FluidSurfaceBack = () => {
+    const depth = visualTankDepth / 2;
+    const zCenter = -visualTankDepth / 4;
+    const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, zCenter, depth);
     return (
       <g>
-        {drawPoly(
-          [ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5],
-          'url(#surfaceGradientA)',
-          1,
-          'rgba(255,255,255,0.5)',
-          1
-        )}
         {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#ripplePattern)', 1)}
+        <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p2.x} y2={ptsADynamic.p2.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+        <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p5.x} y2={ptsADynamic.p5.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+        <line x1={ptsADynamic.p2.x} y1={ptsADynamic.p2.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+      </g>
+    );
+  };
+
+  const FluidSurfaceFront = () => {
+    const depth = visualTankDepth / 2;
+    const zCenter = visualTankDepth / 4;
+    const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, zCenter, depth);
+    return (
+      <g>
+        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#ripplePattern)', 1)}
+        <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p5.x} y2={ptsADynamic.p5.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+        <line x1={ptsADynamic.p2.x} y1={ptsADynamic.p2.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+        <line x1={ptsADynamic.p5.x} y1={ptsADynamic.p5.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
       </g>
     );
   };
@@ -489,7 +491,8 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   const Vectors = () => {
     if (!showFBD) return null;
 
-    const center = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);
+    const centerTop = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+    const centerBottom = project(0, tankBottomY - objBottomDistFromTankBottom, 0);
     const centerCB = project(0, centerOfBuoyancyY_visual, 0);
 
     const arrowLenP = Math.min(120, Math.max(30, objectWeight * 0.005));
@@ -497,17 +500,18 @@ export const Vista3D: React.FC<Vista3DProps> = ({
 
     return (
       <g pointerEvents="none">
+        {/* Peso (P) - Acima do bloco apontando para baixo */}
         <line
-          x1={center.x}
-          y1={center.y}
-          x2={center.x}
-          y2={center.y + arrowLenP}
+          x1={centerTop.x}
+          y1={centerTop.y - arrowLenP}
+          x2={centerTop.x}
+          y2={centerTop.y}
           stroke="#ef4444"
           strokeWidth="3"
           markerEnd="url(#arrow-red)"
         />
-        <circle cx={center.x} cy={center.y} r={3} fill="#ef4444" />
-        <g transform={`translate(${center.x + 10}, ${center.y + arrowLenP / 2})`}>
+        <circle cx={centerTop.x} cy={centerTop.y} r={3} fill="#ef4444" />
+        <g transform={`translate(${centerTop.x + 10}, ${centerTop.y - arrowLenP / 2})`}>
           <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
           <text x="12" y="4" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="bold">
             P
@@ -516,17 +520,18 @@ export const Vista3D: React.FC<Vista3DProps> = ({
 
         {h_sub_actual > 0.001 && (
           <>
+            {/* Empuxo (E) - Abaixo do bloco apontando para cima */}
             <line
-              x1={centerCB.x}
-              y1={centerCB.y}
-              x2={centerCB.x}
-              y2={centerCB.y - arrowLenE}
+              x1={centerBottom.x}
+              y1={centerBottom.y + arrowLenE}
+              x2={centerBottom.x}
+              y2={centerBottom.y}
               stroke="#16a34a"
               strokeWidth="3"
               markerEnd="url(#arrow-green)"
             />
-            <circle cx={centerCB.x} cy={centerCB.y} r={3} fill="#16a34a" />
-            <g transform={`translate(${centerCB.x + 10}, ${centerCB.y - arrowLenE / 2})`}>
+            <circle cx={centerBottom.x} cy={centerBottom.y} r={3} fill="#16a34a" />
+            <g transform={`translate(${centerBottom.x + 10}, ${centerBottom.y + arrowLenE / 2})`}>
               <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
               <text x="12" y="4" textAnchor="middle" fill="#16a34a" fontSize="12" fontWeight="bold">
                 E
@@ -554,8 +559,9 @@ export const Vista3D: React.FC<Vista3DProps> = ({
       return (
         <>
           {renderEnvironmentFaces(false)}
-          <FluidSurface />
+          <FluidSurfaceBack />
           <Object3D />
+          <FluidSurfaceFront />
           {renderEnvironmentFaces(true)}
         </>
       );
@@ -564,8 +570,9 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         <>
           {renderEnvironmentFaces(false)}
           <Object3D />
+          <FluidSurfaceBack />
+          <FluidSurfaceFront />
           {renderEnvironmentFaces(true)}
-          <FluidSurface />
         </>
       );
     }
@@ -644,7 +651,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
           e.stopPropagation();
           animateCameraReset();
         }}
-        className="absolute bottom-6 right-6 bg-white/90 p-2.5 rounded-full shadow-lg border border-blue-100/70 text-slate-500 hover:text-blue-600 hover:scale-110 transition-all z-30 group"
+        className="absolute bottom-6 left-6 bg-white/90 p-2.5 rounded-full shadow-lg border border-blue-100/70 text-slate-500 hover:text-blue-600 hover:scale-110 transition-all z-30 group"
         title="Resetar Câmera"
       >
         <RotateCcw className="w-4 h-4 group-hover:-rotate-180 transition-transform duration-500" />

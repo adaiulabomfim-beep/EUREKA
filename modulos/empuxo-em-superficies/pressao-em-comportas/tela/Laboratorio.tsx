@@ -23,7 +23,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     barragem: {
       tipo: TipoBarragem.GRAVIDADE,
       altura: 15,
-      larguraBase: 12,
+      larguraBase: 6,
       larguraCrista: 4,
       anguloInclinacao: 90,
     },
@@ -79,7 +79,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     setConfig(prev => {
         let newBarragem = { ...prev.barragem };
         switch (newBarragem.tipo) {
-            case TipoBarragem.GRAVIDADE: newBarragem.anguloInclinacao = 90; newBarragem.larguraBase = newBarragem.altura * 0.8; newBarragem.larguraCrista = 4; break;
+            case TipoBarragem.GRAVIDADE: newBarragem.anguloInclinacao = 90; newBarragem.larguraBase = newBarragem.altura * 0.4; newBarragem.larguraCrista = 4; break;
             case TipoBarragem.TERRA_ENROCAMENTO: newBarragem.anguloInclinacao = 45; newBarragem.larguraBase = newBarragem.altura * 3; newBarragem.larguraCrista = 6; break;
             case TipoBarragem.ARCO: newBarragem.anguloInclinacao = 90; newBarragem.larguraBase = 5; newBarragem.larguraCrista = 3; break;
             case TipoBarragem.CONTRAFORTE: newBarragem.anguloInclinacao = 70; newBarragem.larguraBase = newBarragem.altura * 0.9; newBarragem.larguraCrista = 2; break;
@@ -108,8 +108,11 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       }
   };
 
-  const loadExercise6 = () => {
-      setConfig(PRESETS.exercise30);
+  const loadPreset = (key: string) => {
+      const preset = PRESETS[key];
+      if (preset) {
+          setConfig(preset);
+      }
   };
   
   const configForSimulation: ConfiguracaoSimulacaoComporta = {
@@ -167,7 +170,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
             maxGateHeight={maxGateHeight} 
             maxWaterLevel={maxWaterLevel} 
             toggleGate={toggleGate} 
-            loadExercise6={loadExercise6} 
+            loadPreset={loadPreset} 
+            presets={PRESETS}
             handleHeightChange={handleHeightChange} 
             handleShapeChange={handleShapeChange} 
         />
