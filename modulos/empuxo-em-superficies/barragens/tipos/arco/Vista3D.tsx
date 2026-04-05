@@ -5,6 +5,7 @@ import {
   getDamXAtYGeneric,
   criarPrisma,
   caixaAgua3D,
+  criarBaseTerra,
 } from '../../visual/auxiliaresGeometriaCena';
 import { useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer } from '../../visual/ContainerCena';
@@ -89,7 +90,12 @@ export const Vista3D: React.FC<
       return getDamXAtYGeneric(profile, y, side);
     };
 
+    const maxH = Math.max(damHeight, upstreamLevel, downstreamLevel);
+    const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
+    const farRight = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
+
     const geometry = [
+      ...criarBaseTerra(maxH, farLeft, farRight, CHANNEL_WIDTH * 1.5, toWorldX),
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
@@ -104,7 +110,8 @@ export const Vista3D: React.FC<
         toWorldX,
         2,
         24,
-        12
+        12,
+        true
       ),
     ];
 

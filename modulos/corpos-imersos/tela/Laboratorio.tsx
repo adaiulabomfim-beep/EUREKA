@@ -41,6 +41,16 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [tankDepth, setTankDepth] = useState<number>(500);
   const [tankHeight, setTankHeight] = useState<number>(500);
 
+  // --- NEW STATE: EXTRA WEIGHT & SECOND BLOCK ---
+  const [extraWeight, setExtraWeight] = useState<number>(0);
+  const [twoBlocks, setTwoBlocks] = useState<boolean>(false);
+  const [selectedMaterial2, setSelectedMaterial2] = useState<string>('Concreto');
+  const [density2, setDensity2] = useState<number>(2400);
+  const [dim1_2, setDim1_2] = useState<number>(100);
+  const [dim2_2, setDim2_2] = useState<number>(100);
+  const [cordLength, setCordLength] = useState<number>(20);
+  const [shape2, setShape2] = useState<ObjectShape>(ObjectShape.CUBE);
+
   // --- STATE: UI & CONTROL ---
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [is3D, setIs3D] = useState<boolean>(false);
@@ -97,10 +107,12 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     shape, dim1, dim2, objectDensity: customObjDensity,
     rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity,
     tankWidth, tankDepth, visualScaleFactor, visualHeight,
-    fluidSurfaceY: originalFluidSurfaceY, h_in_A: 0, h_in_B: 0
-  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY]);
+    fluidSurfaceY: originalFluidSurfaceY, h_in_A: 0, h_in_B: 0,
+    h_in_A_2: 0, h_in_B_2: 0,
+    extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2
+  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2]);
 
-  const equilibriumBlockY = originalFluidSurfaceY + (initialPhysics.d_eq * visualScaleFactor) - visualHeight;
+  const equilibriumBlockY = originalFluidSurfaceY + (initialPhysics.d_eq * visualScaleFactor) - (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0) - visualHeight;
   const startBlockY = tankBottomY - (autoTankHeight * visualScaleFactor) - visualHeight - 50;
 
   useEffect(() => {
@@ -122,13 +134,14 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         const damping = 6; // Damping factor
 
         const targetY = equilibriumBlockY;
-        const floorY = tankBottomY - visualHeight;
+        const floorY = tankBottomY - (twoBlocks ? (visualHeight + (H2_cm_visual) + (initialPhysics.actualCordLength * visualScaleFactor)) : visualHeight);
         const effectiveTargetY = Math.min(targetY, floorY);
         
         const objectBottom = posRef.current + visualHeight;
+        const lowestPoint = objectBottom + (twoBlocks ? (H2_cm_visual + initialPhysics.actualCordLength * visualScaleFactor) : 0);
         let accel = 0;
 
-        if (objectBottom < originalFluidSurfaceY) {
+        if (lowestPoint < originalFluidSurfaceY) {
             const g_visual = 2000; 
             accel = g_visual;
         } else {
@@ -154,10 +167,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     return () => {
         if (reqRef.current) cancelAnimationFrame(reqRef.current);
     };
-  }, [isSimulating, equilibriumBlockY, startBlockY, originalFluidSurfaceY, visualHeight, tankBottomY]);
+  }, [isSimulating, equilibriumBlockY, startBlockY, originalFluidSurfaceY, visualHeight, tankBottomY, twoBlocks, initialPhysics.H2_cm, visualScaleFactor, initialPhysics.actualCordLength]);
 
   // --- DYNAMIC RESULTS ---
   const blockY = animBlockY;
+  const H2_cm_visual = (initialPhysics.H2_cm || 0) * visualScaleFactor;
   const currentObjBottomDepth = (blockY + visualHeight - originalFluidSurfaceY) / visualScaleFactor;
   const currentObjTopDepth = (blockY - originalFluidSurfaceY) / visualScaleFactor;
 
@@ -173,12 +187,26 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const overlapB_end = Math.min(currentObjBottomDepth, botB);
   const h_in_B = Math.max(0, overlapB_end - overlapB_start);
 
+  // Calculate depths for block 2
+  const currentObj2TopDepth = currentObjBottomDepth + initialPhysics.actualCordLength;
+  const currentObj2BottomDepth = currentObj2TopDepth + (initialPhysics.H2_cm || 0);
+
+  const overlapA2_start = Math.max(currentObj2TopDepth, topA);
+  const overlapA2_end = Math.min(currentObj2BottomDepth, botA);
+  const h_in_A_2 = twoBlocks ? Math.max(0, overlapA2_end - overlapA2_start) : 0;
+
+  const overlapB2_start = Math.max(currentObj2TopDepth, topB);
+  const overlapB2_end = Math.min(currentObj2BottomDepth, botB);
+  const h_in_B_2 = twoBlocks ? Math.max(0, overlapB2_end - overlapB2_start) : 0;
+
   const physics = useMemo(() => simularCorposImersos({
     shape, dim1, dim2, objectDensity: customObjDensity,
     rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity,
     tankWidth, tankDepth, visualScaleFactor, visualHeight,
-    fluidSurfaceY: originalFluidSurfaceY, h_in_A, h_in_B
-  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B]);
+    fluidSurfaceY: originalFluidSurfaceY, h_in_A, h_in_B,
+    h_in_A_2, h_in_B_2,
+    extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2
+  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2]);
 
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
 
@@ -194,15 +222,19 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
   const EXERCISES = [
     {
-      id: 'ex5',
-      title: 'Bloco de Madeira',
-      subtitle: 'Slide 30 (γ = 650)',
+      id: 'ex1',
+      title: 'Exercício 1: Bloco Uniforme',
+      subtitle: 'Peso 50N ar, 40N submerso',
       load: () => {
         setIsSimulating(false);
-        setSelectedMaterial('Madeira (Pinho)');
-        setCustomObjDensity(650);
+        setTwoBlocks(false);
+        setExtraWeight(0);
+        setSelectedMaterial('Custom');
+        setCustomObjDensity(5000); // 50N / (10000 N/m3 * V) = 40N aparente? 
+        // W = 50N, E = 10N. E = rho_w * V * g => 10 = 10000 * V => V = 0.001 m3.
+        // rho_b = W / (V*g) = 50 / (0.001 * 10) = 5000 kg/m3.
         setShape(ObjectShape.CUBE);
-        setDim1(20);
+        setDim1(10); // 10x10x10 cm = 1000 cm3 = 0.001 m3
         setSelectedFluid('Água Doce');
         setCustomFluidDensity(1000);
         setEnableTwoFluids(false);
@@ -210,74 +242,118 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         setTankWidth(100);
         setTankDepth(100);
         setTankHeight(100);
+        setToastMsg('Exercício 1 Carregado!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'ex2',
+      title: 'Exercício 2: Duas Esferas',
+      subtitle: 'Esferas A e B ligadas',
+      load: () => {
+        setIsSimulating(false);
+        setTwoBlocks(true);
+        setExtraWeight(0);
+        setShape(ObjectShape.SPHERE);
+        setDim1(10); // raio 10
+        setSelectedMaterial('Custom');
+        setCustomObjDensity(800); // Esfera A: 0.8 g/cm3 = 800 kg/m3
+        
+        setShape2(ObjectShape.SPHERE);
+        setDim1_2(10);
+        setSelectedMaterial2('Custom');
+        setDensity2(1200); // Esfera B: 1.2 g/cm3 = 1200 kg/m3
+        setCordLength(20);
+
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(1000);
+        setEnableTwoFluids(false);
+        setDepthA(100);
+        setTankWidth(200);
+        setTankDepth(200);
+        setTankHeight(200);
+        setToastMsg('Exercício 2 Carregado!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'ex5',
+      title: 'Exercício 5: Dois Cubos',
+      subtitle: 'Conectados por cordão',
+      load: () => {
+        setIsSimulating(false);
+        setTwoBlocks(true);
+        setExtraWeight(0);
+        setShape(ObjectShape.CUBE);
+        setDim1(100); // 1m3 volume => 100cm aresta
+        setSelectedMaterial('Custom');
+        setCustomObjDensity(800); // d=0.8
+        
+        setShape2(ObjectShape.CUBE);
+        setDim1_2(100);
+        setSelectedMaterial2('Custom');
+        setDensity2(1100); // d=1.1
+        setCordLength(50);
+
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(1000);
+        setEnableTwoFluids(false);
+        setDepthA(400);
+        setTankWidth(500);
+        setTankDepth(500);
+        setTankHeight(500);
         setToastMsg('Exercício 5 Carregado!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     },
     {
-      id: 'ex_sphere',
-      title: 'Esfera de Aço',
-      subtitle: 'Afunda na água',
+      id: 'ex_extra_weight',
+      title: 'Peso Extra',
+      subtitle: 'Bloco com carga superior',
       load: () => {
         setIsSimulating(false);
-        setSelectedMaterial('Ferro');
-        setCustomObjDensity(7850);
-        setShape(ObjectShape.SPHERE);
-        setDim1(10); // raio 10
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
-        setEnableTwoFluids(false);
-        setDepthA(50);
-        setTankWidth(100);
-        setTankDepth(100);
-        setTankHeight(100);
-        setToastMsg('Esfera de Aço Carregada!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'ex_two_fluids',
-      title: 'Cubo em 2 Fluidos',
-      subtitle: 'Óleo e Água',
-      load: () => {
-        setIsSimulating(false);
+        setTwoBlocks(false);
+        setExtraWeight(50); // 50N extra
         setSelectedMaterial('Madeira (Pinho)');
         setCustomObjDensity(600);
         setShape(ObjectShape.CUBE);
-        setDim1(20); // aresta 20
-        setDim2(20);
-        setSelectedFluid('Óleo de Soja');
-        setCustomFluidDensity(800);
-        setDepthA(30);
-        setEnableTwoFluids(true);
-        setSelectedFluidB('Água Doce');
-        setCustomFluidDensityB(1000);
-        setDepthB(40);
-        setTankWidth(100);
-        setTankDepth(100);
-        setTankHeight(100);
-        setToastMsg('Cubo em 2 Fluidos Carregado!');
+        setDim1(30);
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(1000);
+        setEnableTwoFluids(false);
+        setDepthA(100);
+        setTankWidth(200);
+        setTankDepth(200);
+        setTankHeight(200);
+        setToastMsg('Simulação com Peso Extra Carregada!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     },
     {
-      id: 'ex_iceberg',
-      title: 'Iceberg',
-      subtitle: 'Gelo na Água do Mar',
+      id: 'ex_two_blocks_connected',
+      title: 'Dois Blocos Conectados',
+      subtitle: 'Equilíbrio de dois corpos',
       load: () => {
         setIsSimulating(false);
-        setSelectedMaterial('Gelo');
-        setCustomObjDensity(917);
+        setTwoBlocks(true);
+        setExtraWeight(0);
         setShape(ObjectShape.CUBE);
-        setDim1(30); 
-        setSelectedFluid('Água do Mar');
-        setCustomFluidDensity(1025);
+        setDim1(10); // 1000 cm3
+        setSelectedMaterial('Custom');
+        setCustomObjDensity(500); // 0.5 g/cm3
+        setShape2(ObjectShape.CUBE);
+        setDim1_2(10);
+        setSelectedMaterial2('Custom');
+        setDensity2(1500); // 1.5 g/cm3
+        setCordLength(20);
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(1000);
         setEnableTwoFluids(false);
-        setDepthA(60);
-        setTankWidth(100);
-        setTankDepth(100);
-        setTankHeight(100);
-        setToastMsg('Iceberg Carregado!');
+        setDepthA(100);
+        setTankWidth(200);
+        setTankDepth(200);
+        setTankHeight(200);
+        setToastMsg('Exercício Dois Blocos Carregado!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     }
@@ -351,7 +427,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
               SIMULAÇÕES PRONTAS
             </div>
             <select
-              className="w-full bg-white/20 hover:bg-white/30 transition-colors rounded-lg p-3 text-left flex items-center gap-3 border border-white/30 text-white outline-none cursor-pointer"
+              className="w-full bg-white/20 hover:bg-white/30 transition-colors rounded-lg p-3 text-left flex items-center gap-3 border border-white/30 text-white outline-none cursor-pointer text-xs"
               onChange={(e) => {
                 const ex = EXERCISES.find(x => x.id === e.target.value);
                 if (ex) ex.load();
@@ -401,6 +477,26 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             onDepthBChange={setDepthB}
             onTankWidthChange={setTankWidth}
             onTankDepthChange={setTankDepth}
+            extraWeight={extraWeight}
+            onExtraWeightChange={setExtraWeight}
+            twoBlocks={twoBlocks}
+            onTwoBlocksChange={setTwoBlocks}
+            selectedMaterial2={selectedMaterial2}
+            onMaterial2Change={(e) => {
+              setSelectedMaterial2(e.target.value);
+              if (e.target.value !== 'Custom') {
+                const mat = MATERIALS.find(m => m.name === e.target.value);
+                if (mat) setDensity2(mat.density);
+              }
+            }}
+            density2={density2}
+            onDensity2Change={setDensity2}
+            dim1_2={dim1_2}
+            onDim1_2Change={setDim1_2}
+            cordLength={cordLength}
+            onCordLengthChange={setCordLength}
+            shape2={shape2}
+            onShape2Change={setShape2}
           />
         </div>
 
@@ -441,6 +537,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 showCenterOfBuoyancy={showCenterOfBuoyancy}
                 onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}
                 h_sub_actual={physics.h_sub_actual}
+                twoBlocks={twoBlocks}
+                H2_visual={H2_cm_visual}
+                cordLength_visual={initialPhysics.actualCordLength * visualScaleFactor}
+                obj2Color={MATERIALS.find(m => m.name === selectedMaterial2)?.color || '#475569'}
+                extraWeight={extraWeight}
               />
             ) : (
               <Vista2D
@@ -479,6 +580,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 h_sub_actual={physics.h_sub_actual}
                 showCenterOfBuoyancy={showCenterOfBuoyancy}
                 onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}
+                twoBlocks={twoBlocks}
+                H2_visual={H2_cm_visual}
+                cordLength_visual={initialPhysics.actualCordLength * visualScaleFactor}
+                obj2Color={MATERIALS.find(m => m.name === selectedMaterial2)?.color || '#475569'}
+                extraWeight={extraWeight}
               />
             )}
           </div>
@@ -529,16 +635,14 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         </div>
 
         {/* --- RIGHT SIDEBAR: RESULTS --- */}
-        <div className="lg:col-span-3 flex flex-col gap-3 h-full">
-          <PainelResultados
-            physics={physics}
-            isSimulating={isSimulating}
-            enableTwoFluids={enableTwoFluids}
-            forceText={forceText}
-            showCalculations={showCalculations}
-            onToggleCalculations={() => setShowCalculations(!showCalculations)}
-          />
-        </div>
+        <PainelResultados
+          physics={physics}
+          isSimulating={isSimulating}
+          enableTwoFluids={enableTwoFluids}
+          forceText={forceText}
+          showCalculations={showCalculations}
+          onToggleCalculations={() => setShowCalculations(!showCalculations)}
+        />
       </div>
 
       {/* Floating Calculation Panel */}

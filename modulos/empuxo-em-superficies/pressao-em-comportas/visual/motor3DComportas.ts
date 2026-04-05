@@ -13,7 +13,7 @@ export interface WorldFace {
   stroke?: string;
   strokeWidth?: number;
   normal?: Point3D;
-  kind: 'DAM' | 'WATER';
+  kind: 'DAM' | 'WATER' | 'GATE';
   hatchPattern?: string;
   priority?: number;
 }
@@ -26,7 +26,7 @@ export interface Face {
   strokeWidth?: number;
   zDepth: number;
   brightness?: number;
-  kind: 'DAM' | 'WATER';
+  kind: 'DAM' | 'WATER' | 'GATE';
   hatchPattern?: string;
   id: number;
   priority: number;
@@ -49,7 +49,6 @@ export const useSceneEngine = (
     maxZ: number;
   }
 ) => {
-  // Ângulos iniciais mais frontais e agradáveis
   const [rotX, setRotX] = useState(15);
   const [rotY, setRotY] = useState(is3D ? 25 : 0);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -84,20 +83,17 @@ export const useSceneEngine = (
     const h = Math.max(1, maxY - minY);
     const d = Math.max(1, maxZ - minZ);
 
-    // Em 3D, considerar a profundidade no "tamanho visual" evita
-    // que a água estique a cena e empurre a barragem para fora do foco.
-    const effectiveWidth = is3D ? w + d * 0.55 : w;
-    const effectiveHeight = is3D ? h + d * 0.18 : h;
+    const effectiveWidth = is3D ? w + d * 0.5 : w;
+    const effectiveHeight = is3D ? h + d * 0.2 : h;
 
-    const factor = is3D ? 0.68 : 0.6;
+    const factor = is3D ? 0.65 : 0.7;
     const scaleX = (SVG_W * factor) / effectiveWidth;
     const scaleY = (SVG_H * factor) / effectiveHeight;
 
     const scale = Math.min(scaleX, scaleY, 150);
 
-    // Pequeno deslocamento para centralizar melhor a barragem
-    const panX = is3D ? 20 : 0;
-    const panY = is3D ? 40 : 0;
+    const panX = is3D ? 0 : 0;
+    const panY = is3D ? 20 : 0;
 
     return {
       autoScale: scale,
@@ -125,16 +121,21 @@ export const useSceneEngine = (
     [rotX, rotY]
   );
 
+  // 🔥 CORREÇÃO PRINCIPAL: Alinhamento de referencial 2D/3D
   const project = useCallback(
     (p: Point3D) => {
+      const baseX = ORIGIN_X + finalPan.x;
+      const baseY = ORIGIN_Y + finalPan.y;
+
       if (!is3D) {
         return {
-          x: ORIGIN_X + finalPan.x + p.x * SCALE,
-          y: ORIGIN_Y + finalPan.y - p.y * SCALE,
+          x: baseX + p.x * SCALE,
+          y: baseY - p.y * SCALE, // Y invertido para padrão técnico (SVG cresce para baixo)
           zDepth: 0,
         };
       }
 
+      // Centraliza localmente apenas para rodar a peça, mas mantendo a base X/Y técnica
       const local = {
         x: p.x - center.x,
         y: p.y - center.y,
@@ -143,17 +144,13 @@ export const useSceneEngine = (
 
       const r = rotate(local);
 
-      // Usar o centro do SVG para projeção 3D
-      const cx = SVG_W / 2;
-      const cy = SVG_H / 2;
-
       return {
-        x: cx + finalPan.x + r.x * SCALE,
-        y: cy + finalPan.y - r.y * SCALE,
+        x: baseX + r.x * SCALE,
+        y: baseY - r.y * SCALE,
         zDepth: r.z,
       };
     },
-    [center, ORIGIN_X, ORIGIN_Y, finalPan.x, finalPan.y, is3D, rotate, SCALE, SVG_W, SVG_H]
+    [center, ORIGIN_X, ORIGIN_Y, finalPan.x, finalPan.y, is3D, rotate, SCALE]
   );
 
   const brightness = useCallback(
@@ -169,7 +166,7 @@ export const useSceneEngine = (
       const mag = Math.sqrt(lx * lx + ly * ly + lz * lz) || 1;
       const dot = (rn.x * lx + rn.y * ly + rn.z * lz) / mag;
 
-      return Math.max(0.1, 0.5 + dot * 0.5);
+      return Math.max(0.2, 0.6 + dot * 0.4);
     },
     [is3D, rotate]
   );
@@ -270,28 +267,34 @@ export const useSceneEngine = (
     const projected: Face[] = [];
 
     worldGeometry.forEach((wf, index) => {
-      if (wf.normal) {
+      if (wf.normal && wf.kind !== 'WATER') {
         const rotatedNormal = rotate(wf.normal);
-        if (rotatedNormal.z < 0) return;
+        if (rotatedNormal.z < 0) return; // Backface culling
       }
 
       const proj = wf.pts3.map(project);
 
-      // Profundidade média (mais estável que o ponto mais próximo)
       let zDepth =
         proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
 
-      // Bias para garantir que a água fique atrás da barragem quando estiverem no mesmo plano
       if (wf.kind === 'WATER') {
-        zDepth -= 0.2; // Aumentado de 0.1 para 0.2
+        zDepth -= 0.03;
+      } else if (wf.kind === 'GATE') {
+        zDepth += 0.02;
       } else if (wf.kind === 'DAM') {
-        zDepth += 0.1;
+        zDepth += 0.02;
       }
 
+      if (proj.length === 2) {
+        zDepth += 0.05;
+      }
+      
       let b = 1;
       if (wf.normal) {
         b = brightness(wf.normal);
       }
+
+      let hatchPattern = wf.hatchPattern;
 
       projected.push({
         id: index,
@@ -303,18 +306,24 @@ export const useSceneEngine = (
         zDepth,
         brightness: b,
         kind: wf.kind,
-        hatchPattern: wf.hatchPattern,
+        hatchPattern,
         priority: wf.priority ?? 0,
         normal: wf.normal,
       });
     });
 
-    // Ordenação: primeiro por profundidade, depois por tipo (água por último, ou seja, mais atrás),
-    // depois por prioridade e finalmente por ID.
+    // 🔥 CORREÇÃO: Ordem de pintura SVG. Z menor desenha primeiro (mais ao fundo).
     projected.sort((a, b) => {
       const zDiff = a.zDepth - b.zDepth;
-      if (Math.abs(zDiff) > 0.1) return zDiff;
-      if (a.kind !== b.kind) return a.kind === 'WATER' ? -1 : 1;
+      
+      if (Math.abs(zDiff) > 0.01) return zDiff;
+
+      // Desempate: Se as posições Z são iguais, desenhamos a água primeiro para ficar atrás.
+      if (a.kind !== b.kind) {
+        if (a.kind === 'WATER') return -1;
+        if (b.kind === 'WATER') return 1;
+      }
+
       if (a.priority !== b.priority) return a.priority - b.priority;
       return a.id - b.id;
     });

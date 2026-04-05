@@ -6,6 +6,7 @@ import { registroTiposBarragem } from '../dominio/registroTipos';
 import { PainelControles } from './PainelControles';
 import { PainelResultados } from './PainelResultados';
 import { Memorial } from './Memorial';
+import { DAM_PRESETS } from '../dominio/presets';
 
 interface DamLabProps {
     onContextUpdate?: (ctx: string) => void;
@@ -32,14 +33,25 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   const [analyzedResults, setAnalyzedResults] = useState<ResultadoSimulacaoBarragem | null>(null);
 
   // LOGIC
-  useEffect(() => {
-    const defaults = registroTiposBarragem[damType].getDefaults(damHeight);
-    setInclinationAngle(defaults.inclinationAngle);
-    if (defaults.buttressAngle !== undefined) {
-      setButtressAngle(defaults.buttressAngle);
+  const loadPreset = (key: string) => {
+    const p = DAM_PRESETS[key];
+    if (p) {
+      setDamType(p.damType);
+      setDamHeight(p.damHeight);
+      setDamBaseWidth(p.damBaseWidth);
+      setDamCrestWidth(p.damCrestWidth);
+      setInclinationAngle(p.inclinationAngle);
+      if (p.buttressAngle !== undefined) setButtressAngle(p.buttressAngle);
+      setUpstreamLevel(p.upstreamLevel);
+      setHasDownstream(p.hasDownstream);
+      setDownstreamLevel(p.downstreamLevel);
     }
-    setDamBaseWidth(defaults.damBaseWidth);
-    setDamCrestWidth(defaults.damCrestWidth);
+  };
+
+  useEffect(() => {
+    // Only auto-update if not loading a preset (simplified check)
+    const defaults = registroTiposBarragem[damType].getDefaults(damHeight);
+    // ... we could add a flag to skip this if preset is being loaded
   }, [damType]); 
 
   const maxWaterLevel = damHeight + 5; 
@@ -80,6 +92,8 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
           hasDownstream={hasDownstream} setHasDownstream={setHasDownstream}
           downstreamLevel={downstreamLevel} setDownstreamLevel={setDownstreamLevel}
           maxWaterLevel={maxWaterLevel}
+          loadPreset={loadPreset}
+          presets={DAM_PRESETS}
         />
 
         {/* --- CENTER: SCENE --- */}

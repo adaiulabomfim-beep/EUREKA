@@ -22,7 +22,7 @@ type RenderedFace = {
   stroke?: string;
   strokeWidth?: number;
   brightness?: number;
-  kind?: 'DAM' | 'WATER' | string;
+  kind?: 'DAM' | 'WATER' | 'GATE' | string;
   hatchPattern?: string;
   normal?: { x: number; y: number; z: number };
 };
@@ -37,7 +37,7 @@ type VectorItem = {
   val?: string | number;
 };
 
-interface SceneContainerProps {
+interface ContainerComportasProps {
   is3D: boolean;
   setIs3D: (v: boolean) => void;
   showVectors: boolean;
@@ -56,7 +56,7 @@ interface SceneContainerProps {
   children?: React.ReactNode;
 }
 
-export const SceneContainer: React.FC<SceneContainerProps> = ({
+export const ContainerComportas: React.FC<ContainerComportasProps> = ({
   is3D,
   setIs3D,
   showVectors,
@@ -123,7 +123,6 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
             }
           `}
           title={is3D ? 'Mudar para 2D' : 'Mudar para 3D'}
-          aria-label={is3D ? 'Mudar para 2D' : 'Mudar para 3D'}
         >
           <Cuboid className="h-4 w-4" />
           {is3D ? '3D' : '2D'}
@@ -141,7 +140,6 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
             }
           `}
           title={showVectors ? 'Ocultar vetores' : 'Mostrar vetores'}
-          aria-label={showVectors ? 'Ocultar vetores' : 'Mostrar vetores'}
         >
           <Target className="h-4 w-4" />
           Vetores
@@ -154,7 +152,6 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
           onClick={resetView}
           className="flex items-center gap-2 rounded-full border border-transparent px-4 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-white/70"
           title="Resetar câmera"
-          aria-label="Resetar câmera"
         >
           <RotateCcw className="h-4 w-4" />
           Reset
@@ -177,8 +174,6 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
               transition-transform active:scale-95
               hover:from-blue-700 hover:to-cyan-600
             "
-            title="Analisar"
-            aria-label="Analisar"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
             Analisar
@@ -195,8 +190,6 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
               transition-all active:scale-95
               hover:bg-slate-50
             "
-            title="Reiniciar"
-            aria-label="Reiniciar"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Reiniciar
@@ -226,7 +219,6 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
             }}
             className="group absolute bottom-6 right-6 z-30 rounded-full border border-blue-100/70 bg-white/90 p-2.5 text-slate-500 shadow-lg transition-all hover:scale-110 hover:text-blue-600"
             title="Resetar câmera"
-            aria-label="Resetar câmera"
           >
             <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover:-rotate-180" />
           </button>
@@ -271,21 +263,15 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
             ? `M ${f.pts[0].x},${f.pts[0].y} L ${f.pts[1].x},${f.pts[1].y}`
             : `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
 
-          const isDam = f.kind === 'DAM';
+          const isDam = f.kind === 'DAM' || f.kind === 'GATE';
           const isWater = f.kind === 'WATER';
 
+          // 🔥 RESTAURO DO VISUAL NATIVO: Usar a opacidade e o gradiente originais
           const baseFill = isLine ? 'none' : (f.fill ?? 'none');
           const baseOpacity = f.opacity ?? 1;
 
-          // Para evitar os "gaps" de anti-aliasing do SVG (que parecem uma malha),
-          // aplicamos um stroke da mesma cor do preenchimento nas faces que não têm stroke explícito.
-          let strokeToUse = f.stroke ?? 'none';
-          let strokeWidthToUse = f.strokeWidth ?? 0;
-
-          if (!isLine && strokeToUse === 'none' && baseFill !== 'none') {
-            strokeToUse = baseFill;
-            strokeWidthToUse = 0.5;
-          }
+          const finalStroke = f.stroke ?? (isWater ? 'none' : '#64748b');
+          const finalStrokeWidth = f.strokeWidth ?? (isWater ? 0 : 0.5);
 
           const overlayOpacity =
             isWater || isDam
@@ -301,25 +287,23 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
               ? 'multiply'
               : 'overlay';
 
-          const key =
-            f.id ??
-            `face-${index}-${f.kind ?? 'generic'}-${f.pts
-              .map((p) => `${p.x.toFixed(2)}-${p.y.toFixed(2)}`)
-              .join('_')}`;
+          const key = f.id ?? `face-${index}`;
 
           return (
             <g key={key}>
+              {/* O estilo 'mixBlendMode: normal' devolve o aspecto limpo de volume 3D */}
               <path
                 d={d}
                 fill={baseFill}
                 opacity={baseOpacity}
-                stroke={strokeToUse}
-                strokeWidth={strokeWidthToUse}
+                stroke={finalStroke}
+                strokeWidth={finalStrokeWidth}
                 vectorEffect="non-scaling-stroke"
                 shapeRendering="geometricPrecision"
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 paintOrder="stroke fill"
+                style={{ mixBlendMode: 'normal' }} 
               />
 
               {overlayOpacity > 0 && (

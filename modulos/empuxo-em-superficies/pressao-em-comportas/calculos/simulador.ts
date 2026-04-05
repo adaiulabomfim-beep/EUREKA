@@ -6,13 +6,14 @@ import { calcularMomentos } from './momentos';
 export function simularComportas(config: ConfiguracaoSimulacaoComporta): ResultadoSimulacaoComporta {
   const { fluido, comporta } = config;
   
-  const h_top_up = fluido.nivelMontante - comporta.profundidadeCrista;
-  const h_top_down = fluido.nivelJusante - comporta.profundidadeCrista;
+  const y_top = fluido.nivelMontante - comporta.profundidadeTopo;
+  const h_top_up = comporta.profundidadeTopo;
+  const h_top_down = fluido.nivelJusante - y_top;
   
   const forceData = calculateNetForce(
     comporta.altura,
     comporta.largura,
-    comporta.inclinacao,
+    comporta.angulo || 90,
     h_top_up,
     h_top_down,
     fluido.densidade * fluido.gravidade,

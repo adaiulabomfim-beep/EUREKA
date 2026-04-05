@@ -1,5 +1,5 @@
 // modules/empuxo-em-superficies/pressao-em-comportas/physics/hydrostatics.ts
-import { TipoBarragem, FormaComporta } from '../dominio/tipos';
+import { FormaComporta } from '../dominio/tipos';
 
 /** Utilitário: evita divisões por zero e NaN */
 function safeDiv(n: number, d: number, fallback = 0) {
@@ -104,10 +104,26 @@ export function calculateNetForce(
 ): { FR_net: number; s_cp_net: number; up: any; down: any } {
   const sinTheta = Math.sin((gateInclination * Math.PI) / 180);
 
-  // Geometria básica (assumindo retangular para simplificar, ajustar conforme gateShape)
-  const A = gateHeight * gateWidth;
-  const ybar = gateHeight / 2;
-  const Ixx = (gateWidth * Math.pow(gateHeight, 3)) / 12;
+  let A = 0;
+  let ybar = 0;
+  let Ixx = 0;
+
+  if (gateShape === FormaComporta.RETANGULAR) {
+    A = gateHeight * gateWidth;
+    ybar = gateHeight / 2;
+    Ixx = (gateWidth * Math.pow(gateHeight, 3)) / 12;
+  } else if (gateShape === FormaComporta.CIRCULAR) {
+    const r = gateHeight / 2;
+    A = Math.PI * Math.pow(r, 2);
+    ybar = r;
+    Ixx = (Math.PI * Math.pow(r, 4)) / 4;
+  } else if (gateShape === FormaComporta.SEMI_CIRCULAR) {
+    const r = gateHeight;
+    A = (Math.PI * Math.pow(r, 2)) / 2;
+    ybar = (4 * r) / (3 * Math.PI);
+    // Ixx about centroid axis parallel to base
+    Ixx = Math.pow(r, 4) * (Math.PI / 8 - 8 / (9 * Math.PI));
+  }
 
   const up = hydroPlaneSide(gamma, sinTheta, A, ybar, Ixx, gateHeight, h_top_up);
   const down = hydroPlaneSide(gamma, sinTheta, A, ybar, Ixx, gateHeight, h_top_down);
@@ -136,37 +152,4 @@ export function calculateNetForce(
       h_cp: down.h_cp
     }
   };
-}
-
-/* ========= O que você já tinha (barragem/estabilidade) ========= */
-
-export function calculateGlobalDamForces(
-  gamma: number,
-  upstreamLevel: number,
-  damSin: number,
-  damAngleRad: number
-) {
-  const F_upstream_magnitude = 0.5 * gamma * Math.pow(upstreamLevel, 2) / damSin;
-  const F_up_x = F_upstream_magnitude * damSin;
-  const F_up_y = F_upstream_magnitude * Math.cos(damAngleRad);
-  return { F_upstream_magnitude, F_up_x, F_up_y };
-}
-
-export function calculateDamStability(
-  damType: TipoBarragem,
-  damCrestWidth: number,
-  damBaseWidth: number,
-  damHeight: number,
-  gravity: number,
-  upstreamLevel: number,
-  F_up_x: number
-) {
-  const vol_dam_per_m = ((damCrestWidth + damBaseWidth) / 2) * damHeight;
-  const matDensity = damType === TipoBarragem.TERRA_ENROCAMENTO ? 1900 : 2400;
-  const Weight = vol_dam_per_m * matDensity * gravity;
-  const arm_upstream_horizontal = upstreamLevel / 3;
-  const M_resisting = Weight * (damBaseWidth * 0.6);
-  const M_overturning = F_up_x * arm_upstream_horizontal;
-  const FS = M_overturning > 1 ? M_resisting / M_overturning : 999;
-  return { Weight, M_resisting, M_overturning, FS };
 }

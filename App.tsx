@@ -135,7 +135,7 @@ const App: React.FC = () => {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Section Title */}
                 <div className="mb-6 flex flex-col gap-1">
-                  <h2 className="text-2xl md:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-cyan-500 uppercase drop-shadow-sm">
+                  <h2 className="text-lg md:text-xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 uppercase drop-shadow-sm">
                     {currentMode === SimulationMode.IMMERSED_BODIES && 'Princípio de Arquimedes'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Geometria e Análise de Barragens'}
                     {currentMode === SimulationMode.GATE_PRESSURE && 'Forças Hidrostáticas em Superfícies'}

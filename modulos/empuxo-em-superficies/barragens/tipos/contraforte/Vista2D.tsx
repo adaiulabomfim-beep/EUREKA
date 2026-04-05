@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { RenderizadorBarragensProps } from '../../dominio/tipos';
 import { construirGeometria } from './geometria';
-import { getDamXAtYGeneric, criarPrisma, caixaAgua3D } from '../../visual/auxiliaresGeometriaCena';
+import { getDamXAtYGeneric, criarPrisma, caixaAgua3D, criarBaseTerra } from '../../visual/auxiliaresGeometriaCena';
 import { useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer } from '../../visual/ContainerCena';
 
@@ -29,7 +29,12 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       return getDamXAtYGeneric(wallProfile, y, side);
     };
 
+    const maxH = Math.max(damHeight, upstreamLevel, downstreamLevel);
+    const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
+    const farRight = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
+
     const worldGeometry = [
+      ...criarBaseTerra(maxH, farLeft, farRight, CHANNEL_WIDTH * 1.5, toWorldX),
       ...criarPrisma(
         wallProfile,
         CHANNEL_WIDTH,

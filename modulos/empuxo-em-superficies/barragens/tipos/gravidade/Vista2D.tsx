@@ -6,6 +6,7 @@ import {
   getDamXAtYGeneric,
   criarPrisma,
   caixaAgua3D,
+  criarBaseTerra,
 } from '../../visual/auxiliaresGeometriaCena';
 import { useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer as ContainerCena } from '../../visual/ContainerCena';
@@ -61,7 +62,12 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       return getDamXAtYGeneric(profile, y, side);
     };
 
+    const maxH = Math.max(damHeight, upstreamLevel, downstreamLevel);
+    const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
+    const farRight = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
+
     const worldGeometry = [
+      ...criarBaseTerra(maxH, farLeft, farRight, CHANNEL_WIDTH * 1.5, toWorldX),
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,

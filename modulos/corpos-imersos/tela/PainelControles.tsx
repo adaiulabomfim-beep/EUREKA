@@ -4,6 +4,13 @@ import { MATERIALS, FLUIDS } from '../dominio/configuracao';
 import { ObjectShape } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
 
+export const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon, title }) => (
+    <div className="flex items-center gap-2 mb-5 pb-3 border-b border-blue-50">
+        <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">{icon}</div>
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h3>
+    </div>
+);
+
 interface PainelControlesProps {
   selectedMaterial: string;
   customObjDensity: number;
@@ -32,6 +39,20 @@ interface PainelControlesProps {
   onDepthBChange: (val: number) => void;
   onTankWidthChange: (val: number) => void;
   onTankDepthChange: (val: number) => void;
+  extraWeight: number;
+  onExtraWeightChange: (val: number) => void;
+  twoBlocks: boolean;
+  onTwoBlocksChange: (val: boolean) => void;
+  selectedMaterial2: string;
+  onMaterial2Change: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  density2: number;
+  onDensity2Change: (val: number) => void;
+  dim1_2: number;
+  onDim1_2Change: (val: number) => void;
+  cordLength: number;
+  onCordLengthChange: (val: number) => void;
+  shape2: ObjectShape;
+  onShape2Change: (shape: ObjectShape) => void;
 }
 
 export const PainelControles: React.FC<PainelControlesProps> = ({
@@ -62,24 +83,35 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   onDepthBChange,
   onTankWidthChange,
   onTankDepthChange,
+  extraWeight,
+  onExtraWeightChange,
+  twoBlocks,
+  onTwoBlocksChange,
+  selectedMaterial2,
+  onMaterial2Change,
+  density2,
+  onDensity2Change,
+  dim1_2,
+  onDim1_2Change,
+  cordLength,
+  onCordLengthChange,
+  shape2,
+  onShape2Change,
 }) => {
   const inputGroupClass = 'space-y-1.5';
-  const labelClass = 'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider';
+  const labelClass = "block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5";
   const inputClass =
-    'w-full h-9 px-3 border border-slate-200/60 rounded-lg text-xs bg-white text-slate-700 font-medium outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 transition-all shadow-sm placeholder:text-slate-300';
+    "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-white text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm placeholder:text-slate-300";
   const selectClass =
-    'w-full h-9 px-3 border border-slate-200/60 rounded-lg text-xs bg-slate-50/30 text-slate-700 font-medium outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 transition-all shadow-sm cursor-pointer hover:bg-white';
+    "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-blue-50/30 text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm cursor-pointer hover:bg-white";
 
   const isObjectTooWide = (shape === ObjectShape.CUBE ? dim1 : dim1 * 2) > tankWidth;
 
   return (
     <div className="flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
       {/* Object Properties */}
-      <div className="bg-white/60 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-slate-200/50">
-        <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-slate-100/60">
-            <div className="text-blue-500"><Box className="w-4 h-4" /></div>
-            <h3 className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">Propriedades do Objeto</h3>
-        </div>
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+        <SectionHeader icon={<Box className="w-4 h-4" />} title="Propriedades do Objeto" />
         <div className="space-y-4">
           <div className={inputGroupClass}>
             <label className={labelClass}>Geometria</label>
@@ -130,15 +162,80 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <label className={labelClass}>Densidade (kg/m³)</label>
             <NumberInput value={customObjDensity} onChange={onCustomObjDensityChange} />
           </div>
+
+          <div className="pt-2 border-t border-slate-100">
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Peso Extra (N)</label>
+              <NumberInput value={extraWeight} min={0} onChange={onExtraWeightChange} />
+              <p className="text-[9px] text-slate-400 italic">Simula uma carga aplicada sobre o corpo.</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tank Properties */}
-      <div className="bg-white/60 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-slate-200/50">
-        <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-slate-100/60">
-            <div className="text-blue-500"><Settings2 className="w-4 h-4" /></div>
-            <h3 className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">Tanque</h3>
+      {/* Two Blocks Mode */}
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+        <div className="flex items-center gap-2.5 mb-3 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100/50">
+          <input
+            type="checkbox"
+            checked={twoBlocks}
+            onChange={(e) => onTwoBlocksChange(e.target.checked)}
+            id="two-blocks"
+            className="accent-blue-600 w-4 h-4 cursor-pointer rounded"
+          />
+          <label
+            htmlFor="two-blocks"
+            className="text-[10px] font-bold text-blue-700 cursor-pointer select-none uppercase tracking-widest flex-1"
+          >
+            Dois Blocos Ligados
+          </label>
+          <Layers className={`w-4 h-4 ${twoBlocks ? 'text-blue-500' : 'text-slate-300'}`} />
         </div>
+
+        {twoBlocks && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Geometria Bloco 2</label>
+              <select className={selectClass} value={shape2} onChange={(e) => onShape2Change(e.target.value as ObjectShape)}>
+                <option value={ObjectShape.CUBE}>Cubo</option>
+                <option value={ObjectShape.SPHERE}>Esfera</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className={inputGroupClass}>
+                <label className={labelClass}>{shape2 === ObjectShape.CUBE ? 'Aresta 2 (cm)' : 'Raio 2 (cm)'}</label>
+                <NumberInput value={dim1_2} min={1} onChange={onDim1_2Change} />
+              </div>
+              <div className={inputGroupClass}>
+                <label className={labelClass}>Cabo (cm)</label>
+                <NumberInput value={cordLength} min={1} onChange={onCordLengthChange} />
+              </div>
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Material Bloco 2</label>
+              <select className={selectClass} value={selectedMaterial2} onChange={onMaterial2Change}>
+                {MATERIALS.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+                <option value="Custom">Personalizado...</option>
+              </select>
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Densidade 2 (kg/m³)</label>
+              <NumberInput value={density2} onChange={onDensity2Change} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tank Properties */}
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+        <SectionHeader icon={<Settings2 className="w-4 h-4" />} title="Tanque" />
         <div className="grid grid-cols-2 gap-3">
           <div className={inputGroupClass}>
             <label className={labelClass}>Largura (cm)</label>
@@ -152,11 +249,8 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
       </div>
 
       {/* Fluids */}
-      <div className="bg-white/60 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-slate-200/50">
-        <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-slate-100/60">
-            <div className="text-blue-500"><Droplets className="w-4 h-4" /></div>
-            <h3 className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">Fluidos</h3>
-        </div>
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+        <SectionHeader icon={<Droplets className="w-4 h-4" />} title="Fluidos" />
         <div className="space-y-4">
           <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 rounded-xl border border-slate-200/60 hover:bg-slate-50 transition-colors">
             <input

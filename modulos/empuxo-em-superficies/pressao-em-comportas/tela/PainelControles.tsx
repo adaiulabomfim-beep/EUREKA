@@ -1,14 +1,12 @@
 import React from 'react';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
-import { TipoBarragem, FormaComporta, PosicaoDobradica } from '../dominio/tipos';
+import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
-import { BookOpen, Construction, Square, Circle, RefreshCw, Waves, Anchor, Link } from 'lucide-react';
+import { BookOpen, Square, Circle, Waves, Anchor, Link } from 'lucide-react';
 
 interface PainelControlesProps {
   config: ConfiguracaoSimulacaoComporta;
   setConfig: React.Dispatch<React.SetStateAction<ConfiguracaoSimulacaoComporta>>;
-  syncGateAngle: boolean;
-  setSyncGateAngle: (val: boolean) => void;
   hasDownstream: boolean;
   setHasDownstream: (val: boolean) => void;
   maxGateHeight: number;
@@ -59,47 +57,17 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
         </select>
       </div>
 
-      {/* Estrutura */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-          <SectionHeader icon={<Construction className="w-4 h-4" />} title="Estrutura" />
-          <div className="space-y-4">
-              <div>
-                  <label className={labelClass}>Tipo de Barragem</label>
-                  <select 
-                      value={config.barragem.tipo} 
-                      onChange={(e) => setConfig(prev => ({...prev, barragem: {...prev.barragem, tipo: e.target.value as TipoBarragem}}))}
-                      className={selectClass}
-                  >
-                      <option value={TipoBarragem.GRAVIDADE}>Gravidade</option>
-                      <option value={TipoBarragem.TERRA_ENROCAMENTO}>Terra / Enrocamento</option>
-                      <option value={TipoBarragem.ARCO}>Arco</option>
-                      <option value={TipoBarragem.CONTRAFORTE}>Contraforte</option>
-                  </select>
-              </div>
-              <div>
-                <label className={labelClass}>Inclinação da Parede (θ)</label>
-                <NumberInput value={config.barragem.anguloInclinacao} min={1} max={160} onChange={(val) => setConfig(prev => ({...prev, barragem: {...prev.barragem, anguloInclinacao: val}}))} />
-              </div>
-              <div>
-                  <label className={labelClass}>Altura Total (m)</label>
-                  <NumberInput value={config.barragem.altura} min={1} max={200} onChange={(val) => setConfig(prev => ({...prev, barragem: {...prev.barragem, altura: val}}))} />
-              </div>
-              {config.barragem.tipo === TipoBarragem.CONTRAFORTE && (
-                  <div>
-                      <label className={labelClass}>Ângulo do Contraforte</label>
-                      <NumberInput value={config.barragem.buttressAngle || 60} min={10} max={90} onChange={(val) => setConfig(prev => ({...prev, barragem: {...prev.barragem, buttressAngle: val}}))} />
-                  </div>
-              )}
-          </div>
-      </div>
-
       {/* Níveis de Água */}
       <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
           <SectionHeader icon={<Waves className="w-4 h-4" />} title="Níveis de Água" />
           <div className="space-y-4">
               <div>
                   <label className={labelClass}>Nível Montante (m)</label>
-                  <NumberInput value={config.fluido.nivelMontante} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluido: {...prev.fluido, nivelMontante: val}}))} />
+                  <NumberInput value={config.fluido.nivelMontante} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({
+                      ...prev, 
+                      fluido: {...prev.fluido, nivelMontante: val},
+                      comporta: {...prev.comporta, profundidadeTopo: Math.min(prev.comporta.profundidadeTopo, val)}
+                  }))} />
               </div>
               
               <div className="pt-2 border-t border-blue-50">
@@ -109,7 +77,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                   </div>
                   {props.hasDownstream && (
                       <div className="animate-in fade-in slide-in-from-top-2">
-                          <NumberInput value={config.fluido.nivelJusante} min={0} max={config.barragem.altura} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluido: {...prev.fluido, nivelJusante: val}}))} />
+                          <NumberInput value={config.fluido.nivelJusante} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluido: {...prev.fluido, nivelJusante: val}}))} />
                       </div>
                   )}
               </div>
@@ -121,7 +89,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
           <div className="flex items-center justify-between mb-5 pb-3 border-b border-blue-50">
               <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Square className="w-4 h-4" /></div>
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comporta</h3>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Geometria da Comporta</h3>
               </div>
               <input type="checkbox" checked={config.comporta.ativa} onChange={(e) => props.toggleGate(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" />
           </div>
@@ -167,8 +135,13 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                   </div>
 
                   <div>
-                      <label className={labelClass}>Profundidade do Topo (da Crista)</label>
-                      <NumberInput value={config.comporta.profundidadeCrista} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, profundidadeCrista: val}}))} min={0} max={config.barragem.altura} step={0.1} />
+                      <label className={labelClass}>Profundidade do Topo (h1)</label>
+                      <NumberInput value={config.comporta.profundidadeTopo} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, profundidadeTopo: val}}))} min={0} max={config.fluido.nivelMontante} step={0.1} />
+                  </div>
+
+                  <div>
+                      <label className={labelClass}>Ângulo de Inclinação (θ)</label>
+                      <NumberInput value={config.comporta.angulo || 90} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, angulo: val}}))} min={1} max={90} step={1} />
                   </div>
 
                   <div className="pt-4 border-t border-blue-50">

@@ -54,6 +54,11 @@ interface Vista2DProps {
   h_sub_actual?: number;
   showCenterOfBuoyancy?: boolean;
   onToggleCenterOfBuoyancy?: () => void;
+  twoBlocks?: boolean;
+  H2_visual?: number;
+  cordLength_visual?: number;
+  obj2Color?: string;
+  extraWeight?: number;
 
   pan?: { x: number; y: number };
 }
@@ -179,6 +184,11 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   h_sub_actual = 0,
   showCenterOfBuoyancy = true,
   onToggleCenterOfBuoyancy,
+  twoBlocks = false,
+  H2_visual = 0,
+  cordLength_visual = 0,
+  obj2Color = '#475569',
+  extraWeight = 0,
 }) => {
   const clipId = useId().replace(/:/g, '');
   const clipUnderWaterId = `clip-under-water-${clipId}`;
@@ -289,6 +299,47 @@ export const Vista2D: React.FC<Vista2DProps> = ({
         />
       )}
 
+      {/* Cabo entre blocos */}
+      {twoBlocks && (
+        <line
+          x1={cx}
+          y1={cy + visualHeight}
+          x2={cx}
+          y2={cy + visualHeight + cordLength_visual}
+          stroke="#475569"
+          strokeWidth="2"
+          strokeDasharray="2,2"
+        />
+      )}
+
+      {/* Bloco 2 (Sempre submerso visualmente se houver equilíbrio) */}
+      {twoBlocks && (
+        <g transform={`translate(${cx - visualWidth / 2}, ${cy + visualHeight + cordLength_visual})`}>
+          <rect
+            width={visualWidth}
+            height={H2_visual}
+            fill={obj2Color}
+            stroke={OBJECT_BORDER_COLOR}
+            strokeWidth="1"
+            opacity="0.9"
+          />
+          <rect
+            width={visualWidth}
+            height={H2_visual}
+            fill="url(#sphereLight)"
+            opacity="0.2"
+          />
+        </g>
+      )}
+
+      {/* Peso Extra (Visualizado como um pequeno bloco em cima) */}
+      {extraWeight > 0 && (
+        <g transform={`translate(${cx - 15}, ${cy - 10})`}>
+          <rect width="30" height="10" fill="#334155" rx="2" />
+          <text x="15" y="8" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">+{extraWeight}N</text>
+        </g>
+      )}
+
       {/* Parte submersa do objeto */}
       <g clipPath={`url(#${clipUnderWaterId})`}>
         {shape === ObjectShape.SPHERE ? (
@@ -314,36 +365,6 @@ export const Vista2D: React.FC<Vista2DProps> = ({
               r={visualWidth / 2}
               fill="url(#sphereLight)"
               stroke="none"
-            />
-          </>
-        ) : shape === ObjectShape.CYLINDER ? (
-          <>
-            <rect
-              x={cx - visualWidth / 2}
-              y={cy}
-              width={visualWidth}
-              height={visualHeight}
-              fill={objColor}
-              stroke="none"
-            />
-            <rect
-              x={cx - visualWidth / 2}
-              y={cy}
-              width={visualWidth}
-              height={visualHeight}
-              fill={renderFill}
-              stroke={OBJECT_BORDER_COLOR}
-              strokeWidth="1"
-            />
-            <rect
-              x={cx - visualWidth / 2}
-              y={cy}
-              width={visualWidth}
-              height={visualHeight}
-              fill="url(#metalLinear2D)"
-              stroke="none"
-              opacity="0.4"
-              pointerEvents="none"
             />
           </>
         ) : (
@@ -404,36 +425,6 @@ export const Vista2D: React.FC<Vista2DProps> = ({
               r={visualWidth / 2}
               fill="url(#sphereLight)"
               stroke="none"
-              pointerEvents="none"
-            />
-          </>
-        ) : shape === ObjectShape.CYLINDER ? (
-          <>
-            <rect
-              x={cx - visualWidth / 2}
-              y={cy}
-              width={visualWidth}
-              height={visualHeight}
-              fill={objColor}
-              stroke="none"
-            />
-            <rect
-              x={cx - visualWidth / 2}
-              y={cy}
-              width={visualWidth}
-              height={visualHeight}
-              fill={renderFill}
-              stroke={OBJECT_BORDER_COLOR}
-              strokeWidth="1"
-            />
-            <rect
-              x={cx - visualWidth / 2}
-              y={cy}
-              width={visualWidth}
-              height={visualHeight}
-              fill="url(#metalLinear2D)"
-              stroke="none"
-              opacity="0.4"
               pointerEvents="none"
             />
           </>

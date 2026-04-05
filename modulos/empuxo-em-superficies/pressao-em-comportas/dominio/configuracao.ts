@@ -1,14 +1,6 @@
-import { TipoBarragem, FormaComporta, PosicaoDobradica } from './tipos';
+import { FormaComporta, PosicaoDobradica } from './tipos';
 
 export interface ConfiguracaoSimulacaoComporta {
-  barragem: {
-    tipo: TipoBarragem;
-    altura: number;
-    larguraBase: number;
-    larguraCrista: number;
-    anguloInclinacao: number;
-    buttressAngle?: number;
-  };
   fluido: {
     nivelMontante: number;
     nivelJusante: number;
@@ -20,8 +12,8 @@ export interface ConfiguracaoSimulacaoComporta {
     forma: FormaComporta;
     largura: number;
     altura: number;
-    profundidadeCrista: number;
-    inclinacao: number;
+    profundidadeTopo: number;
+    angulo?: number;
     posicaoDobradica: PosicaoDobradica;
     temTirante: boolean;
     posicaoTiranteRelativa: number;

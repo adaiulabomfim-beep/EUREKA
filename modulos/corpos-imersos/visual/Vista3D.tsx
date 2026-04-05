@@ -54,6 +54,11 @@ interface Vista3DProps {
   showCenterOfBuoyancy?: boolean;
   onToggleCenterOfBuoyancy?: () => void;
   visualTankDepth: number;
+  twoBlocks?: boolean;
+  H2_visual?: number;
+  cordLength_visual?: number;
+  obj2Color?: string;
+  extraWeight?: number;
 }
 
 type FaceDef = {
@@ -94,6 +99,11 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   showCenterOfBuoyancy = true,
   onToggleCenterOfBuoyancy,
   visualTankDepth,
+  twoBlocks = false,
+  H2_visual = 0,
+  cordLength_visual = 0,
+  obj2Color = '#475569',
+  extraWeight = 0,
 }) => {
   // câmera do 3D antigo
   const [rotX, setRotX] = useState<number>(15);
@@ -400,8 +410,55 @@ export const Vista3D: React.FC<Vista3DProps> = ({
       })
       .sort((a, b) => a.z - b.z);
 
+    // Bloco 2
+    const obj2Pts = twoBlocks ? getPoints(0, effectiveYBot - cordLength_visual - H2_visual, visualWidth, H2_visual, 0, objD_visual) : null;
+    const faces2: FaceDef[] = obj2Pts ? [
+      { pts: [obj2Pts.p1, obj2Pts.p2, obj2Pts.p3, obj2Pts.p4], n: { x: 0, y: 0, z: -1 } },
+      { pts: [obj2Pts.p5, obj2Pts.p6, obj2Pts.p7, obj2Pts.p8], n: { x: 0, y: 0, z: 1 } },
+      { pts: [obj2Pts.p1, obj2Pts.p2, obj2Pts.p6, obj2Pts.p5], n: { x: 0, y: 1, z: 0 } },
+      { pts: [obj2Pts.p4, obj2Pts.p3, obj2Pts.p7, obj2Pts.p8], n: { x: 0, y: -1, z: 0 } },
+      { pts: [obj2Pts.p1, obj2Pts.p5, obj2Pts.p8, obj2Pts.p4], n: { x: -1, y: 0, z: 0 } },
+      { pts: [obj2Pts.p2, obj2Pts.p6, obj2Pts.p7, obj2Pts.p3], n: { x: 1, y: 0, z: 0 } },
+    ] : [];
+
+    const sortedFaces2 = faces2
+      .map((f) => {
+        const z = f.pts.reduce((acc, p) => acc + (p.z || 0), 0) / 4;
+        const rn = rotateVector(f.n);
+        const lx = -0.5; const ly = 0.5; const lz = -0.8;
+        const mag = Math.sqrt(lx * lx + ly * ly + lz * lz);
+        const dot = (rn.x * lx + rn.y * ly + rn.z * lz) / mag;
+        const shadowOpacity = dot < 0 ? -dot * 0.4 : 0;
+        const highlightOpacity = dot > 0 ? dot * 0.3 : 0;
+        return { ...f, z, shadowOpacity, highlightOpacity };
+      })
+      .sort((a, b) => a.z - b.z);
+
     return (
       <g>
+        {/* Cabo */}
+        {twoBlocks && (
+          <line
+            x1={project(0, tankBottomY - effectiveYBot, 0).x}
+            y1={project(0, tankBottomY - effectiveYBot, 0).y}
+            x2={project(0, tankBottomY - (effectiveYBot - cordLength_visual), 0).x}
+            y2={project(0, tankBottomY - (effectiveYBot - cordLength_visual), 0).y}
+            stroke="#475569"
+            strokeWidth="2"
+            strokeDasharray="2,2"
+          />
+        )}
+
+        {/* Bloco 2 */}
+        {twoBlocks && sortedFaces2.map((f, i) => (
+          <g key={`b2-${i}`}>
+            <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill={obj2Color} stroke={OBJECT_BORDER_COLOR} strokeWidth="1" />
+            <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="black" fillOpacity={f.shadowOpacity} stroke="none" />
+            <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="white" fillOpacity={f.highlightOpacity} stroke="none" />
+          </g>
+        ))}
+
+        {/* Bloco 1 */}
         {shape === ObjectShape.CUBE ? (
           sortedFaces.map((f, i) => (
             <g key={i}>
@@ -433,30 +490,6 @@ export const Vista3D: React.FC<Vista3DProps> = ({
               />
             </g>
           ))
-        ) : shape === ObjectShape.CYLINDER ? (
-          sortedFaces.map((f, i) => (
-            <g key={i}>
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill={objColor}
-                stroke="none"
-              />
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill={renderFill}
-                stroke={OBJECT_BORDER_COLOR}
-                strokeWidth="1"
-                strokeLinejoin="round"
-              />
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill="url(#metalLinear2D)"
-                stroke="none"
-                opacity="0.4"
-                pointerEvents="none"
-              />
-            </g>
-          ))
         ) : (
           <g>
             <circle
@@ -482,6 +515,14 @@ export const Vista3D: React.FC<Vista3DProps> = ({
               stroke="none"
               pointerEvents="none"
             />
+          </g>
+        )}
+
+        {/* Peso Extra */}
+        {extraWeight > 0 && (
+          <g transform={`translate(${center.x - 15}, ${project(0, tankBottomY - (effectiveYBot + visualHeight), 0).y - 10})`}>
+            <rect width="30" height="10" fill="#334155" rx="2" />
+            <text x="15" y="8" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">+{extraWeight}N</text>
           </g>
         )}
       </g>

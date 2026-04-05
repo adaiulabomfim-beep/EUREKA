@@ -5,6 +5,7 @@ import {
   getDamXAtYGeneric,
   criarPrisma,
   caixaAgua3D,
+  criarBaseTerra,
 } from '../../visual/auxiliaresGeometriaCena';
 import { useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer } from '../../visual/ContainerCena';
@@ -59,13 +60,19 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
     const getDamXAtY = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') =>
       getDamXAtYGeneric(profile, y, side);
 
+    const maxH = Math.max(damHeight, upstreamLevel, downstreamLevel);
+    const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
+    const farRight = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
+
     const worldGeometry = [
+      ...criarBaseTerra(maxH, farLeft, farRight, CHANNEL_WIDTH * 1.5, toWorldX),
+      // BARRAGEM DE GRAVIDADE
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
         '#9ca3af',
         1,
-        '#6b7280',
+        '#4b5563',
         1,
         'DAM',
         undefined,
@@ -73,8 +80,9 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
         'url(#concretePattern)',
         toWorldX,
         2,
-        24,
-        12
+        1,
+        1,
+        true
       ),
     ];
 
@@ -89,7 +97,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
           toWorldX,
           undefined,
           'A',
-          24
+          1
         )
       );
     }
@@ -105,7 +113,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
           toWorldX,
           undefined,
           'B',
-          24
+          1
         )
       );
     }
@@ -122,15 +130,8 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
   ]);
 
   const autoFitParams = useMemo(() => {
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    let minZ = Infinity;
-    let maxZ = -Infinity;
-
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
     const zs = [-CHANNEL_WIDTH / 2, CHANNEL_WIDTH / 2];
-
     profile.forEach((p: { x: number; y: number }) => {
       zs.forEach((z) => {
         const wx = toWorldX(p.x);
@@ -142,15 +143,13 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
         maxZ = Math.max(maxZ, z);
       });
     });
-
-    const params = { minX, maxX, minY, maxY, minZ, maxZ };
-    console.log('Gravity Dam autoFitParams:', params);
-    return params;
+    return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, toWorldX]);
 
   const { renderedFaces, project, rotate, SCALE, handlers, resetView } =
     useSceneEngine(true, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams);
 
+  // Vectors (sem alterações)
   const vectors = useMemo(() => {
     if (!showVectors || !isAnalyzed) return [];
 
@@ -180,7 +179,6 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
       val?: string
     ) => {
       const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
-
       if (rotatedNormal.z < 0) return;
       const visibilityFactor = Math.max(0.5, rotatedNormal.z);
 
@@ -237,15 +235,9 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
       let nz = 0;
 
       if (side === 'UPSTREAM') {
-        if (nx > 0) {
-          nx = -nx;
-          ny = -ny;
-        }
+        if (nx > 0) { nx = -nx; ny = -ny; }
       } else {
-        if (nx < 0) {
-          nx = -nx;
-          ny = -ny;
-        }
+        if (nx < 0) { nx = -nx; ny = -ny; }
       }
 
       const mag = Math.sqrt(nx * nx + ny * ny) || 1;

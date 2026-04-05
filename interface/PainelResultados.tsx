@@ -48,6 +48,11 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
         <div className="text-[12px] font-black text-purple-600 uppercase tracking-wide">
           {value}
         </div>
+        {secondaryValue && (
+          <div className="text-[9px] mt-1 text-purple-500 font-bold">
+            {secondaryValue}
+          </div>
+        )}
       </div>
     );
   }

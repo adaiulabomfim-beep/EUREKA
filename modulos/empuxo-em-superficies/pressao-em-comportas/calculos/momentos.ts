@@ -33,7 +33,7 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
       }
       
       // Component of weight perpendicular to the gate
-      const rad = (comporta.inclinacao * Math.PI) / 180;
+      const rad = ((comporta.angulo || 90) * Math.PI) / 180;
       const W_perp = W * Math.cos(rad);
       
       M_hinge += W_perp * d_cg;
@@ -51,7 +51,7 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
 
       // Component of tie rod force perpendicular to the gate
       // Assuming tieRodAngle is relative to the horizontal
-      const gateRad = (comporta.inclinacao * Math.PI) / 180;
+      const gateRad = ((comporta.angulo || 90) * Math.PI) / 180;
       const tieRad = (comporta.anguloTirante * Math.PI) / 180;
       
       // Angle between tie rod and gate
