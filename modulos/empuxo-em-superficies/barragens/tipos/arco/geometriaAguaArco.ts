@@ -12,7 +12,7 @@ import { Point3D, WorldFace } from '../../visual/motorCena3D';
 const face = (
   pts3: Point3D[], fill: string, opacity: number,
   stroke = 'none', strokeWidth = 0, normal?: Point3D,
-  kind: 'DAM' | 'WATER' = 'WATER', hatch?: string, priority = 1
+  kind: 'DAM' | 'WATER_UP' | 'WATER_DOWN' | 'EARTH' = 'WATER_UP', hatch?: string, priority = 1
 ): WorldFace => ({ pts3, fill, opacity, stroke, strokeWidth, normal, kind, hatchPattern: hatch, priority });
 
 export const caixaAguaArco3D = (
@@ -32,6 +32,7 @@ export const caixaAguaArco3D = (
   const dz = channelWidth / slices;
   const wL = waterLevelY;
   const fX = toWorldX(farX);
+  const waterKind = up ? 'WATER_UP' : 'WATER_DOWN';
 
   const fill = fillId === 'A' ? 'url(#fluidDepthA)' : 'url(#fluidDepthB)';
   const surf = fillId === 'A' ? 'url(#surfaceGradientA)' : 'url(#surfaceGradientB)';
@@ -52,7 +53,7 @@ export const caixaAguaArco3D = (
            { x: cx(wL, z2), y: wL, z: z2 }, { x: cx(wL, z1), y: wL, z: z1 }]
         : [{ x: cx(wL, z1), y: wL, z: z1 }, { x: cx(wL, z2), y: wL, z: z2 },
            { x: fX, y: wL, z: z2 }, { x: fX, y: wL, z: z1 }],
-      surf, 0.95, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER', ripple, 1
+      surf, 0.95, 'none', 0, { x: 0, y: 1, z: 0 }, waterKind, ripple, 1
     ));
   }
 
@@ -64,7 +65,7 @@ export const caixaAguaArco3D = (
 
   faces.push(face(
     backWallPts,
-    fill, 0.95, 'none', 0, { x: fnx, y: 0, z: 0 }, 'WATER', undefined, 1
+    fill, 0.95, 'none', 0, { x: fnx, y: 0, z: 0 }, waterKind, undefined, 1
   ));
 
   // FACES Z (frente e trás, z=+halfW e z=-halfW)
@@ -74,7 +75,7 @@ export const caixaAguaArco3D = (
          { x: cx(wL, halfW), y: wL, z: halfW }, { x: fX, y: wL, z: halfW }]
       : [{ x: cx(0, halfW), y: 0, z: halfW }, { x: fX, y: 0, z: halfW },
          { x: fX, y: wL, z: halfW }, { x: cx(wL, halfW), y: wL, z: halfW }],
-    fill, 0.95, 'none', 0, { x: 0, y: 0, z: 1 }, 'WATER', undefined, 1
+    fill, 0.95, 'none', 0, { x: 0, y: 0, z: 1 }, waterKind, undefined, 1
   ));
 
   faces.push(face(
@@ -83,7 +84,7 @@ export const caixaAguaArco3D = (
          { x: fX, y: wL, z: -halfW }, { x: cx(wL, -halfW), y: wL, z: -halfW }]
       : [{ x: fX, y: 0, z: -halfW }, { x: cx(0, -halfW), y: 0, z: -halfW },
          { x: cx(wL, -halfW), y: wL, z: -halfW }, { x: fX, y: wL, z: -halfW }],
-    fill, 0.95, 'none', 0, { x: 0, y: 0, z: -1 }, 'WATER', undefined, 1
+    fill, 0.95, 'none', 0, { x: 0, y: 0, z: -1 }, waterKind, undefined, 1
   ));
 
   return faces;

@@ -20,7 +20,7 @@ export const criarFace = (
   stroke = "none",
   strokeWidth = 1,
   normal?: Point3D,
-  kind: "DAM" | "WATER" = "DAM",
+  kind: "DAM" | "WATER_UP" | "WATER_DOWN" | "EARTH" = "DAM",
   hatchPattern?: string,
   priority: number = 0
 ): WorldFace => ({
@@ -99,7 +99,7 @@ export const criarPrisma = (
   opacity: number,
   stroke = "none",
   strokeWidth = 1.2,
-  kind: "DAM" | "WATER" = "DAM",
+  kind: "DAM" | "WATER_UP" | "WATER_DOWN" | "EARTH" = "DAM",
   xOffsetFn?: (z: number, x: number) => number,
   zOffset: number = 0,
   hatchPattern?: string,
@@ -142,7 +142,7 @@ export const criarPrisma = (
   // Se o perfil é CCW, já está correto.
   const frontPtsRaw = profile.map((pt) => mapPt(pt, zF));
   const frontPts = profileIsCW ? [...frontPtsRaw].reverse() : frontPtsRaw;
-  faces.push(criarFace(frontPts, fill, opacity, "none", 0, { x: 0, y: 0, z: 1 }, kind, kind === "WATER" ? undefined : hatchPattern, p));
+  faces.push(criarFace(frontPts, fill, opacity, "none", 0, { x: 0, y: 0, z: 1 }, kind, kind.startsWith("WATER") ? undefined : hatchPattern, p));
 
   // --- Capa traseira (z menor) ---
   // A normal deve apontar para -Z.
@@ -150,10 +150,10 @@ export const criarPrisma = (
   // Se o perfil é CCW, reverte.
   const backPtsRaw = profile.map((pt) => mapPt(pt, zB));
   const backPts = profileIsCW ? backPtsRaw : [...backPtsRaw].reverse();
-  faces.push(criarFace(backPts, fill, opacity, "none", 0, { x: 0, y: 0, z: -1 }, kind, kind === "WATER" ? undefined : hatchPattern, p));
+  faces.push(criarFace(backPts, fill, opacity, "none", 0, { x: 0, y: 0, z: -1 }, kind, kind.startsWith("WATER") ? undefined : hatchPattern, p));
 
   // --- Laterais ---
-  if (kind === "WATER" && steps > 1 && xOffsetFn) {
+  if (kind.startsWith("WATER") && steps > 1 && xOffsetFn) {
     // Para água com múltiplas subdivisões Z (curvas de arco),
     // mesclar todas as fatias Z numa única polygon por aresta do perfil.
     // Isso elimina as linhas de anti-aliasing entre sub-faces adjacentes.
@@ -192,7 +192,7 @@ export const criarPrisma = (
 
         faces.push(criarFace(
           mergedPts, fill, opacity, "none", 0, trueNormal, kind,
-          (kind === "WATER" && i !== 1) ? undefined : hatchPattern, p
+          (kind.startsWith("WATER") && i !== 1) ? undefined : hatchPattern, p
         ));
       }
     }
@@ -235,7 +235,7 @@ export const criarPrisma = (
             0,
             trueNormal,
             kind,
-            (kind === "WATER" && i !== 1) ? undefined : hatchPattern,
+            (kind.startsWith("WATER") && i !== 1) ? undefined : hatchPattern,
             p
           ));
         }
@@ -317,13 +317,13 @@ export const caixaAgua3D = (
     0.95,
     "none", // Sem stroke entre faces — elimina linhas de fatiamento
     0,
-    "WATER",
+    damFaceSide === "UPSTREAM" ? "WATER_UP" : "WATER_DOWN",
     offsetFn,
     0,
     ripplePattern,
     toWorldX,
     1,
-    stepsZ || 1, // Restaurado para acompanhar a curvatura do arco
+    stepsZ || 1, // Restaurado para 1, usamos 1 gigante para barragens retas (topologia resolve o z-depth)
     1,
     false
   );
@@ -359,7 +359,7 @@ export const poligonoAgua2D = (
     poly.reverse();
   }
 
-  faces.push(criarFace(poly, fill, 1, "none", 0, { x: 0, y: 0, z: 1 }, "WATER", undefined, 0));
+  faces.push(criarFace(poly, fill, 1, "none", 0, { x: 0, y: 0, z: 1 }, damFaceSide === "UPSTREAM" ? "WATER_UP" : "WATER_DOWN", undefined, 0));
 
   const xC = toWorldX(getDamXAtY(waterLevelY, damFaceSide));
   const rippleHeight = Math.min(30, waterLevelY);
@@ -377,7 +377,7 @@ export const poligonoAgua2D = (
         { x: toWorldX(getDamXAtY(waterLevelY - rippleHeight, damFaceSide)), y: waterLevelY - rippleHeight, z: 0 }
       ];
 
-  faces.push(criarFace(ripplePoly, "none", 1, "none", 0, { x: 0, y: 0, z: 1 }, "WATER", "url(#ripplePattern)", 1));
+  faces.push(criarFace(ripplePoly, "none", 1, "none", 0, { x: 0, y: 0, z: 1 }, damFaceSide === "UPSTREAM" ? "WATER_UP" : "WATER_DOWN", "url(#ripplePattern)", 1));
 
   return faces;
 };

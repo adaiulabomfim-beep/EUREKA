@@ -13,7 +13,7 @@ export interface WorldFace {
   stroke?: string;
   strokeWidth?: number;
   normal?: Point3D;
-  kind: 'DAM' | 'WATER';
+  kind: 'DAM' | 'WATER_UP' | 'WATER_DOWN' | 'EARTH';
   hatchPattern?: string;
   priority?: number;
 }
@@ -26,7 +26,7 @@ export interface Face {
   strokeWidth?: number;
   zDepth: number;
   brightness?: number;
-  kind: 'DAM' | 'WATER';
+  kind: 'DAM' | 'WATER_UP' | 'WATER_DOWN' | 'EARTH';
   hatchPattern?: string;
   id: number;
   priority: number;
@@ -305,8 +305,8 @@ export const useSceneEngine = (
       // Z médio exato para a face visível
       let zDepth = proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
 
-      // Desempate sutil automático baseado no tipo da face para bordas tangentes
-      if (wf.kind === 'WATER') zDepth -= 0.1;
+      // Desempate sutil automático
+      if (wf.kind.startsWith('WATER')) zDepth -= 0.1;
       if (wf.kind === 'DAM') zDepth += 0.1;
 
       let b = 1;
@@ -331,37 +331,49 @@ export const useSceneEngine = (
       });
     });
 
-    // Algoritmo do Pintor com Orientação Espacial Absoluta de Camadas
+    // Algoritmo do Pintor com Topologia de Camadas Absolutas (Macroscopic Layering)
     projected.sort((a, b) => {
-      // Regra 0: Detectar inversão de perspectiva
-      const isLookingFromBelow = rotX < 0; // Quando rotX inverte, o chão vira teto
-      
-      // Regra 1: GROUND ABSOLUTO (Cobre falha geométrica de Bounding Boxes enormes)
-      // Apenas forçamos a camada de base (Terra=0) a se subordinar independentemente de Z-Depth. 
-      // Água (1) e Represa (2) vão usar física tridimensional natural!
-      if (a.priority === 0 || b.priority === 0) {
-         if (a.priority !== b.priority) {
-            return isLookingFromBelow 
-               ? b.priority - a.priority // Olhando de baixo: Terra desenha por último
-               : a.priority - b.priority; // Olhando de cima: Terra desenha primeiro
-         }
+      const getLayerIndex = (f: Face) => {
+        if (f.kind === 'EARTH') return 0;
+        const isUpstreamView = rotY <= 0;
+        
+        // Se a câmera está na Esquerda (Upstream), Água Montante fica na Frente (Maior index = Desenha por último)
+        if (isUpstreamView) {
+          if (f.kind === 'WATER_DOWN') return 1;
+          if (f.kind === 'DAM') return 2;
+          if (f.kind === 'WATER_UP') return 3;
+        } else {
+          // Se a câmera está na Direita (Downstream)
+          if (f.kind === 'WATER_UP') return 1;
+          if (f.kind === 'DAM') return 2;
+          if (f.kind === 'WATER_DOWN') return 3;
+        }
+        return 0;
+      };
+
+      const layerA = getLayerIndex(a);
+      const layerB = getLayerIndex(b);
+
+      // Regra 1: Ordens topológicas rígidas primeiro! Nunca intersectar água com barragem.
+      if (layerA !== layerB) {
+        // Correção de inversão se olhar por baixo (chão vira teto)
+        if (rotX < 0 && (layerA === 0 || layerB === 0)) {
+           return layerB - layerA; 
+        }
+        return layerA - layerB;
       }
 
-      // Regra 2: Entre Barragem e Água, Z-Depth comanda a profundidade rigorosamente!
+      // Regra 2: Para faces DENTRO da mesma camada (ex: fatias da mesma barragem ou do mesmo bloco d'agua), usar zDepth!
       const zDiff = a.zDepth - b.zDepth;
       if (Math.abs(zDiff) > 0.05) {
          return zDiff;
       }
 
-      // Regra 3: Empate coplanar milimétrico (Z-Fighting Handle)
+      // Regra 3: Empate coplanar milimétrico (Z-Fighting Handle final)
       if (a.priority !== b.priority) {
          return a.priority - b.priority;
       }
 
-      // Regra 3: Empates perfeitos (Z-Fighting Handling)
-      if (a.kind !== b.kind) return a.kind === 'WATER' ? -1 : 1;
-
-      // 4. Se tudo falhar, usar ID para estabilidade (não piscar na tela)
       return a.id - b.id;
     });
 
