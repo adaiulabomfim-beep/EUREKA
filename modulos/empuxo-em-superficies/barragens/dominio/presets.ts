@@ -9,6 +9,7 @@ export interface DamPreset {
   damCrestWidth: number;
   inclinationAngle: number;
   buttressAngle?: number;
+  archRadius?: number;
   upstreamLevel: number;
   hasDownstream: boolean;
   downstreamLevel: number;
@@ -60,6 +61,7 @@ export const DAM_PRESETS: { [key: string]: DamPreset } = {
     damBaseWidth: 6,
     damCrestWidth: 3,
     inclinationAngle: 90,
+    archRadius: 50,
     upstreamLevel: 28,
     hasDownstream: false,
     downstreamLevel: 0,

@@ -37,10 +37,10 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
-        '#78350f',
+        '#A67B5B',
         1,
-        '#451a03',
-        1,
+        '#6F4F28',
+        1.2,
         'DAM',
         undefined,
         0,
@@ -103,7 +103,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, toWorldX]);
 
-  const { renderedFaces, project, SCALE, handlers, resetView } = useSceneEngine(
+  const { renderedFaces, project, SCALE, pan, handlers, resetView } = useSceneEngine(
     false, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams
   );
 
@@ -460,7 +460,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       isAnalyzed={isAnalyzed} onCalculate={onCalculate} onReset={onReset}
       resetView={resetView} handlers={handlers}
       renderedFaces={renderedFaces} vectors={vectors}
-      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y}
+      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y} pan={pan}
     >
       {renderDimensions()}
     </SceneContainer>

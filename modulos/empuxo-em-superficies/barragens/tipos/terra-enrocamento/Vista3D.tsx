@@ -37,9 +37,9 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
-        '#78350f',
+        '#A67B5B',
         1,
-        '#451a03',
+        '#6F4F28',
         1,
         'DAM',
         undefined,
@@ -47,8 +47,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         'url(#earthPattern)',
         toWorldX,
         2,
-        24,
-        12,
+        1,
+        1,
         true
       ),
     ];
@@ -64,7 +64,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           toWorldX,
           undefined,
           'A',
-          24
+          1
         )
       );
     }
@@ -80,7 +80,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           toWorldX,
           undefined,
           'B',
-          24
+          1
         )
       );
     }
@@ -109,7 +109,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, toWorldX]);
 
-  const { renderedFaces, project, rotate, SCALE, handlers, resetView } = useSceneEngine(
+  const { renderedFaces, project, rotate, rotateDirection, SCALE, pan, handlers, resetView } = useSceneEngine(
     true, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams
   );
 
@@ -121,7 +121,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
 
     const pushArrow = (x: number, y: number, z: number, nx: number, ny: number, nz: number, magWorld: number, color: string, isResultant: boolean, val?: string) => {
       // Check visibility using the normal
-      const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
+      const rotatedNormal = rotateDirection({ x: nx, y: ny, z: nz });
       
       // Visibility factor: 0 to 1 based on dot product with camera view direction (0,0,1)
       if (rotatedNormal.z < 0) return;
@@ -227,7 +227,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     }
 
     return vecs;
-  }, [showVectors, upstreamLevel, downstreamLevel, isAnalyzed, force, y_cp, up, damHeight, getDamXAtY, toWorldX, project, rotate, SCALE]);
+  }, [showVectors, upstreamLevel, downstreamLevel, isAnalyzed, force, y_cp, up, damHeight, getDamXAtY, toWorldX, project, rotate, rotateDirection, SCALE]);
 
   const originProj = project({ x: 0, y: 0, z: 0 });
 
@@ -238,7 +238,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       isAnalyzed={isAnalyzed} onCalculate={onCalculate} onReset={onReset}
       resetView={resetView} handlers={handlers}
       renderedFaces={renderedFaces} vectors={vectors}
-      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y}
+      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y} pan={pan}
     />
   );
 };

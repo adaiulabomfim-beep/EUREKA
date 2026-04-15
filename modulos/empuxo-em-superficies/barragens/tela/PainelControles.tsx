@@ -18,6 +18,10 @@ interface PainelControlesProps {
   setInclinationAngle: (val: number) => void;
   buttressAngle?: number;
   setButtressAngle?: (val: number) => void;
+  downstreamAngle?: number;
+  setDownstreamAngle?: (val: number) => void;
+  archRadius?: number;
+  setArchRadius?: (val: number) => void;
   damHeight: number;
   setDamHeight: (val: number) => void;
   damBaseWidth: number;
@@ -39,6 +43,8 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   damType, setDamType,
   inclinationAngle, setInclinationAngle,
   buttressAngle, setButtressAngle,
+  downstreamAngle, setDownstreamAngle,
+  archRadius, setArchRadius,
   damHeight, setDamHeight,
   damBaseWidth, setDamBaseWidth,
   damCrestWidth, setDamCrestWidth,
@@ -93,13 +99,27 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                   </select>
               </div>
               <div>
-                <label className={labelClass}>Inclinação da Face (θ)</label>
+                <label className={labelClass}>
+                  {damType === TipoBarragem.TERRA_ENROCAMENTO ? 'Inclinação Montante (θ)' : 'Inclinação da Face (θ)'}
+                </label>
                 <NumberInput value={inclinationAngle} min={1} max={160} onChange={setInclinationAngle} />
               </div>
+              {damType === TipoBarragem.TERRA_ENROCAMENTO && downstreamAngle !== undefined && setDownstreamAngle && (
+                <div>
+                  <label className={labelClass}>Inclinação Jusante (θ)</label>
+                  <NumberInput value={downstreamAngle} min={1} max={160} onChange={setDownstreamAngle} />
+                </div>
+              )}
               {damType === TipoBarragem.CONTRAFORTE && setButtressAngle && buttressAngle !== undefined && (
                 <div>
                   <label className={labelClass}>Inclinação dos Contrafortes (°)</label>
                   <NumberInput value={buttressAngle} min={1} max={160} onChange={setButtressAngle} />
+                </div>
+              )}
+              {damType === TipoBarragem.ARCO && setArchRadius && archRadius !== undefined && (
+                <div>
+                  <label className={labelClass}>Raio de Curvatura (m)</label>
+                  <NumberInput value={archRadius} min={10} max={500} onChange={setArchRadius} />
                 </div>
               )}
               <div className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/50 space-y-3">
@@ -107,9 +127,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                     <label className={labelClass}>Altura Total (m)</label>
                     <NumberInput value={damHeight} min={1} max={200} onChange={setDamHeight} />
                 </div>
-                {damType !== TipoBarragem.CONTRAFORTE && (
+                {damType !== TipoBarragem.CONTRAFORTE && damType !== TipoBarragem.TERRA_ENROCAMENTO && (
                   <div>
-                      <label className={labelClass}>Largura da Base (m)</label>
+                      <label className={labelClass}>
+                        {damType === TipoBarragem.ARCO ? 'Espessura na Base (m)' : 'Largura da Base (m)'}
+                      </label>
                       <NumberInput value={damBaseWidth} min={1} max={200} onChange={setDamBaseWidth} />
                   </div>
                 )}

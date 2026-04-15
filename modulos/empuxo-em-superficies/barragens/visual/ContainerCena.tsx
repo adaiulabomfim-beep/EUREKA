@@ -7,7 +7,7 @@ import {
   Maximize,
   Play,
 } from 'lucide-react';
-import { SVGDefs } from './DefinicoesSVG';
+import { DefinicoesSVG } from './DefinicoesSVG';
 
 type Point2D = {
   x: number;
@@ -53,6 +53,7 @@ interface SceneContainerProps {
   SVG_H: number;
   ORIGIN_X: number;
   ORIGIN_Y: number;
+  pan?: { x: number; y: number };
   children?: React.ReactNode;
 }
 
@@ -72,6 +73,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
   SVG_H,
   ORIGIN_X,
   ORIGIN_Y,
+  pan,
   children,
 }) => {
   return (
@@ -240,7 +242,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
         preserveAspectRatio="xMidYMid meet"
         className="flex-1 touch-none overflow-visible"
       >
-        <SVGDefs />
+        <DefinicoesSVG pan={pan} />
 
         <g opacity="0.12">
           <line
@@ -282,7 +284,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
           let strokeToUse = f.stroke ?? 'none';
           let strokeWidthToUse = f.strokeWidth ?? 0;
 
-          if (!isLine && strokeToUse === 'none' && baseFill !== 'none') {
+          if (!isLine && !isWater && strokeToUse === 'none' && baseFill !== 'none') {
             strokeToUse = baseFill;
             strokeWidthToUse = 0.5;
           }

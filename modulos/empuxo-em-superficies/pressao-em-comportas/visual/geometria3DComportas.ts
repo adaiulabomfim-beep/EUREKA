@@ -28,7 +28,7 @@ export const criarPrisma = (
   fill: string,
   opacity: number,
   stroke = "none",
-  strokeWidth = 1,
+  strokeWidth = 1.2,
   kind: "DAM" | "WATER" | "GATE" = "DAM",
   xOffsetFn?: (z: number) => number,
   zOffset: number = 0,
@@ -291,6 +291,32 @@ export const caixaAgua3D = (
       criarFace(pts, surfColor, waterVolumeOpacity, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", ripplePattern, 0)
     );
   }
+
+  // 6. Arestas luminosas do tanque (Ciano estilo Vidro / Corpos Imersos)
+  const farW = toWorldX(farX);
+  const zBackEdge = zStart;
+  const zFrontEdge = zStart + depth;
+
+  // Gerar linhas da borda d'água explicitamente:
+  const drawEdge = (p1x: number, p1y: number, p1z: number, p2x: number, p2y: number, p2z: number) => {
+    faces.push(criarFace([{x: p1x, y: p1y, z: p1z}, {x: p2x, y: p2y, z: p2z}], "none", 1, "rgba(103, 232, 249, 0.6)", 1.2, undefined, "WATER", undefined, 0));
+  };
+
+  // Bordas superiores e inferiores de profundidade Z
+  drawEdge(farW, 0, zBackEdge, farW, 0, zFrontEdge);
+  drawEdge(farW, waterLevelY, zBackEdge, farW, waterLevelY, zFrontEdge);
+  drawEdge(getContactX(0, zBackEdge), 0, zBackEdge, getContactX(0, zFrontEdge), 0, zFrontEdge);
+  drawEdge(getContactX(waterLevelY, zBackEdge), waterLevelY, zBackEdge, getContactX(waterLevelY, zFrontEdge), waterLevelY, zFrontEdge);
+
+  // Perímetro Capa Traseira
+  drawEdge(farW, 0, zBackEdge, farW, waterLevelY, zBackEdge);
+  drawEdge(farW, waterLevelY, zBackEdge, getContactX(waterLevelY, zBackEdge), waterLevelY, zBackEdge);
+  drawEdge(getContactX(0, zBackEdge), 0, zBackEdge, farW, 0, zBackEdge);
+
+  // Perímetro Capa Frontal
+  drawEdge(farW, 0, zFrontEdge, farW, waterLevelY, zFrontEdge);
+  drawEdge(farW, waterLevelY, zFrontEdge, getContactX(waterLevelY, zFrontEdge), waterLevelY, zFrontEdge);
+  drawEdge(getContactX(0, zFrontEdge), 0, zFrontEdge, farW, 0, zFrontEdge);
 
   return faces;
 };

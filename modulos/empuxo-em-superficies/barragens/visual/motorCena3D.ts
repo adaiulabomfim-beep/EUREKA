@@ -31,6 +31,7 @@ export interface Face {
   id: number;
   priority: number;
   normal?: Point3D;
+  facingScore: number;
 }
 
 export const useSceneEngine = (
@@ -125,6 +126,24 @@ export const useSceneEngine = (
     [rotX, rotY]
   );
 
+  // Rotação apenas de direção (sem translação de centro).
+  // Essencial para normais, que são vetores de direção, não pontos.
+  const rotateDirection = useCallback(
+    (v: Point3D) => {
+      const radX = (rotX * Math.PI) / 180;
+      const radY = (rotY * Math.PI) / 180;
+
+      const x1 = v.x * Math.cos(radY) - v.z * Math.sin(radY);
+      const z1 = v.x * Math.sin(radY) + v.z * Math.cos(radY);
+
+      const y2 = v.y * Math.cos(radX) - z1 * Math.sin(radX);
+      const z2 = v.y * Math.sin(radX) + z1 * Math.cos(radX);
+
+      return { x: x1, y: y2, z: z2 };
+    },
+    [rotX, rotY]
+  );
+
   const project = useCallback(
     (p: Point3D) => {
       if (!is3D) {
@@ -160,7 +179,7 @@ export const useSceneEngine = (
     (n: Point3D) => {
       if (!is3D) return 1;
 
-      const rn = rotate(n);
+      const rn = rotateDirection(n);
 
       const lx = -0.5;
       const ly = 0.5;
@@ -171,7 +190,7 @@ export const useSceneEngine = (
 
       return Math.max(0.1, 0.5 + dot * 0.5);
     },
-    [is3D, rotate]
+    [is3D, rotateDirection]
   );
 
   const animateCameraReset = useCallback(() => {
@@ -270,23 +289,25 @@ export const useSceneEngine = (
     const projected: Face[] = [];
 
     worldGeometry.forEach((wf, index) => {
+      let facingScore = 0;
       if (wf.normal) {
-        const rotatedNormal = rotate(wf.normal);
-        if (rotatedNormal.z < 0) return;
+        const rn = rotateDirection(wf.normal);
+        facingScore = rn.z;
+        // BACKFACE CULLING ESTRITO: 
+        // Se a face está de costas para a câmera (Z negativo), ela NUNCA deve ser desenhada.
+        // Isso impede matematicamente que a parte de trás do Contraforte ou do Arco
+        // lute contra a parte da frente pela visibilidade.
+        if (facingScore < 0) return;
       }
 
       const proj = wf.pts3.map(project);
 
-      // Profundidade média (mais estável que o ponto mais próximo)
-      let zDepth =
-        proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
+      // Z médio exato para a face visível
+      let zDepth = proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
 
-      // Bias para garantir que a água fique atrás da barragem quando estiverem no mesmo plano
-      if (wf.kind === 'WATER') {
-        zDepth -= 0.2; // Aumentado de 0.1 para 0.2
-      } else if (wf.kind === 'DAM') {
-        zDepth += 0.1;
-      }
+      // Desempate sutil automático baseado no tipo da face para bordas tangentes
+      if (wf.kind === 'WATER') zDepth -= 0.1;
+      if (wf.kind === 'DAM') zDepth += 0.1;
 
       let b = 1;
       if (wf.normal) {
@@ -306,26 +327,52 @@ export const useSceneEngine = (
         hatchPattern: wf.hatchPattern,
         priority: wf.priority ?? 0,
         normal: wf.normal,
+        facingScore,
       });
     });
 
-    // Ordenação: primeiro por profundidade, depois por tipo (água por último, ou seja, mais atrás),
-    // depois por prioridade e finalmente por ID.
+    // Algoritmo do Pintor com Orientação Espacial Absoluta de Camadas
     projected.sort((a, b) => {
+      // Regra 0: Detectar inversão de perspectiva
+      const isLookingFromBelow = rotX < 0; // Quando rotX inverte, o chão vira teto
+      
+      // Regra 1: GROUND ABSOLUTO (Cobre falha geométrica de Bounding Boxes enormes)
+      // Apenas forçamos a camada de base (Terra=0) a se subordinar independentemente de Z-Depth. 
+      // Água (1) e Represa (2) vão usar física tridimensional natural!
+      if (a.priority === 0 || b.priority === 0) {
+         if (a.priority !== b.priority) {
+            return isLookingFromBelow 
+               ? b.priority - a.priority // Olhando de baixo: Terra desenha por último
+               : a.priority - b.priority; // Olhando de cima: Terra desenha primeiro
+         }
+      }
+
+      // Regra 2: Entre Barragem e Água, Z-Depth comanda a profundidade rigorosamente!
       const zDiff = a.zDepth - b.zDepth;
-      if (Math.abs(zDiff) > 0.1) return zDiff;
+      if (Math.abs(zDiff) > 0.05) {
+         return zDiff;
+      }
+
+      // Regra 3: Empate coplanar milimétrico (Z-Fighting Handle)
+      if (a.priority !== b.priority) {
+         return a.priority - b.priority;
+      }
+
+      // Regra 3: Empates perfeitos (Z-Fighting Handling)
       if (a.kind !== b.kind) return a.kind === 'WATER' ? -1 : 1;
-      if (a.priority !== b.priority) return a.priority - b.priority;
+
+      // 4. Se tudo falhar, usar ID para estabilidade (não piscar na tela)
       return a.id - b.id;
     });
 
     return projected;
-  }, [worldGeometry, project, brightness, rotate]);
+  }, [worldGeometry, project, brightness, rotateDirection]);
 
   return {
     renderedFaces,
     project,
     rotate,
+    rotateDirection,
     SCALE,
     rotX,
     rotY,

@@ -224,7 +224,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [fitPoints, toWorldX, maxH]);
 
-  const { renderedFaces, handlers, resetView, project } = useSceneEngine(
+  const { renderedFaces, handlers, resetView, project, pan } = useSceneEngine(
     true,
     worldGeometry,
     SVG_W,
@@ -253,6 +253,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       SVG_H={SVG_H}
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
+      pan={pan}
     />
   );
 };

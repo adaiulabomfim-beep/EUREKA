@@ -74,7 +74,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         '#9ca3af',
         1,
         '#6b7280',
-        1,
+        1.2,
         'DAM',
         undefined,
         0,
@@ -169,7 +169,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, toWorldX]);
 
-  const { renderedFaces, project, SCALE, handlers, resetView } = useSceneEngine(
+  const { renderedFaces, project, SCALE, pan, handlers, resetView } = useSceneEngine(
     false,
     worldGeometry,
     SVG_W,
@@ -537,6 +537,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       SVG_H={SVG_H}
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
+      pan={pan}
     >
       {renderDimensions()}
     </ContainerCena>

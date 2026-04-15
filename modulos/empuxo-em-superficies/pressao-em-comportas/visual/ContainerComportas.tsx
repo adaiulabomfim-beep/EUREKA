@@ -7,7 +7,7 @@ import {
   Maximize,
   Play,
 } from 'lucide-react';
-import { SVGDefs } from './DefinicoesSVG';
+import { DefinicoesSVG } from './DefinicoesSVG';
 
 type Point2D = {
   x: number;
@@ -53,6 +53,7 @@ interface ContainerComportasProps {
   SVG_H: number;
   ORIGIN_X: number;
   ORIGIN_Y: number;
+  pan?: { x: number; y: number };
   children?: React.ReactNode;
 }
 
@@ -72,6 +73,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
   SVG_H,
   ORIGIN_X,
   ORIGIN_Y,
+  pan,
   children,
 }) => {
   return (
@@ -232,7 +234,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
         preserveAspectRatio="xMidYMid meet"
         className="flex-1 touch-none overflow-visible"
       >
-        <SVGDefs />
+        <DefinicoesSVG pan={pan} />
 
         <g opacity="0.12">
           <line

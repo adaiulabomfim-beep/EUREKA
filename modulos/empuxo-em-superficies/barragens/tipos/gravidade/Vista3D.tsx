@@ -146,7 +146,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, toWorldX]);
 
-  const { renderedFaces, project, rotate, SCALE, handlers, resetView } =
+  const { renderedFaces, project, rotate, rotateDirection, SCALE, pan, handlers, resetView } =
     useSceneEngine(true, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams);
 
   // Vectors (sem alterações)
@@ -178,7 +178,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
       isResultant: boolean,
       val?: string
     ) => {
-      const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
+      const rotatedNormal = rotateDirection({ x: nx, y: ny, z: nz });
       if (rotatedNormal.z < 0) return;
       const visibilityFactor = Math.max(0.5, rotatedNormal.z);
 
@@ -305,6 +305,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
     toWorldX,
     project,
     rotate,
+    rotateDirection,
     SCALE,
   ]);
 
@@ -327,6 +328,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
       SVG_H={SVG_H}
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
+      pan={pan}
     />
   );
 };

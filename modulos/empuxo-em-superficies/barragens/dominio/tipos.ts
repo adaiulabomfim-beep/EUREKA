@@ -9,6 +9,7 @@ export interface PredefinicaoBarragem {
   inclinationAngle: number;
   damBaseWidth: number;
   damCrestWidth: number;
+  archRadius?: number;
 }
 
 export type ResultadoSuperficieRetangular = {
@@ -30,6 +31,7 @@ export interface RenderizadorBarragensProps {
   damCrestWidth: number;
   inclinationAngle: number;
   buttressAngle?: number;
+  archRadius?: number;
   upstreamLevel: number;
   downstreamLevel?: number;
   force: number;
@@ -48,6 +50,7 @@ export interface VistaBarragemProps {
   damCrestWidth: number;
   inclinationAngle: number;
   buttressAngle?: number;
+  archRadius?: number;
   upstreamLevel: number;
   downstreamLevel: number;
   forceData?: any;
@@ -67,6 +70,7 @@ export interface ConfiguracaoSimulacaoBarragem {
   damCrestWidth: number;
   inclinationAngle: number;
   buttressAngle?: number;
+  archRadius?: number;
   upstreamLevel: number;
   downstreamLevel: number;
   density: number;

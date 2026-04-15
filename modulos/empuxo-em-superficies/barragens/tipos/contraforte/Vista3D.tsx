@@ -41,16 +41,16 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         buttressWidth,
         '#9ca3af',
         1,
-        '#6b7280',
-        1,
+        '#4b5563',
+        1.2,
         'DAM',
         undefined,
         offset,
         'url(#concretePattern)',
         toWorldX,
         2,
-        undefined,
-        12,
+        1,
+        1,
         true
       )
     );
@@ -62,16 +62,16 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         CHANNEL_WIDTH,
         '#9ca3af',
         1,
-        '#6b7280',
-        1,
+        '#4b5563',
+        1.2,
         'DAM',
         undefined,
         0,
         'url(#concretePattern)',
         toWorldX,
         2,
-        24,
-        12,
+        10,
+        1,
         true
       ),
       ...buttresses,
@@ -88,7 +88,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           toWorldX,
           undefined,
           'A',
-          24
+          1
         )
       );
     }
@@ -104,7 +104,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           toWorldX,
           undefined,
           'B',
-          24
+          1
         )
       );
     }
@@ -134,7 +134,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, actualBaseWidth, toWorldX]);
 
-  const { renderedFaces, project, rotate, SCALE, handlers, resetView } = useSceneEngine(
+  const { renderedFaces, project, rotate, rotateDirection, SCALE, pan, handlers, resetView } = useSceneEngine(
     true, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams
   );
 
@@ -146,7 +146,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
 
     const pushArrow = (x: number, y: number, z: number, nx: number, ny: number, nz: number, magWorld: number, color: string, isResultant: boolean, val?: string) => {
       // Check visibility using the normal
-      const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
+      const rotatedNormal = rotateDirection({ x: nx, y: ny, z: nz });
       
       // Visibility factor: 0 to 1 based on dot product with camera view direction (0,0,1)
       if (rotatedNormal.z < 0) return;
@@ -252,7 +252,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     }
 
     return vecs;
-  }, [showVectors, upstreamLevel, downstreamLevel, isAnalyzed, force, y_cp, up, damHeight, getDamXAtY, toWorldX, project, rotate, SCALE]);
+  }, [showVectors, upstreamLevel, downstreamLevel, isAnalyzed, force, y_cp, up, damHeight, getDamXAtY, toWorldX, project, rotate, rotateDirection, SCALE]);
 
   const originProj = project({ x: 0, y: 0, z: 0 });
 
@@ -263,7 +263,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       isAnalyzed={isAnalyzed} onCalculate={onCalculate} onReset={onReset}
       resetView={resetView} handlers={handlers}
       renderedFaces={renderedFaces} vectors={vectors}
-      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y}
+      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y} pan={pan}
     />
   );
 };

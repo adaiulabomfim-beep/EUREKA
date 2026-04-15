@@ -4,9 +4,9 @@ import { construirGeometria } from './geometria';
 import {
   getDamXAtYGeneric,
   criarPrisma,
-  caixaAgua3D,
   criarBaseTerra,
 } from '../../visual/auxiliaresGeometriaCena';
+import { caixaAguaArco3D } from './geometriaAguaArco';
 import { useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer } from '../../visual/ContainerCena';
 
@@ -45,6 +45,7 @@ export const Vista3D: React.FC<
     setIs3D,
     showVectors,
     setShowVectors,
+    archRadius = 30,
   } = props;
 
   const SVG_W = 900;
@@ -61,19 +62,28 @@ export const Vista3D: React.FC<
     [damBaseWidth]
   );
 
-  // Raio maior + curvatura mais suave = leitura mais monolítica
-  const archRadius = useMemo(() => {
-    return Math.max(CHANNEL_WIDTH * 2.2, damBaseWidth * 4.5);
-  }, [damBaseWidth, CHANNEL_WIDTH]);
+  // Raio real, definido pelo usuário no formulário do laboratório
+  const safeArchRadius = useMemo(() => {
+    return archRadius;
+  }, [archRadius]);
 
   const archOffsetFn = useMemo(() => {
-    return (z: number) => {
-      const rr = archRadius * archRadius;
+    return (z: number, x?: number) => {
+      const rr = safeArchRadius * safeArchRadius;
       const zz = z * z;
-      const baseCurve = archRadius - Math.sqrt(Math.max(0, rr - zz));
-      return baseCurve * 1.08;
+      const baseCurve = safeArchRadius - Math.sqrt(Math.max(0, rr - zz));
+      const maxOffset = baseCurve * 1.08;
+      
+      // Falloff geométrico duro:
+      // Se X está a montante do eixo (menor que -1 ou similar), a curva amortece drasticamente 
+      // para não curvar as margens naturais da água.
+      if (x !== undefined && x < -1) {
+        return 0; // Água reta imediatamente
+      }
+
+      return maxOffset;
     };
-  }, [archRadius]);
+  }, [safeArchRadius]);
 
   const { worldGeometry, getDamXAtY, profile } = useMemo(() => {
     const { profile } = construirGeometria(
@@ -117,7 +127,7 @@ export const Vista3D: React.FC<
 
     if (upstreamLevel > 0) {
       geometry.push(
-        ...caixaAgua3D(
+        ...caixaAguaArco3D(
           upstreamLevel,
           CHANNEL_WIDTH,
           getDamXAtY(0, 'UPSTREAM') - damHeight * 1.25,
@@ -133,7 +143,7 @@ export const Vista3D: React.FC<
 
     if (downstreamLevel > 0) {
       geometry.push(
-        ...caixaAgua3D(
+        ...caixaAguaArco3D(
           downstreamLevel,
           CHANNEL_WIDTH,
           getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.25,
@@ -192,7 +202,9 @@ export const Vista3D: React.FC<
     renderedFaces,
     project,
     rotate,
+    rotateDirection,
     SCALE,
+    pan,
     handlers,
     resetView,
   } = useSceneEngine(
@@ -225,7 +237,7 @@ export const Vista3D: React.FC<
       isResultant: boolean,
       val?: string
     ) => {
-      const rotatedNormal = rotate({ x: nx, y: ny, z: nz });
+      const rotatedNormal = rotateDirection({ x: nx, y: ny, z: nz });
 
       if (rotatedNormal.z < 0.08) return;
 
@@ -378,6 +390,7 @@ export const Vista3D: React.FC<
     toWorldX,
     project,
     rotate,
+    rotateDirection,
     SCALE,
     archOffsetFn,
     CHANNEL_WIDTH,
@@ -402,6 +415,7 @@ export const Vista3D: React.FC<
       SVG_H={SVG_H}
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
+      pan={pan}
     />
   );
 };

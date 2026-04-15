@@ -1,6 +1,8 @@
 import React from 'react';
 
-export const SVGDefs: React.FC = () => (
+export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pan = { x: 0, y: 0 } }) => {
+  const trans = `translate(${pan.x}, ${pan.y})`;
+  return (
   <defs>
     {/* Sombra */}
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -57,13 +59,13 @@ export const SVGDefs: React.FC = () => (
 
     {/* Água */}
     <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
-      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.7" />
+      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.9" />
     </linearGradient>
 
     <linearGradient id="fluidDepthB" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
-      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.9" />
+      <stop offset="0%" stopColor="#1e40af" stopOpacity="0.5" />
+      <stop offset="100%" stopColor="#1e3a8a" stopOpacity="0.95" />
     </linearGradient>
 
     <linearGradient id="surfaceGradientA" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -112,38 +114,31 @@ export const SVGDefs: React.FC = () => (
       />
     </filter>
 
-    <pattern id="concretePattern" width="64" height="64" patternUnits="userSpaceOnUse">
-      <rect width="64" height="64" fill="#a3a3a3" />
-      <rect width="64" height="64" filter="url(#concreteNoise)" opacity="0.25" />
-      <path
-        d="M10,20 Q15,15 20,20 T30,20"
-        stroke="#525252"
-        strokeWidth="0.5"
-        fill="none"
-        opacity="0.3"
-      />
-      <circle cx="45" cy="50" r="1.5" fill="#525252" opacity="0.4" />
-      <circle cx="10" cy="50" r="1" fill="#e5e5e5" opacity="0.4" />
+    <pattern id="concretePattern" width="32" height="32" patternUnits="userSpaceOnUse" patternTransform={trans}>
+      <rect width="32" height="32" fill="#a3a3a3" />
+      {/* Triângulos de Agregado */}
+      <path d="M4,8 l2,-2 l2,2 z M18,22 l2,-2 l2,2 z M25,10 l1.5,-1.5 l1.5,1.5 z" fill="#525252" opacity="0.4" />
+      <circle cx="10" cy="15" r="0.5" fill="#525252" opacity="0.3" />
+      <circle cx="22" cy="7" r="0.5" fill="#525252" opacity="0.3" />
+      <circle cx="5" cy="28" r="0.5" fill="#525252" opacity="0.3" />
+      <circle cx="28" cy="25" r="0.5" fill="#525252" opacity="0.3" />
     </pattern>
 
     {/* Terra / Enrocamento */}
     <pattern
       id="earthPattern"
-      width="20"
-      height="20"
+      width="24"
+      height="24"
       patternUnits="userSpaceOnUse"
-      patternTransform="rotate(12)"
+      patternTransform={`rotate(12) ${trans}`}
     >
-      <rect width="20" height="20" fill="#78350f" />
-      <path
-        d="M0,5 Q10,2 20,5 M0,15 Q10,18 20,15"
-        stroke="#451a03"
-        strokeWidth="0.8"
-        fill="none"
-        opacity="0.35"
-      />
-      <circle cx="5" cy="5" r="1" fill="#451a03" opacity="0.5" />
-      <circle cx="15" cy="15" r="0.8" fill="#451a03" opacity="0.4" />
+      <rect width="24" height="24" fill="none" />
+      {/* Padrão Técnico de Terra (Grupos de linhas a 45 graus) */}
+      <g stroke="#000000" strokeWidth="0.8" opacity="0.15">
+        <line x1="0" y1="24" x2="24" y2="0" stroke="inherit" />
+        <line x1="4" y1="24" x2="24" y2="4" stroke="inherit" />
+        <line x1="0" y1="20" x2="20" y2="0" stroke="inherit" />
+      </g>
     </pattern>
 
     {/* Madeira e metal, caso queira reaproveitar */}
@@ -152,7 +147,7 @@ export const SVGDefs: React.FC = () => (
       width="20"
       height="20"
       patternUnits="userSpaceOnUse"
-      patternTransform="rotate(10)"
+      patternTransform={`rotate(10) ${trans}`}
     >
       <rect width="20" height="20" fill="#d97706" />
       <path
@@ -183,4 +178,5 @@ export const SVGDefs: React.FC = () => (
       <stop offset="100%" stopColor="#b45309" />
     </linearGradient>
   </defs>
-);
+  );
+};

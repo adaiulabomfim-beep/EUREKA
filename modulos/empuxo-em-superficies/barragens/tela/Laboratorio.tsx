@@ -19,7 +19,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   const [damCrestWidth, setDamCrestWidth] = useState<number>(4);
   const [damBaseWidth, setDamBaseWidth] = useState<number>(12); 
   const [inclinationAngle, setInclinationAngle] = useState<number>(90);
+  const [downstreamAngle, setDownstreamAngle] = useState<number>(45);
   const [buttressAngle, setButtressAngle] = useState<number>(45);
+  const [archRadius, setArchRadius] = useState<number>(30);
   
   const [upstreamLevel, setUpstreamLevel] = useState<number>(12);
   const [hasDownstream, setHasDownstream] = useState<boolean>(false);
@@ -42,6 +44,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
       setDamCrestWidth(p.damCrestWidth);
       setInclinationAngle(p.inclinationAngle);
       if (p.buttressAngle !== undefined) setButtressAngle(p.buttressAngle);
+      if (p.archRadius !== undefined) setArchRadius(p.archRadius);
       setUpstreamLevel(p.upstreamLevel);
       setHasDownstream(p.hasDownstream);
       setDownstreamLevel(p.downstreamLevel);
@@ -49,26 +52,38 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   };
 
   useEffect(() => {
-    // Only auto-update if not loading a preset (simplified check)
     const defaults = registroTiposBarragem[damType].getDefaults(damHeight);
-    // ... we could add a flag to skip this if preset is being loaded
+    setInclinationAngle(defaults.inclinationAngle);
+    if (defaults.downstreamAngle !== undefined) setDownstreamAngle(defaults.downstreamAngle);
+    setDamBaseWidth(defaults.damBaseWidth);
+    setDamCrestWidth(defaults.damCrestWidth);
+    if (defaults.buttressAngle !== undefined) setButtressAngle(defaults.buttressAngle);
   }, [damType]); 
 
   const maxWaterLevel = damHeight + 5; 
 
   const effectiveDownstreamLevel = hasDownstream ? downstreamLevel : 0;
   
+  const effectiveBaseWidth = useMemo(() => {
+    if (damType !== TipoBarragem.TERRA_ENROCAMENTO) return damBaseWidth;
+    const radUp = (inclinationAngle * Math.PI) / 180;
+    const radDown = (downstreamAngle * Math.PI) / 180;
+    const dxUp = inclinationAngle === 90 ? 0 : damHeight / Math.tan(radUp);
+    const dxDown = downstreamAngle === 90 ? 0 : damHeight / Math.tan(radDown);
+    return parseFloat((dxUp + damCrestWidth + dxDown).toFixed(2));
+  }, [damType, damBaseWidth, inclinationAngle, downstreamAngle, damHeight, damCrestWidth]);
+
   const config: ConfiguracaoSimulacaoBarragem = {
-      damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle,
+      damType, damHeight, damBaseWidth: effectiveBaseWidth, damCrestWidth, inclinationAngle, buttressAngle, archRadius,
       upstreamLevel, downstreamLevel: effectiveDownstreamLevel, density, gravity
   };
   
-  const liveResults = useMemo(() => simularBarragem(config), [damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle, upstreamLevel, effectiveDownstreamLevel, density, gravity]);
+  const liveResults = useMemo(() => simularBarragem(config), [damType, damHeight, effectiveBaseWidth, damCrestWidth, inclinationAngle, buttressAngle, archRadius, upstreamLevel, effectiveDownstreamLevel, density, gravity]);
 
   useEffect(() => { setAnalyzedResults(null); }, [liveResults]);
   const handleCalculate = () => { setAnalyzedResults(liveResults); };
 
-  const contextString = useMemo(() => `LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${damBaseWidth}m, Largura Crista=${damCrestWidth}m, θ=${inclinationAngle}°, Nível Montante=${upstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m`, [damType, damHeight, damBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, effectiveDownstreamLevel]);
+  const contextString = useMemo(() => `LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${effectiveBaseWidth}m, Largura Crista=${damCrestWidth}m, θ=${inclinationAngle}°, Nível Montante=${upstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m`, [damType, damHeight, effectiveBaseWidth, damCrestWidth, inclinationAngle, upstreamLevel, effectiveDownstreamLevel]);
 
   useEffect(() => {
       if (onContextUpdate) {
@@ -84,7 +99,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
         <PainelControles
           damType={damType} setDamType={setDamType}
           inclinationAngle={inclinationAngle} setInclinationAngle={setInclinationAngle}
+          downstreamAngle={downstreamAngle} setDownstreamAngle={setDownstreamAngle}
           buttressAngle={buttressAngle} setButtressAngle={setButtressAngle}
+          archRadius={archRadius} setArchRadius={setArchRadius}
           damHeight={damHeight} setDamHeight={setDamHeight}
           damBaseWidth={damBaseWidth} setDamBaseWidth={setDamBaseWidth}
           damCrestWidth={damCrestWidth} setDamCrestWidth={setDamCrestWidth}
@@ -101,8 +118,8 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-10"></div>
             <RenderizadorBarragens
                 key={damType}
-                damType={damType} damHeight={damHeight} damBaseWidth={damBaseWidth} damCrestWidth={damCrestWidth}
-                inclinationAngle={inclinationAngle} buttressAngle={buttressAngle} upstreamLevel={upstreamLevel} downstreamLevel={effectiveDownstreamLevel}
+                damType={damType} damHeight={damHeight} damBaseWidth={effectiveBaseWidth} damCrestWidth={damCrestWidth}
+                inclinationAngle={inclinationAngle} buttressAngle={buttressAngle} archRadius={archRadius} upstreamLevel={upstreamLevel} downstreamLevel={effectiveDownstreamLevel}
                 force={analyzedResults ? analyzedResults.forceData.FR_net : 0} 
                 s_cp={analyzedResults ? analyzedResults.forceData.s_cp_net : 0}
                 y_cp={analyzedResults ? analyzedResults.forceData.y_cp_net : 0}

@@ -3,7 +3,7 @@ import { RenderizadorBarragensProps } from '../../dominio/tipos';
 import { construirGeometria } from './geometria';
 import { getDamXAtYGeneric, criarPrisma, caixaAgua3D, criarBaseTerra } from '../../visual/auxiliaresGeometriaCena';
 import { useSceneEngine } from '../../visual/motorCena3D';
-import { SceneContainer } from '../../visual/ContainerCena';
+import { SceneContainer as ContainerCena } from '../../visual/ContainerCena';
 
 export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, setIs3D: any, showVectors: boolean, setShowVectors: any }> = (props) => {
   const {
@@ -21,7 +21,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
 
   const toWorldX = useCallback((x: number) => x - damBaseWidth / 2, [damBaseWidth]);
 
-  const archRadius = useMemo(() => Math.max(CHANNEL_WIDTH * 2.2, damBaseWidth * 4.5), [damBaseWidth, CHANNEL_WIDTH]);
+  const archRadius = useMemo(() => props.archRadius || 30, [props.archRadius]);
   const archOffsetFn = useMemo(() => {
     return (z: number) => {
       const rr = archRadius * archRadius;
@@ -50,9 +50,9 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         '#9ca3af',
         1,
         '#6b7280',
-        1,
+        1.2,
         'DAM',
-        archOffsetFn,
+        undefined, // Sem deformação espacial na Vista 2D para coincidir as cotas exatamente com Z=0
         0,
         'url(#concretePattern)',
         toWorldX
@@ -68,7 +68,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           'UPSTREAM',
           getDamXAtY,
           toWorldX,
-          archOffsetFn,
+          undefined, // Água sem curva ortográfica
           'A'
         )
       );
@@ -83,7 +83,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           'DOWNSTREAM',
           getDamXAtY,
           toWorldX,
-          archOffsetFn,
+          undefined, // Água sem curva ortográfica
           'B'
         )
       );
@@ -101,8 +101,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     const zs = [-CHANNEL_WIDTH / 2, CHANNEL_WIDTH / 2];
     profile.forEach((p: any) => {
       zs.forEach((z) => {
-        const off = archOffsetFn ? archOffsetFn(z) : 0;
-        const wx = toWorldX(p.x + off);
+        const wx = toWorldX(p.x);
         minX = Math.min(minX, wx);
         maxX = Math.max(maxX, wx);
         minY = Math.min(minY, p.y);
@@ -115,7 +114,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, archOffsetFn, toWorldX]);
 
-  const { renderedFaces, project, SCALE, handlers, resetView } = useSceneEngine(
+  const { renderedFaces, project, SCALE, pan, handlers, resetView } = useSceneEngine(
     false, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams
   );
 
@@ -191,8 +190,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         for (let j = 0; j < Nz; j++) {
           const z = 0;
           const base = getDamXAtY(y, "UPSTREAM");
-          const off = archOffsetFn ? archOffsetFn(z) : 0;
-          const x = toWorldX(base + off);
+          const x = toWorldX(base);
           pushArrow(x, y, z, nx, ny, Lw, "#2563eb", false);
         }
       }
@@ -209,8 +207,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         for (let j = 0; j < Nz; j++) {
           const z = 0;
           const base = getDamXAtY(y, "DOWNSTREAM");
-          const off = archOffsetFn ? archOffsetFn(z) : 0;
-          const x = toWorldX(base + off);
+          const x = toWorldX(base);
           pushArrow(x, y, z, nx, ny, Lw, "#3b82f6", false);
         }
       }
@@ -221,8 +218,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       if (up && force !== 0) {
         const { nx, ny } = localNormal(y_cp, "UPSTREAM");
         const base = getDamXAtY(y_cp, "UPSTREAM");
-        const off = archOffsetFn ? archOffsetFn(zCenter) : 0;
-        const x = toWorldX(base + off);
+        const x = toWorldX(base);
         pushArrow(x, y_cp, zCenter, nx, ny, 120 / SCALE, "#2563eb", true, "FR");
       }
     }
@@ -478,19 +474,52 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       }
     }
 
+    const renderTopViewInset = () => {
+      if (is3D) return null;
+      const boxW = 160;
+      const boxH = 130;
+      const x0 = 15;
+      const y0 = 15;
+      const centerX = x0 + boxW / 2;
+      const centerY = y0 + boxH - 25; 
+      
+      const r = 60; 
+      const bow = Math.max(10, Math.min(60, 60 * (30 / archRadius)));
+
+      return (
+        <g key="topViewInset">
+          <rect x={x0} y={y0} width={boxW} height={boxH} fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" rx="8" />
+          <text x={centerX} y={y0 + 20} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#64748b" letterSpacing="1">VISTA SUPERIOR</text>
+          
+          {/* Water Area */}
+          <path d={`M ${centerX-r} ${centerY} Q ${centerX} ${centerY-bow} ${centerX+r} ${centerY} L ${centerX+r} ${y0+30} L ${centerX-r} ${y0+30} Z`} fill="#dbeafe" opacity="0.8"/>
+          <text x={centerX} y={y0 + 40} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#3b82f6" opacity="0.6">MONTANTE</text>
+
+          {/* Arch Concrete */}
+          <path d={`M ${centerX-r} ${centerY} Q ${centerX} ${centerY-bow} ${centerX+r} ${centerY}`} fill="none" stroke="#94a3b8" strokeWidth={Math.max(4, damCrestWidth * 1.5)} strokeLinecap="round" />
+          
+          {/* Bedrock / Walls */}
+          <path d={`M ${centerX-r+2} ${centerY-2} L ${centerX-r-8} ${centerY+8} M ${centerX+r-2} ${centerY-2} L ${centerX+r+8} ${centerY+8}`} fill="none" stroke="#78350f" strokeWidth="5" strokeLinecap="round" opacity="0.9" />
+          <text x={centerX} y={centerY + 16} textAnchor="middle" fontSize="8" fontWeight="bold" fill="#78350f" opacity="0.8">ENCAIXES NA ROCHA</text>
+        </g>
+      );
+    };
+
+    dims.push(renderTopViewInset());
+
     return dims;
   };
 
   return (
-    <SceneContainer
+    <ContainerCena
       is3D={is3D} setIs3D={setIs3D}
       showVectors={showVectors} setShowVectors={setShowVectors}
       isAnalyzed={isAnalyzed} onCalculate={onCalculate} onReset={onReset}
       resetView={resetView} handlers={handlers}
       renderedFaces={renderedFaces} vectors={vectors}
-      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y}
+      SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y} pan={pan}
     >
       {renderDimensions()}
-    </SceneContainer>
+    </ContainerCena>
   );
 };

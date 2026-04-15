@@ -24,6 +24,7 @@ export interface RegistroTipoBarragem {
   component3D: React.FC<any>;
   getDefaults: (h: number) => {
     inclinationAngle: number;
+    downstreamAngle?: number;
     buttressAngle?: number;
     damBaseWidth: number;
     damCrestWidth: number;
@@ -51,7 +52,8 @@ export const registroTiposBarragem: Record<TipoBarragem, RegistroTipoBarragem> =
     component2D: Vista2DTerraEnrocamento,
     component3D: Vista3DTerraEnrocamento,
     getDefaults: (h: number) => ({
-      inclinationAngle: 25,
+      inclinationAngle: 60,
+      downstreamAngle: 45,
       damBaseWidth: round(h * 3),
       damCrestWidth: round(h * 0.4),
     }),
