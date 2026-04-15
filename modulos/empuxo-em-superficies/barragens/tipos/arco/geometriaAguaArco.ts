@@ -30,7 +30,6 @@ export const caixaAguaArco3D = (
   const up = side === 'UPSTREAM';
   const halfW = channelWidth / 2;
   const dz = channelWidth / slices;
-  const eps = 0.01; // overlap sub-pixel invisível que evita listras verticais
   const wL = waterLevelY;
   const fX = toWorldX(farX);
 
@@ -39,37 +38,34 @@ export const caixaAguaArco3D = (
   const ripple = 'url(#ripplePattern)';
 
   const cx = (y: number, z: number) => {
-    const nudge = up ? -0.2 : 0.2;
-    return toWorldX(getDamXAtY(y, side) + archOffsetFn(z)) + nudge;
+    return toWorldX(getDamXAtY(y, side) + archOffsetFn(z));
   };
 
   for (let s = 0; s < slices; s++) {
     const z1 = -halfW + s * dz;
     const z2 = -halfW + (s + 1) * dz;
-    const rz1 = s === 0 ? z1 : z1 - eps;
-    const rz2 = s === slices - 1 ? z2 : z2 + eps;
 
     // SUPERFÍCIE (y=waterLevel)
     faces.push(face(
       up
-        ? [{ x: fX, y: wL, z: rz1 }, { x: fX, y: wL, z: rz2 },
-           { x: cx(wL, rz2), y: wL, z: rz2 }, { x: cx(wL, rz1), y: wL, z: rz1 }]
-        : [{ x: cx(wL, rz1), y: wL, z: rz1 }, { x: cx(wL, rz2), y: wL, z: rz2 },
-           { x: fX, y: wL, z: rz2 }, { x: fX, y: wL, z: rz1 }],
+        ? [{ x: fX, y: wL, z: z1 }, { x: fX, y: wL, z: z2 },
+           { x: cx(wL, z2), y: wL, z: z2 }, { x: cx(wL, z1), y: wL, z: z1 }]
+        : [{ x: cx(wL, z1), y: wL, z: z1 }, { x: cx(wL, z2), y: wL, z: z2 },
+           { x: fX, y: wL, z: z2 }, { x: fX, y: wL, z: z1 }],
       surf, 0.95, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER', ripple, 1
     ));
-
-    // PAREDE DISTANTE
-    const fnx = up ? -1 : 1;
-    faces.push(face(
-      up
-        ? [{ x: fX, y: 0, z: rz1 }, { x: fX, y: 0, z: rz2 },
-           { x: fX, y: wL, z: rz2 }, { x: fX, y: wL, z: rz1 }]
-        : [{ x: fX, y: 0, z: rz2 }, { x: fX, y: 0, z: rz1 },
-           { x: fX, y: wL, z: rz1 }, { x: fX, y: wL, z: rz2 }],
-      fill, 0.95, 'none', 0, { x: fnx, y: 0, z: 0 }, 'WATER', undefined, 1
-    ));
   }
+
+  // PAREDE DISTANTE (único polígono massivo, x=fX, elimina listras verticais)
+  const fnx = up ? -1 : 1;
+  const backWallPts: Point3D[] = up
+    ? [{ x: fX, y: 0, z: -halfW }, { x: fX, y: 0, z: halfW }, { x: fX, y: wL, z: halfW }, { x: fX, y: wL, z: -halfW }]
+    : [{ x: fX, y: 0, z: halfW }, { x: fX, y: 0, z: -halfW }, { x: fX, y: wL, z: -halfW }, { x: fX, y: wL, z: halfW }];
+
+  faces.push(face(
+    backWallPts,
+    fill, 0.95, 'none', 0, { x: fnx, y: 0, z: 0 }, 'WATER', undefined, 1
+  ));
 
   // FACES Z (frente e trás, z=+halfW e z=-halfW)
   faces.push(face(
