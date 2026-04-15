@@ -29,6 +29,8 @@ export const caixaAguaArco3D = (
   const faces: WorldFace[] = [];
   const up = side === 'UPSTREAM';
   const halfW = channelWidth / 2;
+  const dz = channelWidth / slices;
+  const eps = 0.01; // overlap sub-pixel invisível que evita listras verticais
   const wL = waterLevelY;
   const fX = toWorldX(farX);
 
@@ -41,39 +43,33 @@ export const caixaAguaArco3D = (
     return toWorldX(getDamXAtY(y, side) + archOffsetFn(z)) + nudge;
   };
 
-  // Montar array de pontos da margem curva
-  const curvePtsTop: Point3D[] = [];
-  const curvePtsBottom: Point3D[] = [];
-  for (let s = 0; s <= slices; s++) {
-    const z = -halfW + s * (channelWidth / slices);
-    curvePtsTop.push({ x: cx(wL, z), y: wL, z });
-    curvePtsBottom.push({ x: cx(0, z), y: 0, z });
+  for (let s = 0; s < slices; s++) {
+    const z1 = -halfW + s * dz;
+    const z2 = -halfW + (s + 1) * dz;
+    const rz1 = s === 0 ? z1 : z1 - eps;
+    const rz2 = s === slices - 1 ? z2 : z2 + eps;
+
+    // SUPERFÍCIE (y=waterLevel)
+    faces.push(face(
+      up
+        ? [{ x: fX, y: wL, z: rz1 }, { x: fX, y: wL, z: rz2 },
+           { x: cx(wL, rz2), y: wL, z: rz2 }, { x: cx(wL, rz1), y: wL, z: rz1 }]
+        : [{ x: cx(wL, rz1), y: wL, z: rz1 }, { x: cx(wL, rz2), y: wL, z: rz2 },
+           { x: fX, y: wL, z: rz2 }, { x: fX, y: wL, z: rz1 }],
+      surf, 0.95, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER', ripple, 1
+    ));
+
+    // PAREDE DISTANTE
+    const fnx = up ? -1 : 1;
+    faces.push(face(
+      up
+        ? [{ x: fX, y: 0, z: rz1 }, { x: fX, y: 0, z: rz2 },
+           { x: fX, y: wL, z: rz2 }, { x: fX, y: wL, z: rz1 }]
+        : [{ x: fX, y: 0, z: rz2 }, { x: fX, y: 0, z: rz1 },
+           { x: fX, y: wL, z: rz1 }, { x: fX, y: wL, z: rz2 }],
+      fill, 0.95, 'none', 0, { x: fnx, y: 0, z: 0 }, 'WATER', undefined, 1
+    ));
   }
-
-  // Se for montante, esquerda para direita é -z para +z, o que afeta a orientação
-  // SUPERFÍCIE (1 polígono gigante)
-  const surfPts: Point3D[] = [
-    { x: fX, y: wL, z: -halfW },
-    ...curvePtsTop,
-    { x: fX, y: wL, z: halfW }
-  ];
-  if (!up) surfPts.reverse(); // Garante normal correta
-
-  faces.push(face(
-    surfPts,
-    surf, 0.95, 'none', 0, { x: 0, y: 1, z: 0 }, 'WATER', ripple, 1
-  ));
-
-  // PAREDE DISTANTE (1 polígono gigante x=fX)
-  const fnx = up ? -1 : 1;
-  const backWallPts: Point3D[] = up
-    ? [{ x: fX, y: 0, z: -halfW }, { x: fX, y: 0, z: halfW }, { x: fX, y: wL, z: halfW }, { x: fX, y: wL, z: -halfW }]
-    : [{ x: fX, y: 0, z: halfW }, { x: fX, y: 0, z: -halfW }, { x: fX, y: wL, z: -halfW }, { x: fX, y: wL, z: halfW }];
-
-  faces.push(face(
-    backWallPts,
-    fill, 0.95, 'none', 0, { x: fnx, y: 0, z: 0 }, 'WATER', undefined, 1
-  ));
 
   // FACES Z (frente e trás, z=+halfW e z=-halfW)
   faces.push(face(

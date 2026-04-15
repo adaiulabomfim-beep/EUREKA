@@ -88,7 +88,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           toWorldX,
           undefined,
           'A',
-          1
+          10
         )
       );
     }
@@ -104,7 +104,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           toWorldX,
           undefined,
           'B',
-          1
+          10
         )
       );
     }
