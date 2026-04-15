@@ -302,8 +302,20 @@ export const useSceneEngine = (
 
       const proj = wf.pts3.map(project);
 
-      // Z médio exato para a face visível
-      let zDepth = proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
+      // Determinar centroide base
+      let cX = wf.pts3.reduce((sum, p) => sum + p.x, 0) / Math.max(1, wf.pts3.length);
+      const cY = wf.pts3.reduce((sum, p) => sum + p.y, 0) / Math.max(1, wf.pts3.length);
+      const cZ = wf.pts3.reduce((sum, p) => sum + p.z, 0) / Math.max(1, wf.pts3.length);
+
+      // Z-Depth Anchor Correction para volumes massivos de água
+      if (wf.kind === 'WATER_UP') {
+        cX = Math.max(...wf.pts3.map(p => p.x)); // Força a profundidade pro ponto de contato
+      } else if (wf.kind === 'WATER_DOWN') {
+        cX = Math.min(...wf.pts3.map(p => p.x)); // Força a profundidade pro ponto de contato
+      }
+
+      const anchorLocal = { x: cX - center.x, y: cY - center.y, z: cZ - center.z };
+      let zDepth = rotate(anchorLocal).z;
 
       // Desempate sutil automático
       if (wf.kind.startsWith('WATER')) zDepth -= 0.1;
@@ -331,48 +343,23 @@ export const useSceneEngine = (
       });
     });
 
-    // Algoritmo do Pintor com Topologia de Camadas Absolutas (Macroscopic Layering)
+    // Algoritmo do Pintor Baseado no Z-Depth Ancorado
     projected.sort((a, b) => {
-      const getLayerIndex = (f: Face) => {
-        if (f.kind === 'EARTH') return 0;
-        const isUpstreamView = rotY <= 0;
-        
-        // Se a câmera está na Esquerda (Upstream), Água Montante fica na Frente (Maior index = Desenha por último)
-        if (isUpstreamView) {
-          if (f.kind === 'WATER_DOWN') return 1;
-          if (f.kind === 'DAM') return 2;
-          if (f.kind === 'WATER_UP') return 3;
-        } else {
-          // Se a câmera está na Direita (Downstream)
-          if (f.kind === 'WATER_UP') return 1;
-          if (f.kind === 'DAM') return 2;
-          if (f.kind === 'WATER_DOWN') return 3;
-        }
-        return 0;
-      };
-
-      const layerA = getLayerIndex(a);
-      const layerB = getLayerIndex(b);
-
-      // Regra 1: Ordens topológicas rígidas primeiro! Nunca intersectar água com barragem.
-      if (layerA !== layerB) {
-        // Correção de inversão se olhar por baixo (chão vira teto)
-        if (rotX < 0 && (layerA === 0 || layerB === 0)) {
-           return layerB - layerA; 
-        }
-        return layerA - layerB;
+      const isLookingFromBelow = rotX < 0; // Chão/Teto
+      
+      // Regra 1: GROUND ABSOLUTO protege a fundação do glitch visual
+      if (a.priority === 0 || b.priority === 0) {
+         if (a.priority !== b.priority) {
+            return isLookingFromBelow ? b.priority - a.priority : a.priority - b.priority;
+         }
       }
 
-      // Regra 2: Para faces DENTRO da mesma camada (ex: fatias da mesma barragem ou do mesmo bloco d'agua), usar zDepth!
+      // Regra 2: Distância principal
       const zDiff = a.zDepth - b.zDepth;
-      if (Math.abs(zDiff) > 0.05) {
-         return zDiff;
-      }
+      if (Math.abs(zDiff) > 0.05) return zDiff;
 
-      // Regra 3: Empate coplanar milimétrico (Z-Fighting Handle final)
-      if (a.priority !== b.priority) {
-         return a.priority - b.priority;
-      }
+      // Regra 3: Empate coplanar milimétrico
+      if (a.priority !== b.priority) return a.priority - b.priority;
 
       return a.id - b.id;
     });
