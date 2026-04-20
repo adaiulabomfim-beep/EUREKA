@@ -1,8 +1,8 @@
 import React from 'react';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
-import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
+import { FormaComporta, PosicaoDobradica, FLUIDOS_PREDEFINIDOS } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
-import { BookOpen, Square, Circle, Waves, Anchor, Link } from 'lucide-react';
+import { BookOpen, Square, Circle, Waves, Anchor, Link, Droplets } from 'lucide-react';
 
 interface PainelControlesProps {
   config: ConfiguracaoSimulacaoComporta;
@@ -28,7 +28,24 @@ export const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> =
 export const PainelControles: React.FC<PainelControlesProps> = (props) => {
   const { config, setConfig } = props;
   const labelClass = "block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5";
-  const selectClass = "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-blue-50/30 text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm cursor-pointer hover:bg-white";
+  const selectClass = "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-blue-50/30 text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm cursor-pointer hover:bg-white mb-2";
+
+  const handleFluidChange = (isUpstream: boolean, chave: string) => {
+    const fluido = FLUIDOS_PREDEFINIDOS[chave];
+    if (!fluido) return;
+
+    setConfig(prev => {
+      const target = isUpstream ? 'fluidoMontante' : 'fluidoJusante';
+      return {
+        ...prev,
+        [target]: {
+          ...prev[target],
+          chave,
+          densidade: fluido.densidade
+        }
+      };
+    });
+  };
 
   return (
     <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
@@ -47,6 +64,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
             }
           }}
           defaultValue=""
+          key={JSON.stringify(config.comporta)} // Force re-render on preset load
         >
           <option value="" disabled className="text-gray-800">Selecione uma simulação...</option>
           {Object.entries(props.presets).map(([key, preset]) => (
@@ -57,27 +75,86 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
         </select>
       </div>
 
-      {/* Níveis de Água */}
+      {/* Níveis e Fluidos */}
       <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-          <SectionHeader icon={<Waves className="w-4 h-4" />} title="Níveis de Água" />
-          <div className="space-y-4">
+          <SectionHeader icon={<Waves className="w-4 h-4" />} title="Líquidos e Níveis" />
+          
+          <div className="space-y-6">
+              {/* MONTANTE */}
               <div>
-                  <label className={labelClass}>Nível Montante (m)</label>
-                  <NumberInput value={config.fluido.nivelMontante} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({
-                      ...prev, 
-                      fluido: {...prev.fluido, nivelMontante: val},
-                      comporta: {...prev.comporta, profundidadeTopo: Math.min(prev.comporta.profundidadeTopo, val)}
-                  }))} />
+                  <div className="flex items-center gap-1.5 mb-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Montante</h4>
+                  </div>
+                  
+                  <label className={labelClass}>Tipo de Fluido</label>
+                  <select 
+                    value={config.fluidoMontante.chave}
+                    onChange={(e) => handleFluidChange(true, e.target.value)}
+                    className={selectClass}
+                  >
+                    {Object.entries(FLUIDOS_PREDEFINIDOS).map(([key, f]) => (
+                      <option key={key} value={key}>{f.nome}</option>
+                    ))}
+                  </select>
+
+                  <div className="grid grid-cols-2 gap-3">
+                      <div>
+                          <label className={labelClass}>Nível (m)</label>
+                          <NumberInput value={config.fluidoMontante.nivel} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({
+                              ...prev, 
+                              fluidoMontante: {...prev.fluidoMontante, nivel: val},
+                              comporta: {...prev.comporta, profundidadeTopo: Math.min(prev.comporta.profundidadeTopo, val)}
+                          }))} />
+                      </div>
+                      <div>
+                          <label className={labelClass}>ρ (kg/m³)</label>
+                          <NumberInput value={config.fluidoMontante.densidade} min={1} max={20000} step={10} onChange={(val) => setConfig(prev => ({
+                              ...prev, 
+                              fluidoMontante: {...prev.fluidoMontante, densidade: val, chave: 'personalizado'}
+                          }))} />
+                      </div>
+                  </div>
               </div>
               
-              <div className="pt-2 border-t border-blue-50">
+              {/* JUSANTE */}
+              <div className="pt-4 border-t border-blue-50">
                   <div className="flex items-center justify-between mb-3">
-                      <label className={labelClass + " !mb-0"}>Água a Jusante</label>
-                      <input type="checkbox" checked={props.hasDownstream} onChange={(e) => props.setHasDownstream(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" />
+                      <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                          <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Jusante</h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">Ativar</span>
+                          <input type="checkbox" checked={config.fluidoJusante.ativo} onChange={(e) => props.setHasDownstream(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" />
+                      </div>
                   </div>
-                  {props.hasDownstream && (
-                      <div className="animate-in fade-in slide-in-from-top-2">
-                          <NumberInput value={config.fluido.nivelJusante} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluido: {...prev.fluido, nivelJusante: val}}))} />
+
+                  {config.fluidoJusante.ativo && (
+                      <div className="animate-in fade-in slide-in-from-top-2 space-y-3">
+                          <div>
+                              <label className={labelClass}>Tipo de Fluido</label>
+                              <select 
+                                value={config.fluidoJusante.chave}
+                                onChange={(e) => handleFluidChange(false, e.target.value)}
+                                className={selectClass}
+                              >
+                                {Object.entries(FLUIDOS_PREDEFINIDOS).map(([key, f]) => (
+                                  <option key={key} value={key}>{f.nome}</option>
+                                ))}
+                              </select>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                  <label className={labelClass}>Nível (m)</label>
+                                  <NumberInput value={config.fluidoJusante.nivel} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, nivel: val}}))} />
+                              </div>
+                              <div>
+                                  <label className={labelClass}>ρ (kg/m³)</label>
+                                  <NumberInput value={config.fluidoJusante.densidade} min={1} max={20000} step={10} onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, densidade: val, chave: 'personalizado'}}))} />
+                              </div>
+                          </div>
                       </div>
                   )}
               </div>
@@ -136,7 +213,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
 
                   <div>
                       <label className={labelClass}>Profundidade do Topo (h1)</label>
-                      <NumberInput value={config.comporta.profundidadeTopo} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, profundidadeTopo: val}}))} min={0} max={config.fluido.nivelMontante} step={0.1} />
+                      <NumberInput value={config.comporta.profundidadeTopo} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, profundidadeTopo: val}}))} min={0} max={config.fluidoMontante.nivel} step={0.1} />
                   </div>
 
                   <div>
@@ -165,43 +242,43 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                           </div>
 
                           <div className="pt-2 border-t border-blue-50/50">
-                              <div className="flex items-center justify-between mb-3">
-                                  <label className={labelClass + " !mb-0 flex items-center gap-1"}><Link className="w-3 h-3" /> Tirante / Escora</label>
-                                  <input type="checkbox" checked={config.comporta.temTirante} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, temTirante: e.target.checked}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
-                              </div>
-                              
-                              {config.comporta.temTirante && (
-                                  <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
-                                      <div>
-                                          <label className={labelClass}>Posição (0=Topo, 1=Base)</label>
-                                          <NumberInput value={config.comporta.posicaoTiranteRelativa} min={0} max={1} step={0.1} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, posicaoTiranteRelativa: val}}))} />
-                                      </div>
-                                      <div>
-                                          <label className={labelClass}>Ângulo (graus)</label>
-                                          <NumberInput value={config.comporta.anguloTirante} min={-90} max={90} step={5} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, anguloTirante: val}}))} />
-                                      </div>
-                                  </div>
-                              )}
-                          </div>
+                               <div className="flex items-center justify-between mb-3">
+                                   <label className={labelClass + " !mb-0 flex items-center gap-1"}><Link className="w-3 h-3" /> Tirante / Escora</label>
+                                   <input type="checkbox" checked={config.comporta.temTirante} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, temTirante: e.target.checked}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
+                               </div>
+                               
+                               {config.comporta.temTirante && (
+                                   <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+                                       <div>
+                                           <label className={labelClass}>Posição (0=Topo, 1=Base)</label>
+                                           <NumberInput value={config.comporta.posicaoTiranteRelativa} min={0} max={1} step={0.1} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, posicaoTiranteRelativa: val}}))} />
+                                       </div>
+                                       <div>
+                                           <label className={labelClass}>Ângulo (graus)</label>
+                                           <NumberInput value={config.comporta.anguloTirante} min={-90} max={90} step={5} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, anguloTirante: val}}))} />
+                                       </div>
+                                   </div>
+                               )}
+                           </div>
 
-                          <div className="pt-2 border-t border-blue-50/50">
-                              <div className="flex items-center justify-between mb-3">
-                                  <label className={labelClass + " !mb-0"}>Considerar Peso Próprio</label>
-                                  <input type="checkbox" checked={config.comporta.pesoProprioAtivo} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, pesoProprioAtivo: e.target.checked}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
-                              </div>
-                              
-                              {config.comporta.pesoProprioAtivo && (
-                                  <div className="animate-in fade-in slide-in-from-top-2">
-                                      <label className={labelClass}>Peso da Comporta (kg)</label>
-                                      <NumberInput value={config.comporta.pesoProprio} min={0} max={10000} step={10} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, pesoProprio: val}}))} />
-                                  </div>
-                              )}
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          )}
-      </div>
+                           <div className="pt-2 border-t border-blue-50/50">
+                               <div className="flex items-center justify-between mb-3">
+                                   <label className={labelClass + " !mb-0"}>Considerar Peso Próprio</label>
+                                   <input type="checkbox" checked={config.comporta.pesoProprioAtivo} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, pesoProprioAtivo: e.target.checked}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
+                               </div>
+                               
+                               {config.comporta.pesoProprioAtivo && (
+                                   <div className="animate-in fade-in slide-in-from-top-2">
+                                       <label className={labelClass}>Peso da Comporta (kg)</label>
+                                       <NumberInput value={config.comporta.pesoProprio} min={0} max={10000} step={10} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, pesoProprio: val}}))} />
+                                   </div>
+                               )}
+                           </div>
+                       </div>
+                   </div>
+               </div>
+           )}
+       </div>
     </div>
   );
 };

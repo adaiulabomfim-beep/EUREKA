@@ -5,7 +5,10 @@ import { RenderizadorComporta } from './RenderizadorComporta';
 interface CenaProps {
   upstreamLevel: number;
   downstreamLevel: number;
+  upstreamFluidKey: string;
+  downstreamFluidKey: string;
   hasGate: boolean;
+  // ... rest of the props
   gateShape: FormaComporta;
   gateWidth: number;
   gateHeight: number;

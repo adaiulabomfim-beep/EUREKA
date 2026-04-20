@@ -314,7 +314,7 @@ export const caixaAgua3D = (
     getWaterProfile(),
     depth,
     fill,
-    0.95,
+    1,
     "none", // Sem stroke entre faces — elimina linhas de fatiamento
     0,
     damFaceSide === "UPSTREAM" ? "WATER_UP" : "WATER_DOWN",

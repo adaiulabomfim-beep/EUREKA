@@ -6,6 +6,8 @@ import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
 interface RenderizadorComportaProps {
   upstreamLevel: number;
   downstreamLevel: number;
+  upstreamFluidKey: string;
+  downstreamFluidKey: string;
   hasGate: boolean;
   gateShape: FormaComporta;
   gateWidth: number;

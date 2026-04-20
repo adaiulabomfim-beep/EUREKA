@@ -4,11 +4,18 @@ import { calculateNetForce } from './hidrostatica';
 import { calcularMomentos } from './momentos';
 
 export function simularComportas(config: ConfiguracaoSimulacaoComporta): ResultadoSimulacaoComporta {
-  const { fluido, comporta } = config;
+  const { fluidoMontante, fluidoJusante, comporta } = config;
   
-  const y_top = fluido.nivelMontante - comporta.profundidadeTopo;
+  const y_top = fluidoMontante.nivel - comporta.profundidadeTopo;
   const h_top_up = comporta.profundidadeTopo;
-  const h_top_down = fluido.nivelJusante - y_top;
+  
+  // Jusante: se inativo, nível = 0 → h_top_down será negativo → sem força
+  const nivelJusante = fluidoJusante.ativo ? fluidoJusante.nivel : 0;
+  const h_top_down = nivelJusante - y_top;
+  
+  // Gammas independentes por lado
+  const gammaUp = fluidoMontante.densidade * fluidoMontante.gravidade;
+  const gammaDown = fluidoJusante.densidade * fluidoJusante.gravidade;
   
   const forceData = calculateNetForce(
     comporta.altura,
@@ -16,7 +23,8 @@ export function simularComportas(config: ConfiguracaoSimulacaoComporta): Resulta
     comporta.angulo || 90,
     h_top_up,
     h_top_down,
-    fluido.densidade * fluido.gravidade,
+    gammaUp,
+    gammaDown,
     comporta.forma
   );
   

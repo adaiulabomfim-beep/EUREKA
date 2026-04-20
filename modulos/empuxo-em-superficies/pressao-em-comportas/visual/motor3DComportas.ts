@@ -124,18 +124,14 @@ export const useSceneEngine = (
   // 🔥 CORREÇÃO PRINCIPAL: Alinhamento de referencial 2D/3D
   const project = useCallback(
     (p: Point3D) => {
-      const baseX = ORIGIN_X + finalPan.x;
-      const baseY = ORIGIN_Y + finalPan.y;
-
       if (!is3D) {
         return {
-          x: baseX + p.x * SCALE,
-          y: baseY - p.y * SCALE, // Y invertido para padrão técnico (SVG cresce para baixo)
+          x: ORIGIN_X + finalPan.x + p.x * SCALE,
+          y: ORIGIN_Y + finalPan.y - p.y * SCALE,
           zDepth: 0,
         };
       }
 
-      // Centraliza localmente apenas para rodar a peça, mas mantendo a base X/Y técnica
       const local = {
         x: p.x - center.x,
         y: p.y - center.y,
@@ -144,20 +140,40 @@ export const useSceneEngine = (
 
       const r = rotate(local);
 
+      // Usar o centro do SVG para projeção 3D (como no Barragens)
+      const cx = SVG_W / 2;
+      const cy = SVG_H / 2;
+
       return {
-        x: baseX + r.x * SCALE,
-        y: baseY - r.y * SCALE,
+        x: cx + finalPan.x + r.x * SCALE,
+        y: cy + finalPan.y - r.y * SCALE,
         zDepth: r.z,
       };
     },
-    [center, ORIGIN_X, ORIGIN_Y, finalPan.x, finalPan.y, is3D, rotate, SCALE]
+    [center, ORIGIN_X, ORIGIN_Y, finalPan.x, finalPan.y, is3D, rotate, SCALE, SVG_W, SVG_H]
+  );
+
+  const rotateDirection = useCallback(
+    (v: Point3D) => {
+      const radX = (rotX * Math.PI) / 180;
+      const radY = (rotY * Math.PI) / 180;
+
+      const x1 = v.x * Math.cos(radY) - v.z * Math.sin(radY);
+      const z1 = v.x * Math.sin(radY) + v.z * Math.cos(radY);
+
+      const y2 = v.y * Math.cos(radX) - z1 * Math.sin(radX);
+      const z2 = v.y * Math.sin(radX) + z1 * Math.cos(radX);
+
+      return { x: x1, y: y2, z: z2 };
+    },
+    [rotX, rotY]
   );
 
   const brightness = useCallback(
     (n: Point3D) => {
       if (!is3D) return 1;
 
-      const rn = rotate(n);
+      const rn = rotateDirection(n);
 
       const lx = -0.5;
       const ly = 0.5;
@@ -166,9 +182,9 @@ export const useSceneEngine = (
       const mag = Math.sqrt(lx * lx + ly * ly + lz * lz) || 1;
       const dot = (rn.x * lx + rn.y * ly + rn.z * lz) / mag;
 
-      return Math.max(0.2, 0.6 + dot * 0.4);
+      return Math.max(0.1, 0.5 + dot * 0.5);
     },
-    [is3D, rotate]
+    [is3D, rotateDirection]
   );
 
   const animateCameraReset = useCallback(() => {
@@ -267,23 +283,34 @@ export const useSceneEngine = (
     const projected: Face[] = [];
 
     worldGeometry.forEach((wf, index) => {
-      if (wf.normal && wf.kind !== 'WATER') {
-        const rotatedNormal = rotate(wf.normal);
-        if (rotatedNormal.z < 0) return; // Backface culling
+      let facingScore = 0;
+      if (wf.normal) {
+        const rn = rotateDirection(wf.normal);
+        facingScore = rn.z;
+        // BACKFACE CULLING ESTRITO: 
+        // Se a face está de costas para a câmera (Z negativo), ela NUNCA deve ser desenhada.
+        if (facingScore < 0) return;
       }
 
       const proj = wf.pts3.map(project);
 
-      let zDepth =
-        proj.reduce((acc, p) => acc + p.zDepth, 0) / Math.max(1, proj.length);
+      // Determinar centroide base
+      let cX = wf.pts3.reduce((sum, p) => sum + p.x, 0) / Math.max(1, wf.pts3.length);
+      const cY = wf.pts3.reduce((sum, p) => sum + p.y, 0) / Math.max(1, wf.pts3.length);
+      const cZ = wf.pts3.reduce((sum, p) => sum + p.z, 0) / Math.max(1, wf.pts3.length);
 
+      // Z-Depth Anchor Correction para volumes massivos de água
       if (wf.kind === 'WATER') {
-        zDepth -= 0.03;
-      } else if (wf.kind === 'GATE') {
-        zDepth += 0.02;
-      } else if (wf.kind === 'DAM') {
-        zDepth += 0.02;
+        cX = Math.max(...wf.pts3.map(p => p.x)); // Força a profundidade pro ponto de contato
       }
+
+      const anchorLocal = { x: cX - center.x, y: cY - center.y, z: cZ - center.z };
+      let zDepth = rotate(anchorLocal).z;
+
+      // Desempate sutil automático
+      if (wf.kind === 'WATER') zDepth -= 0.1;
+      if (wf.kind === 'GATE') zDepth += 0.02;
+      if (wf.kind === 'DAM') zDepth += 0.1;
 
       if (proj.length === 2) {
         zDepth += 0.05;
@@ -312,29 +339,35 @@ export const useSceneEngine = (
       });
     });
 
-    // 🔥 CORREÇÃO: Ordem de pintura SVG. Z menor desenha primeiro (mais ao fundo).
+    // Algoritmo do Pintor Baseado no Z-Depth Ancorado
     projected.sort((a, b) => {
-      const zDiff = a.zDepth - b.zDepth;
-      
-      if (Math.abs(zDiff) > 0.01) return zDiff;
+      const isLookingFromBelow = rotX < 0;
 
-      // Desempate: Se as posições Z são iguais, desenhamos a água primeiro para ficar atrás.
-      if (a.kind !== b.kind) {
-        if (a.kind === 'WATER') return -1;
-        if (b.kind === 'WATER') return 1;
+      // Regra 1: GROUND ABSOLUTO protege a fundação do glitch visual
+      if (a.priority === 0 || b.priority === 0) {
+        if (a.priority !== b.priority) {
+          return isLookingFromBelow ? b.priority - a.priority : a.priority - b.priority;
+        }
       }
 
+      // Regra 2: Distância principal
+      const zDiff = a.zDepth - b.zDepth;
+      if (Math.abs(zDiff) > 0.05) return zDiff;
+
+      // Regra 3: Empate coplanar milimétrico
       if (a.priority !== b.priority) return a.priority - b.priority;
+
       return a.id - b.id;
     });
 
     return projected;
-  }, [worldGeometry, project, brightness, rotate]);
+  }, [worldGeometry, project, brightness, rotateDirection, rotate, center, rotX]);
 
   return {
     renderedFaces,
     project,
     rotate,
+    rotateDirection,
     SCALE,
     rotX,
     rotY,
@@ -350,5 +383,6 @@ export const useSceneEngine = (
     },
     resetView,
     is3D,
+    center,
   };
 };

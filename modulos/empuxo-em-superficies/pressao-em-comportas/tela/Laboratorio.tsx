@@ -16,11 +16,18 @@ interface GatePressureLabProps {
 export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate }) => {
   // STATE
   const [config, setConfig] = useState<ConfiguracaoSimulacaoComporta>({
-    fluido: {
-      nivelMontante: 12,
-      nivelJusante: 0,
+    fluidoMontante: {
+      chave: 'agua',
+      nivel: 12,
       densidade: 1000,
       gravidade: 9.81,
+    },
+    fluidoJusante: {
+      chave: 'agua',
+      nivel: 0,
+      densidade: 1000,
+      gravidade: 9.81,
+      ativo: false,
     },
     comporta: {
       ativa: true,
@@ -41,8 +48,10 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [analyzedResults, setAnalyzedResults] = useState<any | null>(null);
 
-  const { fluido, comporta } = config;
-  const { nivelMontante: upstreamLevel, nivelJusante: downstreamLevel, densidade: density, gravidade: gravity } = fluido;
+  const { fluidoMontante, fluidoJusante, comporta } = config;
+  const { nivel: upstreamLevel, densidade: density, gravidade: gravity, chave: upstreamFluidKey } = fluidoMontante;
+  const { nivel: downstreamLevel, ativo: hasDownstream, chave: downstreamFluidKey } = fluidoJusante;
+  
   const { 
       ativa: hasGate, 
       forma: gateShape, 
@@ -58,8 +67,10 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       pesoProprioAtivo: gateWeightEnabled 
   } = comporta;
   
-  const hasDownstream = downstreamLevel > 0;
-  const setHasDownstream = (val: boolean) => setConfig(prev => ({ ...prev, fluido: { ...prev.fluido, nivelJusante: val ? prev.fluido.nivelJusante : 0 } }));
+  const setHasDownstream = (val: boolean) => setConfig(prev => ({ 
+    ...prev, 
+    fluidoJusante: { ...prev.fluidoJusante, ativo: val } 
+  }));
   
   // LOGIC
   const maxGateHeight = Math.max(0.1, 20 - config.comporta.profundidadeTopo);
@@ -67,10 +78,15 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
 
   // Handler for toggling gate
   const toggleGate = (active: boolean) => {
-      setConfig(prev => ({ ...prev, comporta: { ...prev.comporta, ativa: active } }));
-      if (active) {
-          setConfig(prev => ({ ...prev, fluido: { ...prev.fluido, nivelJusante: prev.fluido.nivelJusante === 0 ? 3 : prev.fluido.nivelJusante } }));
-      }
+      setConfig(prev => ({ 
+          ...prev, 
+          comporta: { ...prev.comporta, ativa: active },
+          // Se ativar a comporta e a jusante estiver em 0, dá um nível inicial pra facilitar a visualização
+          fluidoJusante: { 
+            ...prev.fluidoJusante, 
+            nivel: (active && prev.fluidoJusante.nivel === 0) ? 3 : prev.fluidoJusante.nivel 
+          }
+      }));
   };
 
   const loadPreset = (key: string) => {
@@ -80,12 +96,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       }
   };
   
-  const configForSimulation: ConfiguracaoSimulacaoComporta = {
-      ...config,
-      fluido: { ...config.fluido, nivelJusante: downstreamLevel }
-  };
-  
-  const liveResults = useMemo(() => simularComportas(configForSimulation), [configForSimulation]);
+  const liveResults = useMemo(() => simularComportas(config), [config]);
 
   useEffect(() => { setAnalyzedResults(null); }, [liveResults]);
   const handleCalculate = () => { setAnalyzedResults(liveResults); };
@@ -141,6 +152,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-10"></div>
             <CenaPressaoComporta
                 upstreamLevel={upstreamLevel} downstreamLevel={downstreamLevel}
+                upstreamFluidKey={upstreamFluidKey} downstreamFluidKey={downstreamFluidKey}
                 hasGate={hasGate} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}
                 gateInclination={gateInclination}

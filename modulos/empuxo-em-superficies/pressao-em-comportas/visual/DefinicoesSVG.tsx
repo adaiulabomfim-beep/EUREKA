@@ -1,9 +1,24 @@
 import React from 'react';
+import { FLUIDOS_PREDEFINIDOS } from '../dominio/tipos';
 
-export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pan = { x: 0, y: 0 } }) => {
+interface DefinicoesSVGProps {
+  pan?: { x: number; y: number };
+  chaveMontante?: string;
+  chaveJusante?: string;
+}
+
+export const DefinicoesSVG: React.FC<DefinicoesSVGProps> = ({ 
+  pan = { x: 0, y: 0 },
+  chaveMontante = 'agua',
+  chaveJusante = 'agua',
+}) => {
   const trans = `translate(${pan.x}, ${pan.y})`;
+  const fm = FLUIDOS_PREDEFINIDOS[chaveMontante] || FLUIDOS_PREDEFINIDOS.agua;
+  const fj = FLUIDOS_PREDEFINIDOS[chaveJusante] || FLUIDOS_PREDEFINIDOS.agua;
+
   return (
   <defs>
+    {/* Sombra */}
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
       <feDropShadow
         dx="0"
@@ -14,6 +29,7 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
       />
     </filter>
 
+    {/* Setas */}
     <marker
       id="arrow-red"
       markerWidth="6"
@@ -48,32 +64,38 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
       <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
     </marker>
 
+    {/* Vidro */}
     <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stopColor="white" stopOpacity="0.4" />
       <stop offset="50%" stopColor="white" stopOpacity="0.1" />
       <stop offset="100%" stopColor="white" stopOpacity="0.3" />
     </linearGradient>
 
+    {/* ===== GRADIENTES DE FLUIDO DINÂMICOS ===== */}
+
+    {/* Montante (fluid A) */}
     <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
-      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.7" />
+      <stop offset="0%" stopColor={fm.corPrimaria} stopOpacity="0.45" />
+      <stop offset="100%" stopColor={fm.corSecundaria} stopOpacity="0.85" />
     </linearGradient>
 
+    {/* Jusante (fluid B) */}
     <linearGradient id="fluidDepthB" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
-      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.9" />
+      <stop offset="0%" stopColor={fj.corPrimaria} stopOpacity="0.55" />
+      <stop offset="100%" stopColor={fj.corSecundaria} stopOpacity="0.95" />
     </linearGradient>
 
     <linearGradient id="surfaceGradientA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.5" />
-      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.8" />
+      <stop offset="0%" stopColor={fm.corSuperficie} stopOpacity="0.55" />
+      <stop offset="100%" stopColor={fm.corPrimaria} stopOpacity="0.8" />
     </linearGradient>
 
     <linearGradient id="surfaceGradientB" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45" />
-      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.75" />
+      <stop offset="0%" stopColor={fj.corSuperficie} stopOpacity="0.5" />
+      <stop offset="100%" stopColor={fj.corPrimaria} stopOpacity="0.8" />
     </linearGradient>
 
+    {/* Ondas animadas */}
     <pattern id="ripplePattern" width="120" height="40" patternUnits="userSpaceOnUse">
       <animateTransform
         attributeName="patternTransform"
@@ -99,6 +121,7 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
       />
     </pattern>
 
+    {/* Concreto mais escuro */}
     <filter id="concreteNoise">
       <feTurbulence
         type="fractalNoise"
@@ -118,6 +141,7 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
       <circle cx="28" cy="25" r="0.5" fill="#525252" opacity="0.3" />
     </pattern>
 
+    {/* Terra / Enrocamento */}
     <pattern
       id="earthPattern"
       width="24"
@@ -125,14 +149,16 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
       patternUnits="userSpaceOnUse"
       patternTransform={`rotate(12) ${trans}`}
     >
-      <rect width="24" height="24" fill="#78350f" />
-      <g stroke="#451a03" strokeWidth="0.8" opacity="0.5">
-        <line x1="0" y1="24" x2="24" y2="0" />
-        <line x1="4" y1="24" x2="24" y2="4" />
-        <line x1="0" y1="20" x2="20" y2="0" />
+      <rect width="24" height="24" fill="none" />
+      {/* Padrão Técnico de Terra (Grupos de linhas a 45 graus) */}
+      <g stroke="#000000" strokeWidth="0.8" opacity="0.15">
+        <line x1="0" y1="24" x2="24" y2="0" stroke="inherit" />
+        <line x1="4" y1="24" x2="24" y2="4" stroke="inherit" />
+        <line x1="0" y1="20" x2="20" y2="0" stroke="inherit" />
       </g>
     </pattern>
 
+    {/* Madeira e metal */}
     <pattern
       id="woodPattern"
       width="20"

@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  Target,
   RotateCcw,
-  Cuboid,
   MousePointer2,
   Maximize,
   Play,
+  Box,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { DefinicoesSVG } from './DefinicoesSVG';
 
@@ -55,6 +55,8 @@ interface ContainerComportasProps {
   ORIGIN_Y: number;
   pan?: { x: number; y: number };
   children?: React.ReactNode;
+  upstreamFluidKey?: string;
+  downstreamFluidKey?: string;
 }
 
 export const ContainerComportas: React.FC<ContainerComportasProps> = ({
@@ -75,6 +77,8 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
   ORIGIN_Y,
   pan,
   children,
+  upstreamFluidKey = 'agua',
+  downstreamFluidKey = 'agua',
 }) => {
   return (
     <div
@@ -89,6 +93,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
       "
       {...handlers}
     >
+      {/* ... (background blur divs) */}
       <div className="pointer-events-none absolute inset-0">
         <div
           className="absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full opacity-40 blur-[120px]"
@@ -107,7 +112,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
       </div>
 
       <div
-        className="absolute top-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-blue-100/70 bg-white/85 p-1.5 shadow-xl backdrop-blur-md transition-all hover:scale-[1.03]"
+        className="absolute top-6 left-1/2 -translate-x-1/2 flex z-30 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <button
@@ -117,46 +122,34 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
             resetView();
           }}
           className={`
-            flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition-colors
+            flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap
             ${
               is3D
-                ? 'border border-blue-100 bg-blue-50 text-blue-700'
-                : 'border border-transparent text-slate-600 hover:bg-white/70'
+                ? 'bg-blue-100/80 text-blue-700 shadow-inner'
+                : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
             }
           `}
           title={is3D ? 'Mudar para 2D' : 'Mudar para 3D'}
         >
-          <Cuboid className="h-4 w-4" />
-          {is3D ? '3D' : '2D'}
+          <Box className="h-3.5 w-3.5" />
+          {is3D ? '3D ON' : '3D OFF'}
         </button>
 
         <button
           type="button"
           onClick={() => setShowVectors(!showVectors)}
           className={`
-            flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition-colors
+            flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap
             ${
               showVectors
-                ? 'border border-blue-100 bg-blue-50 text-blue-700'
-                : 'border border-transparent text-slate-600 hover:bg-white/70'
+                ? 'bg-blue-100/80 text-blue-700 shadow-inner'
+                : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
             }
           `}
           title={showVectors ? 'Ocultar vetores' : 'Mostrar vetores'}
         >
-          <Target className="h-4 w-4" />
-          Vetores
-        </button>
-
-        <div className="mx-1 h-6 w-px bg-slate-200" />
-
-        <button
-          type="button"
-          onClick={resetView}
-          className="flex items-center gap-2 rounded-full border border-transparent px-4 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-white/70"
-          title="Resetar câmera"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Reset
+          <ArrowLeftRight className="h-3.5 w-3.5" />
+          VETORES
         </button>
       </div>
 
@@ -234,7 +227,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
         preserveAspectRatio="xMidYMid meet"
         className="flex-1 touch-none overflow-visible"
       >
-        <DefinicoesSVG pan={pan} />
+        <DefinicoesSVG pan={pan} chaveMontante={upstreamFluidKey} chaveJusante={downstreamFluidKey} />
 
         <g opacity="0.12">
           <line
@@ -266,14 +259,20 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
             : `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
 
           const isDam = f.kind === 'DAM' || f.kind === 'GATE';
-          const isWater = f.kind === 'WATER';
+          const isWater = f.kind === 'WATER' || f.kind === 'WATER_UP' || f.kind === 'WATER_DOWN';
 
-          // 🔥 RESTAURO DO VISUAL NATIVO: Usar a opacidade e o gradiente originais
           const baseFill = isLine ? 'none' : (f.fill ?? 'none');
           const baseOpacity = f.opacity ?? 1;
 
-          const finalStroke = f.stroke ?? (isWater ? 'none' : '#64748b');
-          const finalStrokeWidth = f.strokeWidth ?? (isWater ? 0 : 0.5);
+          // Para evitar os "gaps" de anti-aliasing do SVG (que parecem uma malha),
+          // aplicamos um stroke da mesma cor do preenchimento nas faces que não têm stroke explícito.
+          let strokeToUse = f.stroke ?? 'none';
+          let strokeWidthToUse = f.strokeWidth ?? 0;
+
+          if (!isLine && !isWater && strokeToUse === 'none' && baseFill !== 'none') {
+            strokeToUse = baseFill;
+            strokeWidthToUse = 0.5;
+          }
 
           const overlayOpacity =
             isWater || isDam
@@ -289,23 +288,25 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
               ? 'multiply'
               : 'overlay';
 
-          const key = f.id ?? `face-${index}`;
+          const key =
+            f.id ??
+            `face-${index}-${f.kind ?? 'generic'}-${f.pts
+              .map((p) => `${p.x.toFixed(2)}-${p.y.toFixed(2)}`)
+              .join('_')}`;
 
           return (
             <g key={key}>
-              {/* O estilo 'mixBlendMode: normal' devolve o aspecto limpo de volume 3D */}
               <path
                 d={d}
                 fill={baseFill}
                 opacity={baseOpacity}
-                stroke={finalStroke}
-                strokeWidth={finalStrokeWidth}
+                stroke={strokeToUse}
+                strokeWidth={strokeWidthToUse}
                 vectorEffect="non-scaling-stroke"
                 shapeRendering="geometricPrecision"
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 paintOrder="stroke fill"
-                style={{ mixBlendMode: 'normal' }} 
               />
 
               {overlayOpacity > 0 && (

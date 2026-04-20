@@ -59,7 +59,7 @@ export function hydroPlaneSide(
   const p_top = gamma * Math.max(0, h_top);
   const p_bot = gamma * Math.max(0, h_bot);
 
-  // 4) Força resultante (forma “de aula”)
+  // 4) Força resultante (forma "de aula")
   // F = γ * hbar * A
   const F = p_cg * A_wet;
 
@@ -93,13 +93,18 @@ export function hydroPlaneNet(
   return { F_net, M_net, y_cp_net };
 }
 
+/**
+ * Calcula força resultante líquida sobre uma comporta plana.
+ * Aceita gammas DIFERENTES para montante e jusante (dois fluidos).
+ */
 export function calculateNetForce(
   gateHeight: number,
   gateWidth: number,
   gateInclination: number,
   h_top_up: number,
   h_top_down: number,
-  gamma: number,
+  gammaUp: number,
+  gammaDown: number,
   gateShape: FormaComporta
 ): { FR_net: number; s_cp_net: number; up: any; down: any } {
   const sinTheta = Math.sin((gateInclination * Math.PI) / 180);
@@ -125,8 +130,9 @@ export function calculateNetForce(
     Ixx = Math.pow(r, 4) * (Math.PI / 8 - 8 / (9 * Math.PI));
   }
 
-  const up = hydroPlaneSide(gamma, sinTheta, A, ybar, Ixx, gateHeight, h_top_up);
-  const down = hydroPlaneSide(gamma, sinTheta, A, ybar, Ixx, gateHeight, h_top_down);
+  // Cada lado usa seu próprio gamma!
+  const up = hydroPlaneSide(gammaUp, sinTheta, A, ybar, Ixx, gateHeight, h_top_up);
+  const down = hydroPlaneSide(gammaDown, sinTheta, A, ybar, Ixx, gateHeight, h_top_down);
 
   const net = hydroPlaneNet(up, down);
 

@@ -7,6 +7,8 @@ import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
 interface Vista3DProps {
   upstreamLevel: number;
   downstreamLevel: number;
+  upstreamFluidKey: string;
+  downstreamFluidKey: string;
   hasGate: boolean;
   gateShape: FormaComporta;
   gateWidth: number;
@@ -29,6 +31,7 @@ interface Vista3DProps {
 }
 
 export const Vista3D: React.FC<Vista3DProps> = (props) => {
+  // ... rest of the component
   const SVG_W = 900;
   const SVG_H = 520;
 
@@ -66,15 +69,16 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
     const leftWallZOffset = (reservoirWidth + props.gateWidth) / 4;
     const rightWallZOffset = -leftWallZOffset;
     
-    // 1. FUNDAÇÃO (Chão de Terra)
+    // 1. FUNDAÇÃO (Chão de Terra) — mesmo estilo visual do módulo Barragens
+    const earthDepth = maxH * 0.2;
     const floorProfile = [
       { x: -reservoirLength, y: floorY },
       { x: getBackX(floorY) + reservoirLength, y: floorY },
-      { x: getBackX(floorY) + reservoirLength, y: floorY - maxH * 0.2 },
-      { x: -reservoirLength, y: floorY - maxH * 0.2 }
+      { x: getBackX(floorY) + reservoirLength, y: floorY - earthDepth },
+      { x: -reservoirLength, y: floorY - earthDepth }
     ];
     geometry.push(...criarPrisma(
-      floorProfile, reservoirWidth * 1.1, '#78350f', 1, '#451a03', 1, 'DAM', undefined, 0, 'url(#earthPattern)', toWorldX, 0, 1, 1
+      floorProfile, reservoirWidth * 1.1, '#a16207', 1, '#713f12', 1.2, 'DAM', undefined, 0, 'url(#earthPattern)', toWorldX, 0, 1, 1
     ));
 
     // Perfil mestre das paredes laterais acompanhando a inclinação
@@ -85,12 +89,12 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       { x: getFaceX(floorY), y: floorY }
     ];
 
-    // 2. PILARES LATERAIS MACIÇOS (Mantêm o contorno para definir as bordas da estrutura)
+    // 2. PILARES LATERAIS MACIÇOS — mesmo estilo concreto do Barragens
     geometry.push(...criarPrisma(
-      pillarProfile, sideWallWidth, '#9ca3af', 1, '#6b7280', 1, 'DAM', undefined, leftWallZOffset, 'url(#concretePattern)', toWorldX, 0, 1, 1
+      pillarProfile, sideWallWidth, '#a3a3a3', 1, '#6b7280', 1.2, 'DAM', undefined, leftWallZOffset, 'url(#concretePattern)', toWorldX, 2, 1, 1
     ));
     geometry.push(...criarPrisma(
-      pillarProfile, sideWallWidth, '#9ca3af', 1, '#6b7280', 1, 'DAM', undefined, rightWallZOffset, 'url(#concretePattern)', toWorldX, 0, 1, 1
+      pillarProfile, sideWallWidth, '#a3a3a3', 1, '#6b7280', 1.2, 'DAM', undefined, rightWallZOffset, 'url(#concretePattern)', toWorldX, 2, 1, 1
     ));
 
     // --- CONSTRUÇÃO DO VÃO CENTRAL (O Fatiamento Invisível) ---
@@ -136,7 +140,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
           { x: getBackX(floorY), y: floorY },
           { x: getFaceX(floorY), y: floorY }
         ];
-        geometry.push(...criarPrisma(sillProf, renderSliceW, '#9ca3af', 1, 'none', 0, 'DAM', undefined, z_mid, 'url(#concretePattern)', toWorldX, 0, 1, 1));
+        geometry.push(...criarPrisma(sillProf, renderSliceW, '#a3a3a3', 1, 'none', 0, 'DAM', undefined, z_mid, 'url(#concretePattern)', toWorldX, 2, 1, 1));
       }
 
       // B. PAREDE SUPERIOR (Acima do vão)
@@ -147,7 +151,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
           { x: getBackX(sliceTopY), y: sliceTopY },
           { x: getFaceX(sliceTopY), y: sliceTopY }
         ];
-        geometry.push(...criarPrisma(topProf, renderSliceW, '#9ca3af', 1, 'none', 0, 'DAM', undefined, z_mid, 'url(#concretePattern)', toWorldX, 0, 1, 1));
+        geometry.push(...criarPrisma(topProf, renderSliceW, '#a3a3a3', 1, 'none', 0, 'DAM', undefined, z_mid, 'url(#concretePattern)', toWorldX, 2, 1, 1));
       }
 
       // C. COMPORTA
@@ -254,6 +258,8 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
       pan={pan}
+      upstreamFluidKey={props.upstreamFluidKey}
+      downstreamFluidKey={props.downstreamFluidKey}
     />
   );
 };
