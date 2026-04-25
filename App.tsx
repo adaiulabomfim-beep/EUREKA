@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain } from 'lucide-react';
+import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ImmersedBodiesLab } from './modulos/corpos-imersos';
 import { DamLab } from './modulos/empuxo-em-superficies/barragens';
@@ -8,6 +8,7 @@ import { TheoryReference } from './interface/ReferenciaTeorica';
 import { ChatBot } from './interface/ChatBot';
 import { PaginaInicial } from './interface/PaginaInicial';
 import { SimulationMode } from './types';
+import { gerarPDFCompleto } from './src/utils/exportacao';
 
 const App: React.FC = () => {
   const [hasStarted, setHasStarted] = useState<boolean>(false);
@@ -66,9 +67,10 @@ const App: React.FC = () => {
             {/* Navigation Tabs */}
             <div className="bg-white/75 backdrop-blur-md border-b border-blue-100/70 shadow-sm z-40 sticky top-16">
               <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                <nav className="flex space-x-2 py-2 overflow-x-auto custom-scrollbar" aria-label="Tabs">
-                  <button
-                    onClick={() => setCurrentMode(SimulationMode.IMMERSED_BODIES)}
+                <div className="flex justify-between items-center py-2">
+                  <nav className="flex space-x-2 overflow-x-auto custom-scrollbar pr-4" aria-label="Tabs">
+                    <button
+                      onClick={() => setCurrentMode(SimulationMode.IMMERSED_BODIES)}
                     className={`
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                       ${
@@ -127,6 +129,66 @@ const App: React.FC = () => {
                     Fundamentos Teóricos
                   </button>
                 </nav>
+                  
+                  <div className="relative flex group z-50">
+                    <button
+                      title="Opções de Exportação"
+                      className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm ml-2 gap-2 font-bold text-xs uppercase"
+                    >
+                      <FileText className="w-4 h-4" /> Exportar Relatório
+                    </button>
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
+                      {(() => {
+                        const validateAndGetSimulacao = () => {
+                          const container = document.getElementById("areaSimulacao");
+                          if (!container || !container.dataset.simulacao) {
+                            alert("Ative a aba de uma simulação antes de exportar.");
+                            return null;
+                          }
+                          const data = JSON.parse(container.dataset.simulacao);
+                          // Validação rigorosa
+                          if (data.empuxo === 0 && data.peso === 0 && data.volumeDeslocado === 0 && data.tipo === 'corpos-imersos') {
+                            alert("Execute uma simulação válida ativamente ajustando um parâmetro, antes de exportar! Valores atuais não podem ser nulos.");
+                            return null;
+                          }
+                          return data;
+                        };
+
+                        return (
+                          <>
+                            <button 
+                              onClick={() => {
+                                const data = validateAndGetSimulacao();
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFVisual(data, "areaSimulacao"));
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
+                            >
+                              PDF Relatório Visual
+                            </button>
+                            <button 
+                              onClick={() => {
+                                const data = validateAndGetSimulacao();
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProva(data, "areaSimulacao"));
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
+                            >
+                              PDF de Prova (Lista/Exercício)
+                            </button>
+                            <button 
+                              onClick={() => {
+                                const data = validateAndGetSimulacao();
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabarito(data, "areaSimulacao"));
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700"
+                            >
+                              Gerar Gabarito (Com Result)
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

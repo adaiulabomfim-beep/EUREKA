@@ -208,6 +208,22 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2
   }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2]);
 
+  const exportData = useMemo(() => ({
+    tipo: 'corpos-imersos',
+    geometria: shape,
+    dimensoes: { 
+      'Aresta/Raio (cm)': dim1, 
+      ...(shape !== ObjectShape.CUBE && shape !== ObjectShape.SPHERE ? { 'Comprimento (cm)': dim2 } : {}),
+      ...(twoBlocks ? { 'Aresta 2 (cm)': dim1_2 } : {})
+    },
+    densidadeObjeto: customObjDensity,
+    densidadeFluido: rhoA,
+    empuxo: physics.buoyancyForce,
+    peso: physics.objectWeight,
+    volumeDeslocado: physics.vol_deslocado / 1e6,
+    alturaSubmersa: physics.h_sub_actual / 100
+  }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics]);
+
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
 
   // --- HANDLERS ---
@@ -501,7 +517,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         </div>
 
         {/* --- CENTER: SCENE --- */}
-        <div className="lg:col-span-6 flex flex-col h-full bg-white rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20 min-h-[500px]">
+        <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 flex flex-col h-full bg-white rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20 min-h-[500px]">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
           <div className="w-full h-full">
             {is3D ? (
