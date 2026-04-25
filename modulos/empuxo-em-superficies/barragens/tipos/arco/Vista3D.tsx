@@ -5,8 +5,9 @@ import {
   getDamXAtYGeneric,
   criarPrisma,
   criarBaseTerra,
+  caixaAgua3D,
+  WorldFace
 } from '../../visual/auxiliaresGeometriaCena';
-import { caixaAguaArco3D } from './geometriaAguaArco';
 import { useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer } from '../../visual/ContainerCena';
 
@@ -75,10 +76,8 @@ export const Vista3D: React.FC<
       const maxOffset = baseCurve * 1.08;
       
       // Falloff geométrico duro:
-      // Se X está a montante do eixo (menor que -1 ou similar), a curva amortece drasticamente 
-      // para não curvar as margens naturais da água.
       if (x !== undefined && x < -1) {
-        return 0; // Água reta imediatamente
+        return 0; 
       }
 
       return maxOffset;
@@ -120,14 +119,14 @@ export const Vista3D: React.FC<
         toWorldX,
         2,
         24,
-        12,
-        true
+        1,
+        false
       ),
     ];
 
     if (upstreamLevel > 0) {
       geometry.push(
-        ...caixaAguaArco3D(
+        ...caixaAgua3D(
           upstreamLevel,
           CHANNEL_WIDTH,
           getDamXAtY(0, 'UPSTREAM') - damHeight * 1.25,
@@ -143,7 +142,7 @@ export const Vista3D: React.FC<
 
     if (downstreamLevel > 0) {
       geometry.push(
-        ...caixaAguaArco3D(
+        ...caixaAgua3D(
           downstreamLevel,
           CHANNEL_WIDTH,
           getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.25,

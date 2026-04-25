@@ -148,8 +148,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
         />
 
         {/* --- CENTER: SCENE --- */}
-        <div className="lg:col-span-6 flex flex-col h-full bg-slate-50 rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20">
-             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-10"></div>
+        <div className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
             <CenaPressaoComporta
                 upstreamLevel={upstreamLevel} downstreamLevel={downstreamLevel}
                 upstreamFluidKey={upstreamFluidKey} downstreamFluidKey={downstreamFluidKey}

@@ -269,13 +269,15 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
           let strokeToUse = f.stroke ?? 'none';
           let strokeWidthToUse = f.strokeWidth ?? 0;
 
-          if (!isLine && !isWater && strokeToUse === 'none' && baseFill !== 'none') {
+          if (!isLine && strokeToUse === 'none' && baseFill !== 'none') {
             strokeToUse = baseFill;
-            strokeWidthToUse = 0.5;
+            // Usamos 0.2 apenas para fechar o anti-aliasing subpixel caso o SVG vaze mínimo,
+            // mas o fatiamento real foi resolvido mesclando os polígonos nas construtoras.
+            strokeWidthToUse = 0.2; 
           }
 
           const overlayOpacity =
-            isWater || isDam
+            isWater
               ? 0
               : typeof f.brightness === 'number'
                 ? f.brightness < 1
@@ -312,12 +314,15 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
               {overlayOpacity > 0 && (
                 <path
                   d={d}
-                  fill="#000000"
+                  fill={typeof f.brightness === 'number' && f.brightness > 1 ? "#ffffff" : "#000000"}
                   opacity={overlayOpacity}
-                  stroke="none"
+                  stroke={typeof f.brightness === 'number' && f.brightness > 1 ? "#ffffff" : "#000000"}
+                  strokeWidth={strokeWidthToUse}
                   style={{ mixBlendMode: overlayBlend }}
                   pointerEvents="none"
                   shapeRendering="geometricPrecision"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
                 />
               )}
 

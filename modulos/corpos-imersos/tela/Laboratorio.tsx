@@ -416,8 +416,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:h-[750px]">
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
         <div className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto pr-1 custom-scrollbar">
           {/* SIMULAÇÕES PRONTAS */}
@@ -501,7 +501,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         </div>
 
         {/* --- CENTER: SCENE --- */}
-        <div className="lg:col-span-6 flex flex-col h-full rounded-3xl border border-white/50 overflow-hidden relative shadow-2xl shadow-blue-500/10 bg-white/60 backdrop-blur-md">
+        <div className="lg:col-span-6 flex flex-col h-full bg-white rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20 min-h-[500px]">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
           <div className="w-full h-full">
             {is3D ? (
               <Vista3D

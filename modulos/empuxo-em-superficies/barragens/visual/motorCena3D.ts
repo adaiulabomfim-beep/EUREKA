@@ -293,11 +293,6 @@ export const useSceneEngine = (
       if (wf.normal) {
         const rn = rotateDirection(wf.normal);
         facingScore = rn.z;
-        // BACKFACE CULLING ESTRITO: 
-        // Se a face está de costas para a câmera (Z negativo), ela NUNCA deve ser desenhada.
-        // Isso impede matematicamente que a parte de trás do Contraforte ou do Arco
-        // lute contra a parte da frente pela visibilidade.
-        if (facingScore < 0) return;
       }
 
       const proj = wf.pts3.map(project);
@@ -307,15 +302,7 @@ export const useSceneEngine = (
       const cY = wf.pts3.reduce((sum, p) => sum + p.y, 0) / Math.max(1, wf.pts3.length);
       const cZ = wf.pts3.reduce((sum, p) => sum + p.z, 0) / Math.max(1, wf.pts3.length);
 
-      // Z-Depth Anchor Correction para volumes massivos de água
-      if (wf.kind === 'WATER_UP') {
-        cX = Math.max(...wf.pts3.map(p => p.x)); // Força a profundidade pro ponto de contato
-      } else if (wf.kind === 'WATER_DOWN') {
-        cX = Math.min(...wf.pts3.map(p => p.x)); // Força a profundidade pro ponto de contato
-      }
-
-      const anchorLocal = { x: cX - center.x, y: cY - center.y, z: cZ - center.z };
-      let zDepth = rotate(anchorLocal).z;
+      let zDepth = rotate({ x: cX - center.x, y: cY - center.y, z: cZ - center.z }).z;
 
       // Desempate sutil automático
       if (wf.kind.startsWith('WATER')) zDepth -= 0.1;

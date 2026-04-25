@@ -28,79 +28,67 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           disabled: !analyzedResults,
         }}
       >
-        {analyzedResults ? (
-          <>
-            {/* Hydrostatic Force Card */}
-            <ResultsCard
-              title="Força Hidrostática Resultante"
-              value={(Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2)}
-              unit="kN"
-              theme="blue"
-              icon={ArrowDown}
-            />
+        <>
+          {/* Hydrostatic Force Card */}
+          <ResultsCard
+            title="Força Hidrostática Resultante"
+            value={analyzedResults ? (Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2) : '???'}
+            unit={analyzedResults ? 'kN' : ''}
+            theme="blue"
+            icon={ArrowDown}
+          />
 
-            {/* Center of Pressure Depth */}
-            <ResultsCard
-              title="Centro de Pressão (CP)"
-              value={analyzedResults.forceData.s_cp_net.toFixed(2)}
-              unit="m"
-              theme="cyan"
-              icon={MoveVertical}
-              secondaryValue="Posição ao longo da face (do topo)"
-            />
+          {/* Center of Pressure Depth */}
+          <ResultsCard
+            title="Centro de Pressão (CP)"
+            value={analyzedResults ? analyzedResults.forceData.s_cp_net.toFixed(2) : '?'}
+            unit={analyzedResults ? 'm' : ''}
+            theme="cyan"
+            icon={MoveVertical}
+            secondaryValue="Posição ao longo da face (do topo)"
+          />
 
-            {/* Equilibrium */}
-            {(hingePosition !== PosicaoDobradica.NONE || hasTieRod) && (
-              <>
-                {hingePosition !== PosicaoDobradica.NONE && (
-                  <ResultsCard
-                    title="Momento no Apoio"
-                    value={(Math.abs(analyzedResults.equilibrium.M_hinge) / 1000).toFixed(2)}
-                    unit="kN·m"
-                    theme="purple"
-                    icon={RotateCw}
-                  />
-                )}
-                {hasTieRod && (
-                  <ResultsCard
-                    title="Força no Tirante"
-                    value={(Math.abs(analyzedResults.equilibrium.F_tie) / 1000).toFixed(2)}
-                    unit="kN"
-                    theme="amber"
-                    icon={RotateCw}
-                  />
-                )}
-              </>
-            )}
+          {/* Equilibrium */}
+          {(hingePosition !== PosicaoDobradica.NONE || hasTieRod) && (
+            <>
+              {hingePosition !== PosicaoDobradica.NONE && (
+                <ResultsCard
+                  title="Momento no Apoio"
+                  value={analyzedResults ? (Math.abs(analyzedResults.equilibrium.M_hinge) / 1000).toFixed(2) : '???'}
+                  unit={analyzedResults ? 'kN·m' : ''}
+                  theme="purple"
+                  icon={RotateCw}
+                />
+              )}
+              {hasTieRod && (
+                <ResultsCard
+                  title="Força no Tirante"
+                  value={analyzedResults ? (Math.abs(analyzedResults.equilibrium.F_tie) / 1000).toFixed(2) : '???'}
+                  unit={analyzedResults ? 'kN' : ''}
+                  theme="amber"
+                  icon={RotateCw}
+                />
+              )}
+            </>
+          )}
 
-            {/* Geometry Properties */}
-            <ResultsCard
-              title="Área Molhada (Montante)"
-              value={analyzedResults.forceData.up.area.toFixed(2)}
-              unit="m²"
-              theme="slate"
-              icon={Maximize}
-            />
-            
-            <ResultsCard
-              title="Área Molhada (Jusante)"
-              value={analyzedResults.forceData.down.area.toFixed(2)}
-              unit="m²"
-              theme="slate"
-              icon={Maximize}
-            />
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60 p-4 py-20">
-            <div className="bg-blue-50 p-4 rounded-full mb-3">
-              <AlertCircle className="w-8 h-8 text-blue-400" />
-            </div>
-            <h4 className="text-sm font-black text-slate-600 tracking-tight">Aguardando análise</h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-[200px] font-medium">
-              Configure os parâmetros e clique em "Analisar" na área central.
-            </p>
-          </div>
-        )}
+          {/* Geometry Properties */}
+          <ResultsCard
+            title="Área Molhada (Montante)"
+            value={analyzedResults ? analyzedResults.forceData.up.area.toFixed(2) : '?'}
+            unit={analyzedResults ? 'm²' : ''}
+            theme="slate"
+            icon={Maximize}
+          />
+          
+          <ResultsCard
+            title="Área Molhada (Jusante)"
+            value={analyzedResults ? analyzedResults.forceData.down.area.toFixed(2) : '?'}
+            unit={analyzedResults ? 'm²' : ''}
+            theme="slate"
+            icon={Maximize}
+          />
+        </>
       </ResultsPanel>
     </div>
   );
