@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { ContainerComportas } from './ContainerComportas';
 import { useSceneEngine } from './motor3DComportas';
-import { criarPrisma, caixaAgua3D } from './geometria3DComportas';
+import { criarPrisma, caixaAgua3D, criarFace, criarTubo } from './geometria3DComportas';
 import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
 
 interface Vista3DProps {
@@ -97,78 +97,115 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       pillarProfile, sideWallWidth, '#a3a3a3', 1, '#6b7280', 1.2, 'DAM', undefined, rightWallZOffset, 'url(#concretePattern)', toWorldX, 2, 1, 1
     ));
 
-    // --- CONSTRUÇÃO DO VÃO CENTRAL (O Fatiamento Invisível) ---
-    const gateShapeStr = String(props.gateShape).toUpperCase();
-    const isRectangular = gateShapeStr.includes('RET');
-    
-    const numSlices = isRectangular ? 1 : 16;
-    const sliceW = props.gateWidth / numSlices;
-    
-    // 🔥 TRUQUE VISUAL: Uma leve sobreposição para o SVG não deixar falhas microscópicas entre as fatias
-    const renderSliceW = sliceW + 0.05; 
-    
     const H = props.gateHeight;
     const W = props.gateWidth;
+    
+    const gateBotY = gateTopY - H * Math.sin(thetaRad);
 
-    for (let i = 0; i < numSlices; i++) {
-      const z_mid = -W/2 + (i + 0.5) * sliceW;
-      const u = Math.min(1, Math.max(-1, 2 * z_mid / W)); 
+    const matColor = '#a3a3a3';
+    const matStroke = '#6b7280';
+    const matPattern = 'url(#concretePattern)';
 
-      let L_top = 0; 
-      let L_bot = H; 
-
-      // Ajusta a profundidade do corte conforme a geometria (Circular/Semicircular)
-      if (gateShapeStr.includes('CIRCULAR') && !gateShapeStr.includes('SEMI')) {
-        const h_slant = H * Math.sqrt(1 - u * u);
-        L_top = H/2 - h_slant/2;
-        L_bot = H/2 + h_slant/2;
+    const genHoleSafe = (fn: any) => {
+      const pts = [];
+      const gateShapeStr = String(props.gateShape).toUpperCase();
+      if (gateShapeStr.includes('RET') || gateShapeStr.includes('QUAD')) {
+         const yTop = gateTopY;
+         const yBot = gateBotY;
+         pts.push({ x: fn(yTop), y: yTop, z: -W/2 });
+         pts.push({ x: fn(yTop), y: yTop, z: W/2 });
+         pts.push({ x: fn(yBot), y: yBot, z: W/2 });
+         pts.push({ x: fn(yBot), y: yBot, z: -W/2 });
+      } else if (gateShapeStr.includes('CIRCULAR') && !gateShapeStr.includes('SEMI')) {
+         const steps = 32;
+         const r = H / 2;
+         const cy = gateTopY - r * Math.sin(thetaRad);
+         for (let i = 0; i < steps; i++) {
+           const angle = (i / steps) * Math.PI * 2;
+           const lY = cy + r * Math.cos(angle) * Math.sin(thetaRad);
+           const lZ = r * Math.sin(angle);
+           pts.push({ x: fn(lY), y: lY, z: lZ });
+         }
       } else if (gateShapeStr.includes('SEMI')) {
-        const h_slant = H * Math.sqrt(1 - u * u);
-        L_top = 0;
-        L_bot = h_slant;
+         const steps = 16;
+         const r = H / 2;
+         const yBot = gateBotY;
+         pts.push({ x: fn(yBot), y: yBot, z: -r });
+         pts.push({ x: fn(yBot), y: yBot, z: r });
+         for (let i = 0; i <= steps; i++) {
+           const angle = (i / steps) * Math.PI;
+           const lY = gateBotY + r * Math.sin(angle) * Math.sin(thetaRad);
+           const lZ = r * Math.cos(angle);
+           pts.push({ x: fn(lY), y: lY, z: lZ });
+         }
       }
+      return pts;
+    };
 
-      const sliceTopY = gateTopY - L_top * Math.sin(thetaRad);
-      const sliceBotY = gateTopY - L_bot * Math.sin(thetaRad);
+    let holeFront, holeBack;
+    if (props.hasGate) {
+      holeFront = genHoleSafe(getFaceX);
+      holeBack = genHoleSafe(getBackX);
+    }
 
-      // A. SOLEIRA (Abaixo do vão)
-      // 🔥 Passamos 'none' e 0 para remover as linhas de contorno (strokes) das fatias
-      if (sliceBotY > floorY) {
-        const sillProf = [
-          { x: getFaceX(sliceBotY), y: sliceBotY },
-          { x: getBackX(sliceBotY), y: sliceBotY },
-          { x: getBackX(floorY), y: floorY },
-          { x: getFaceX(floorY), y: floorY }
-        ];
-        geometry.push(...criarPrisma(sillProf, renderSliceW, '#a3a3a3', 1, 'none', 0, 'DAM', undefined, z_mid, 'url(#concretePattern)', toWorldX, 2, 1, 1));
-      }
+    const zStart = -reservoirWidth / 2;
+    const zEnd = reservoirWidth / 2;
 
-      // B. PAREDE SUPERIOR (Acima do vão)
-      if (sliceTopY < wallHeight) {
-        const topProf = [
-          { x: getFaceX(wallHeight), y: wallHeight },
-          { x: getBackX(wallHeight), y: wallHeight },
-          { x: getBackX(sliceTopY), y: sliceTopY },
-          { x: getFaceX(sliceTopY), y: sliceTopY }
-        ];
-        geometry.push(...criarPrisma(topProf, renderSliceW, '#a3a3a3', 1, 'none', 0, 'DAM', undefined, z_mid, 'url(#concretePattern)', toWorldX, 2, 1, 1));
-      }
+    const pUp_bot = { x: getFaceX(floorY), y: floorY };
+    const pUp_top = { x: getFaceX(wallHeight), y: wallHeight };
+    const pDown_bot = { x: getBackX(floorY), y: floorY };
+    const pDown_top = { x: getBackX(wallHeight), y: wallHeight };
 
-      // C. COMPORTA
-      if (props.hasGate) {
-        const gateThick = Math.max(0.2, H * 0.04);
-        const offset = 0.02; // Leve recuo para evitar conflito com a água
-        const gxTop = getFaceX(sliceTopY) + offset;
-        const gxBot = getFaceX(sliceBotY) + offset;
+    geometry.push(criarFace(
+      [
+        { x: pDown_top.x, y: pDown_top.y, z: zStart },
+        { x: pDown_top.x, y: pDown_top.y, z: zEnd },
+        { x: pUp_top.x, y: pUp_top.y, z: zEnd },
+        { x: pUp_top.x, y: pUp_top.y, z: zStart }
+      ],
+      matColor, 1, matStroke, 1.2, { x: 0, y: 1, z: 0 }, 'DAM', matPattern, 2
+    ));
 
-        const gateProf = [
-          { x: gxTop, y: sliceTopY },
-          { x: gxTop + gateThick * Math.sin(thetaRad), y: sliceTopY + gateThick * Math.cos(thetaRad) },
-          { x: gxBot + gateThick * Math.sin(thetaRad), y: sliceBotY + gateThick * Math.cos(thetaRad) },
-          { x: gxBot, y: sliceBotY }
-        ];
-        geometry.push(...criarPrisma(gateProf, renderSliceW, '#94a3b8', 1, 'none', 0, 'GATE', undefined, z_mid, undefined, toWorldX, 0, 1, 1));
-      }
+    const upstreamFacePts = [
+      { x: pUp_top.x, y: pUp_top.y, z: zStart },
+      { x: pUp_top.x, y: pUp_top.y, z: zEnd },
+      { x: pUp_bot.x, y: pUp_bot.y, z: zEnd },
+      { x: pUp_bot.x, y: pUp_bot.y, z: zStart }
+    ];
+    geometry.push(criarFace(upstreamFacePts, matColor, 1, matStroke, 1.2, { x: -Math.sin(thetaRad), y: Math.cos(thetaRad), z: 0 }, 'DAM', matPattern, 2, holeFront ? [holeFront] : undefined));
+
+    const downstreamFacePts = [
+      { x: pDown_top.x, y: pDown_top.y, z: zEnd },
+      { x: pDown_top.x, y: pDown_top.y, z: zStart },
+      { x: pDown_bot.x, y: pDown_bot.y, z: zStart },
+      { x: pDown_bot.x, y: pDown_bot.y, z: zEnd }
+    ];
+    geometry.push(criarFace(downstreamFacePts, matColor, 1, matStroke, 1.2, { x: 1, y: 0, z: 0 }, 'DAM', matPattern, 2, holeBack ? [holeBack] : undefined));
+
+    const leftFacePts = [
+      { x: pDown_top.x, y: pDown_top.y, z: zStart },
+      { x: pUp_top.x, y: pUp_top.y, z: zStart },
+      { x: pUp_bot.x, y: pUp_bot.y, z: zStart },
+      { x: pDown_bot.x, y: pDown_bot.y, z: zStart }
+    ];
+    geometry.push(criarFace(leftFacePts, matColor, 1, matStroke, 1.2, { x: 0, y: 0, z: -1 }, 'DAM', matPattern, 2));
+
+    const rightFacePts = [
+      { x: pUp_top.x, y: pUp_top.y, z: zEnd },
+      { x: pDown_top.x, y: pDown_top.y, z: zEnd },
+      { x: pDown_bot.x, y: pDown_bot.y, z: zEnd },
+      { x: pUp_bot.x, y: pUp_bot.y, z: zEnd }
+    ];
+    geometry.push(criarFace(rightFacePts, matColor, 1, matStroke, 1.2, { x: 0, y: 0, z: 1 }, 'DAM', matPattern, 2));
+
+    if (props.hasGate && holeFront && holeBack) {
+      geometry.push(...criarTubo(holeFront, holeBack, matColor, matStroke, matPattern, 2));
+
+      const gatePtsFront = holeFront.map(p => ({ x: p.x - 0.03, y: p.y, z: p.z }));
+      geometry.push(criarFace(gatePtsFront, 'url(#metalLinear)', 1, '#1e293b', 1.5, { x: -Math.sin(thetaRad), y: Math.cos(thetaRad), z: 0 }, 'GATE', undefined, 3));
+      
+      const gatePtsBack = holeFront.map(p => ({ x: p.x - 0.01, y: p.y, z: p.z })).reverse();
+      geometry.push(criarFace(gatePtsBack, '#475569', 1, '#1e293b', 1.5, { x: 1, y: 0, z: 0 }, 'GATE', undefined, 3));
     }
 
     // 7. ÁGUA MONTANTE E JUSANTE
@@ -178,11 +215,12 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
         reservoirWidth - 0.2, 
         -reservoirLength,
         "UPSTREAM",
-        (y) => getFaceX(y) - 0.01, // A água acompanha perfeitamente a inclinação
+        (y) => getFaceX(y) - 0.01,
         toWorldX,
         undefined,
         "A",
-        1 
+        1,
+        floorY
       ));
     }
 
@@ -192,11 +230,12 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
         reservoirWidth - 0.2,
         wallThickness + reservoirLength,
         "DOWNSTREAM",
-        (y) => getBackX(y) + 0.01, // A água acompanha as costas da parede
+        (y) => getBackX(y) + 0.01,
         toWorldX,
         undefined,
         "B",
-        1
+        1,
+        floorY
       ));
     }
 

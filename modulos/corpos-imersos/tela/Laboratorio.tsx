@@ -58,6 +58,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [showCalculations, setShowCalculations] = useState<boolean>(false);
   const [showCenterOfBuoyancy, setShowCenterOfBuoyancy] = useState<boolean>(true);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [currentEnunciado, setCurrentEnunciado] = useState<string | null>(null);
+  const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
 
   // --- LAYOUT CALCULATIONS ---
   const svgHeight = 600;
@@ -89,6 +91,15 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   } else {
     visualWidth = dim1 * 2 * visualScaleFactor;
     visualHeight = dim2 * visualScaleFactor;
+  }
+
+  let visualWidth2 = 0;
+  if (shape2 === ObjectShape.CUBE) {
+    visualWidth2 = dim1_2 * visualScaleFactor;
+  } else if (shape2 === ObjectShape.SPHERE) {
+    visualWidth2 = dim1_2 * 2 * visualScaleFactor;
+  } else {
+    visualWidth2 = dim1_2 * 2 * visualScaleFactor;
   }
 
   // --- PHYSICS CALCULATIONS ---
@@ -241,8 +252,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       id: 'ex1',
       title: 'Exercício 1: Bloco Uniforme',
       subtitle: 'Peso 50N ar, 40N submerso',
+      enunciado: 'Um bloco pesa 50N no ar e 40N quando totalmente submerso em água. Determine o volume e a densidade do bloco.',
       load: () => {
         setIsSimulating(false);
+        setActiveExerciseId('ex1');
+        setCurrentEnunciado('Um bloco pesa 50N no ar e 40N quando totalmente submerso em água. Determine o volume e a densidade do bloco.');
         setTwoBlocks(false);
         setExtraWeight(0);
         setSelectedMaterial('Custom');
@@ -266,8 +280,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       id: 'ex2',
       title: 'Exercício 2: Duas Esferas',
       subtitle: 'Esferas A e B ligadas',
+      enunciado: 'Duas esferas, A e B, de raios iguais, estão ligadas por um arame de peso e volume desprezíveis e flutuam na água, conforme se apresenta na figura. Sabendo que as massas específicas da água e da esfera A são respectivamente 1,0 g/cm³ e 0,8 g/cm³, calcule a massa específica da esfera B.',
       load: () => {
         setIsSimulating(false);
+        setActiveExerciseId('ex2');
+        setCurrentEnunciado('Duas esferas, A e B, de raios iguais, estão ligadas por um arame de peso e volume desprezíveis e flutuam na água, conforme se apresenta na figura. Sabendo que as massas específicas da água e da esfera A são respectivamente 1,0 g/cm³ e 0,8 g/cm³, calcule a massa específica da esfera B.');
         setTwoBlocks(true);
         setExtraWeight(0);
         setShape(ObjectShape.SPHERE);
@@ -296,8 +313,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       id: 'ex5',
       title: 'Exercício 5: Dois Cubos',
       subtitle: 'Conectados por cordão',
+      enunciado: 'Dois cubos conectados por um cordão. O cubo inferior é mais denso, enquanto o superior garante a flutuabilidade do conjunto.',
       load: () => {
         setIsSimulating(false);
+        setActiveExerciseId('ex5');
+        setCurrentEnunciado('Dois cubos conectados por um cordão. O cubo inferior é mais denso, enquanto o superior garante a flutuabilidade do conjunto.');
         setTwoBlocks(true);
         setExtraWeight(0);
         setShape(ObjectShape.CUBE);
@@ -326,8 +346,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       id: 'ex_extra_weight',
       title: 'Peso Extra',
       subtitle: 'Bloco com carga superior',
+      enunciado: 'Um bloco de madeira flutua na água. Uma carga adicional é colocada sobre ele. Determine o novo calado (altura submersa) do bloco.',
       load: () => {
         setIsSimulating(false);
+        setActiveExerciseId('ex_extra_weight');
+        setCurrentEnunciado('Um bloco de madeira flutua na água. Uma carga adicional é colocada sobre ele. Determine o novo calado (altura submersa) do bloco.');
         setTwoBlocks(false);
         setExtraWeight(50); // 50N extra
         setSelectedMaterial('Madeira (Pinho)');
@@ -349,8 +372,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       id: 'ex_two_blocks_connected',
       title: 'Dois Blocos Conectados',
       subtitle: 'Equilíbrio de dois corpos',
+      enunciado: 'Dois blocos de densidades diferentes estão conectados. Encontre o ponto de equilíbrio do sistema quando imerso em água.',
       load: () => {
         setIsSimulating(false);
+        setActiveExerciseId('ex_two_blocks_connected');
+        setCurrentEnunciado('Dois blocos de densidades diferentes estão conectados. Encontre o ponto de equilíbrio do sistema quando imerso em água.');
         setTwoBlocks(true);
         setExtraWeight(0);
         setShape(ObjectShape.CUBE);
@@ -426,6 +452,19 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const colorA = getFluidColor(selectedFluid);
   const colorB = getFluidColor(selectedFluidB);
 
+  let specialResult: { title: string; value: string; unit?: string; description?: string } | null = null;
+  if (activeExerciseId === 'ex2') {
+    const rho_w = selectedFluid === 'Custom' ? customFluidDensity : (FLUIDS.find(f => f.name === selectedFluid)?.density || 1000);
+    const rho_A = customObjDensity;
+    const rho_B = (1.5 * rho_w) - rho_A;
+    specialResult = {
+      title: 'Massa Específica (Esfera B)',
+      value: isSimulating ? rho_B.toFixed(0) : '???',
+      unit: 'kg/m³',
+      description: 'Calculado p/ Esfera A 50% submersa'
+    };
+  }
+
   const geom = {
     formula: shape === ObjectShape.CUBE ? 'L³' : shape === ObjectShape.SPHERE ? '4/3 · π · r³' : 'L · P · H',
     substitution: shape === ObjectShape.CUBE ? `${dim1}³` : shape === ObjectShape.SPHERE ? `4/3 · π · ${dim1}³` : `${dim1} · ${dim1} · ${dim2}`
@@ -457,6 +496,12 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 </option>
               ))}
             </select>
+            {currentEnunciado && (
+              <div className="mt-4 p-3 bg-white/10 rounded-lg border border-white/20 text-xs leading-relaxed text-blue-50">
+                <span className="font-bold block mb-1 text-white">Enunciado:</span>
+                {currentEnunciado}
+              </div>
+            )}
           </div>
 
           <PainelControles
@@ -559,6 +604,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 cordLength_visual={initialPhysics.actualCordLength * visualScaleFactor}
                 obj2Color={MATERIALS.find(m => m.name === selectedMaterial2)?.color || '#475569'}
                 extraWeight={extraWeight}
+                shape2={shape2}
+                visualWidth2={visualWidth2}
               />
             ) : (
               <Vista2D
@@ -602,6 +649,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 cordLength_visual={initialPhysics.actualCordLength * visualScaleFactor}
                 obj2Color={MATERIALS.find(m => m.name === selectedMaterial2)?.color || '#475569'}
                 extraWeight={extraWeight}
+                shape2={shape2}
+                visualWidth2={visualWidth2}
               />
             )}
           </div>
@@ -659,6 +708,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
           forceText={forceText}
           showCalculations={showCalculations}
           onToggleCalculations={() => setShowCalculations(!showCalculations)}
+          specialResult={specialResult}
         />
       </div>
 
@@ -671,6 +721,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
           tankWidth={tankWidth}
           tankDepth={tankDepth}
           enableTwoFluids={enableTwoFluids}
+          activeExerciseId={activeExerciseId}
           onClose={() => setShowCalculations(false)}
         />
       )}

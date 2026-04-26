@@ -4,13 +4,15 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { RelatorioVisualEureka } from '../../components/relatorios/RelatorioVisualEureka';
 import html2canvas from 'html2canvas';
+import { forcarDownloadPDF } from './forcarDownloadPDF';
 
 export const gerarPDFVisual = async (simulacao, elementId = 'areaSimulacao') => {
   let container = null;
   
   try {
     const imagemBase64 = await capturarImagemSimulacao(elementId);
-    const dataText = new Date().toLocaleDateString('pt-BR');
+    const now = new Date();
+    const dataText = now.toLocaleDateString('pt-BR') + ' - ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
     container = document.createElement('div');
     container.style.position = 'absolute';
@@ -34,8 +36,8 @@ export const gerarPDFVisual = async (simulacao, elementId = 'areaSimulacao') => 
         </div>
       );
       
-      // Allow time for the component to mount and render fully
-      setTimeout(resolve, 500);
+      // Allow time for the component to mount, render, and load fonts
+      setTimeout(resolve, 1500);
     });
 
     const wrapper = document.getElementById('relatorio-temp-wrapper');
@@ -55,14 +57,8 @@ export const gerarPDFVisual = async (simulacao, elementId = 'areaSimulacao') => 
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
     
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    
-    // In case the rendered height is slightly larger than 1 page
-    if (pdfHeight > pdf.internal.pageSize.getHeight()) {
-       // Since the design is built precisely for 1123px (A4 size at 96 DPI), 
-       // it should ideally fit perfectly, but keeping this safe.
-    }
 
-    pdf.save(`Relatorio_Visual_EUREKA_${new Date().getTime()}.pdf`);
+    forcarDownloadPDF(pdf, `Relatorio_Visual_EUREKA_${now.getTime()}.pdf`);
     
   } catch (err) {
     console.error("Erro ao gerar PDF visual:", err);

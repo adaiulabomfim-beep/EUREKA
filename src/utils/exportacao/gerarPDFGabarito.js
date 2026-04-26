@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { formatarDadosSimulacao, adicionarCabecalhoAcademico } from './formatarDadosSimulacao';
 import { montarEnunciado } from './montarEnunciado';
+import { forcarDownloadPDF } from './forcarDownloadPDF';
 
 export const gerarPDFGabarito = async (simulacao, elementId = 'areaSimulacao') => {
   const dados = formatarDadosSimulacao(simulacao);
@@ -44,5 +45,5 @@ export const gerarPDFGabarito = async (simulacao, elementId = 'areaSimulacao') =
   const textAnalise = pdf.splitTextToSize(`d) Conclusão: ${dados.statusFisico}`, 170);
   pdf.text(textAnalise, 20, startY);
 
-  pdf.save(`Gabarito_Empuxo_${new Date().getTime()}.pdf`);
+  forcarDownloadPDF(pdf, `Gabarito_Empuxo_${new Date().getTime()}.pdf`);
 };

@@ -9,6 +9,12 @@ interface PainelResultadosProps {
   forceText: string;
   showCalculations: boolean;
   onToggleCalculations: () => void;
+  specialResult?: {
+    title: string;
+    value: string;
+    unit?: string;
+    description?: string;
+  } | null;
 }
 
 export const PainelResultados: React.FC<PainelResultadosProps> = ({
@@ -18,6 +24,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
   forceText,
   showCalculations,
   onToggleCalculations,
+  specialResult,
 }) => {
   return (
     <div className="lg:col-span-3 flex flex-col gap-3 h-full">
@@ -76,6 +83,17 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           badge="Vdesl = Vsub"
           secondaryValue={`Elevação do Nível (Δh): ${isSimulating ? physics.deltaH_cm.toFixed(2) : '?'} cm`}
         />
+
+        {specialResult && (
+          <ResultsCard
+            title={specialResult.title}
+            value={specialResult.value}
+            unit={specialResult.unit}
+            theme="purple"
+            badge="INCÓGNITA"
+            secondaryValue={specialResult.description}
+          />
+        )}
       </ResultsPanel>
     </div>
   );

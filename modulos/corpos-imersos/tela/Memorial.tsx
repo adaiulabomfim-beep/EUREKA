@@ -21,9 +21,8 @@ const CalculationLine: React.FC<{
   isSubHeader?: boolean;
 }> = ({ label, symbol, formula, substitution, result, unit, isSubHeader }) => (
   <div
-    className={`flex flex-col sm:flex-row sm:items-baseline justify-between py-2 border-b border-slate-100 last:border-0 ${
-      isSubHeader ? 'bg-slate-50/80 -mx-4 px-4 font-semibold text-slate-800 mt-2 py-2.5' : ''
-    }`}
+    className={`flex flex-col sm:flex-row sm:items-baseline justify-between py-2 border-b border-slate-100 last:border-0 ${isSubHeader ? 'bg-slate-50/80 -mx-4 px-4 font-semibold text-slate-800 mt-2 py-2.5' : ''
+      }`}
   >
     <div className="text-[10px] text-slate-500 font-medium">{label}</div>
     <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-slate-700 mt-1 sm:mt-0">
@@ -31,9 +30,8 @@ const CalculationLine: React.FC<{
       {formula && <span className="text-slate-400 hidden lg:inline">= {formula}</span>}
       {substitution && <span className="text-slate-500">= {substitution}</span>}
       <span
-        className={`font-bold px-1.5 py-0.5 rounded ml-auto ${
-          isSubHeader ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-900'
-        }`}
+        className={`font-bold px-1.5 py-0.5 rounded ml-auto ${isSubHeader ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-900'
+          }`}
       >
         = {result}{' '}
         <span className="text-[9px] font-sans text-slate-500 ml-0.5">{unit}</span>
@@ -68,7 +66,60 @@ export const Memorial: React.FC<MemorialProps> = ({
         </div>
 
         <div className="p-8 space-y-10">
-          <section>
+          {activeExerciseId === 'ex2' ? (
+            <div className="space-y-8">
+              <section>
+                <h4 className="text-xs font-black text-purple-700 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-purple-300"></div> Resolução do Exercício <div className="flex-1 h-px bg-slate-200"></div>
+                </h4>
+                
+                <div className="bg-purple-50/40 p-6 rounded-2xl border border-purple-100/70 space-y-4 text-slate-700 text-sm leading-relaxed">
+                  <p>Para resolver o exercício, analisamos o sistema em equilíbrio estático onde a soma das forças verticais é zero.</p>
+                  
+                  <div className="bg-white p-4 rounded-xl border border-slate-100 my-4 shadow-sm">
+                    <p className="font-mono text-center mb-2 font-bold text-slate-800">Força Peso Total (P) = Empuxo Total (E)</p>
+                    <p className="font-mono text-center text-xs text-slate-500">P<sub>A</sub> + P<sub>B</sub> = E<sub>A</sub> + E<sub>B</sub></p>
+                  </div>
+
+                  <p>Podemos expressar o peso e o empuxo em termos de massa específica (ρ), Volume (V) e gravidade (g). Como as esferas têm o mesmo raio, seus volumes são iguais (V<sub>A</sub> = V<sub>B</sub> = V).</p>
+                  <ul className="list-disc pl-5 space-y-2 text-slate-600 font-mono text-xs">
+                    <li>P<sub>A</sub> = ρ<sub>A</sub> · V · g</li>
+                    <li>P<sub>B</sub> = ρ<sub>B</sub> · V · g</li>
+                    <li>E<sub>A</sub> = ρ<sub>água</sub> · (V/2) · g <span className="font-sans italic text-slate-400">(A esfera A está 50% submersa)</span></li>
+                    <li>E<sub>B</sub> = ρ<sub>água</sub> · V · g <span className="font-sans italic text-slate-400">(A esfera B está 100% submersa)</span></li>
+                  </ul>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-100 my-4 shadow-sm">
+                    <p className="font-mono text-center text-xs">
+                      ρ<sub>A</sub>·V·g + ρ<sub>B</sub>·V·g = ρ<sub>água</sub>·(V/2)·g + ρ<sub>água</sub>·V·g
+                    </p>
+                    <p className="font-mono text-center text-xs mt-2 text-slate-500">Dividindo toda a equação por (V·g):</p>
+                    <p className="font-mono text-center text-sm font-bold mt-2 text-blue-700">
+                      ρ<sub>A</sub> + ρ<sub>B</sub> = 1,5 · ρ<sub>água</sub>
+                    </p>
+                  </div>
+
+                  <p>Isolando a incógnita (ρ<sub>B</sub>) e substituindo pelos valores fornecidos no enunciado (ρ<sub>A</sub> = 0,8 g/cm³ e ρ<sub>água</sub> = 1,0 g/cm³):</p>
+                  
+                  <div className="bg-slate-800 text-white p-6 rounded-xl mt-6">
+                    <CalculationLine
+                      label="Massa Específica B"
+                      symbol={<>ρ<sub>B</sub></>}
+                      formula={<>1,5 · ρ<sub>água</sub> - ρ<sub>A</sub></>}
+                      substitution="1,5 · 1,0 - 0,8"
+                      result="0,7"
+                      unit="g/cm³"
+                    />
+                    <div className="text-right text-[10px] text-slate-400 mt-2 font-mono">
+                      (ou 700 kg/m³)
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : (
+            <>
+              <section>
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
               <div className="w-6 h-px bg-slate-300"></div> Geometria & Massa <div className="flex-1 h-px bg-slate-200"></div>
             </h4>
@@ -189,12 +240,14 @@ export const Memorial: React.FC<MemorialProps> = ({
                     : physics.status.includes('FLUTUANDO') ||
                       physics.status.includes('INTERFACE') ||
                       physics.status.includes('EQUILÍBRIO')
-                    ? 'P = E (Equilíbrio)'
-                    : 'P = E (Equilíbrio)'}
+                      ? 'P = E (Equilíbrio)'
+                      : 'P = E (Equilíbrio)'}
                 </div>
               </div>
             </div>
           </section>
+          </>
+          )}
         </div>
       </div>
     </div>

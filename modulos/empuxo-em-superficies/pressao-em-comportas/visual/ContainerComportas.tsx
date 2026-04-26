@@ -17,6 +17,7 @@ type Point2D = {
 type RenderedFace = {
   id?: string | number;
   pts?: Point2D[];
+  holes?: Point2D[][];
   fill?: string;
   opacity?: number;
   stroke?: string;
@@ -254,9 +255,17 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
           if (!f.pts || f.pts.length < 2) return null;
 
           const isLine = f.pts.length === 2;
-          const d = isLine 
+          let d = isLine 
             ? `M ${f.pts[0].x},${f.pts[0].y} L ${f.pts[1].x},${f.pts[1].y}`
             : `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
+
+          if (f.holes && f.holes.length > 0) {
+            f.holes.forEach(hole => {
+              if (hole.length >= 3) {
+                d += ` M ${hole.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
+              }
+            });
+          }
 
           const isDam = f.kind === 'DAM' || f.kind === 'GATE';
           const isWater = f.kind === 'WATER' || f.kind === 'WATER_UP' || f.kind === 'WATER_DOWN';
@@ -299,6 +308,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
               <path
                 d={d}
                 fill={baseFill}
+                fillRule="evenodd"
                 opacity={baseOpacity}
                 stroke={strokeToUse}
                 strokeWidth={strokeWidthToUse}
@@ -313,6 +323,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                 <path
                   d={d}
                   fill="#000000"
+                  fillRule="evenodd"
                   opacity={overlayOpacity}
                   stroke="none"
                   style={{ mixBlendMode: overlayBlend }}
@@ -325,6 +336,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                 <path
                   d={d}
                   fill={f.hatchPattern}
+                  fillRule="evenodd"
                   opacity={1}
                   stroke="none"
                   pointerEvents="none"

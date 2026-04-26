@@ -1,3 +1,6 @@
-export { gerarPDFVisual } from './gerarPDFVisual';
-export { gerarPDFProva } from './gerarPDFProva';
-export { gerarPDFGabarito } from './gerarPDFGabarito';
+export { formatarDadosSimulacao } from './formatarDadosSimulacao';
+export { forcarDownloadPDF } from './forcarDownloadPDF';
+export { capturarImagemSimulacao } from './capturarImagemSimulacao';
+export { gerarPDFEstudoVisual } from './gerarPDFEstudoVisual';
+export { gerarPDFProvaVisual } from './gerarPDFProvaVisual';
+export { gerarPDFGabaritoVisual } from './gerarPDFGabaritoVisual';

@@ -130,14 +130,31 @@ const App: React.FC = () => {
                   </button>
                 </nav>
                   
-                  <div className="relative flex group z-50">
+                  <div className="relative flex z-50">
                     <button
                       title="Opções de Exportação"
+                      onClick={() => {
+                        const el = document.getElementById('export-dropdown');
+                        if (el) {
+                          const isVisible = el.style.display === 'block';
+                          el.style.display = isVisible ? 'none' : 'block';
+                          if (!isVisible) {
+                            // Close on outside click
+                            const closeHandler = (e: MouseEvent) => {
+                              if (!(e.target as Element)?.closest?.('#export-dropdown') && !(e.target as Element)?.closest?.('[title="Opções de Exportação"]')) {
+                                el.style.display = 'none';
+                                document.removeEventListener('click', closeHandler);
+                              }
+                            };
+                            setTimeout(() => document.addEventListener('click', closeHandler), 0);
+                          }
+                        }
+                      }}
                       className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm ml-2 gap-2 font-bold text-xs uppercase"
                     >
                       <FileText className="w-4 h-4" /> Exportar Relatório
                     </button>
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
+                    <div id="export-dropdown" style={{ display: 'none' }} className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden">
                       {(() => {
                         const validateAndGetSimulacao = () => {
                           const container = document.getElementById("areaSimulacao");
@@ -154,12 +171,18 @@ const App: React.FC = () => {
                           return data;
                         };
 
+                        const closeMenu = () => {
+                          const el = document.getElementById('export-dropdown');
+                          if (el) el.style.display = 'none';
+                        };
+
                         return (
                           <>
                             <button 
                               onClick={() => {
+                                closeMenu();
                                 const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFVisual(data, "areaSimulacao"));
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFEstudoVisual(data));
                               }}
                               className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
                             >
@@ -167,8 +190,9 @@ const App: React.FC = () => {
                             </button>
                             <button 
                               onClick={() => {
+                                closeMenu();
                                 const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProva(data, "areaSimulacao"));
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProvaVisual(data));
                               }}
                               className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
                             >
@@ -176,8 +200,9 @@ const App: React.FC = () => {
                             </button>
                             <button 
                               onClick={() => {
+                                closeMenu();
                                 const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabarito(data, "areaSimulacao"));
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabaritoVisual(data));
                               }}
                               className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700"
                             >
@@ -190,6 +215,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+
             </div>
 
             {/* Main Content Area */}

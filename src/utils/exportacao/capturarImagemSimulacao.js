@@ -11,19 +11,7 @@ export const capturarImagemSimulacao = async (elementId) => {
       scale: 3, 
       useCORS: true, 
       logging: false, 
-      backgroundColor: '#ffffff',
-      ignoreElements: (el) => {
-        // Ignora botões interativos e overlays da interface gráfica
-        if (el.tagName === 'BUTTON') return true;
-        if (el.classList && (
-             el.classList.contains('canvas-ui-overlay') ||
-             el.classList.contains('bg-white/75') || // Tab header fallback
-             el.getAttribute('title')
-           )) {
-          return true;
-        }
-        return false;
-      }
+      backgroundColor: '#ffffff'
     });
 
     return canvas.toDataURL('image/jpeg', 0.85);

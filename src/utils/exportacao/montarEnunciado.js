@@ -1,34 +1,34 @@
-export const montarDescricaoGeometria = (dados) => {
-  const dim = dados.dimensoes || {};
-  const formatMeters = (cm) => (Number(cm) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m';
+import { obterDimensoesLimpas } from './formatarDadosSimulacao';
 
-  const dim1 = dim['Aresta/Raio (cm)'] || dim['Aresta/Raio'] || dim['Base (m)'] || 0;
-  const dim2 = dim['Comprimento (cm)'] || dim['Comprimento'] || dim['Altura (m)'] || 0;
+export const montarEnunciado = (simulacao) => {
+  const dimensoes = obterDimensoesLimpas(simulacao);
+  const densidadeObj = Number(simulacao.densidadeObjeto || 0).toLocaleString('pt-BR');
+  const densidadeFluido = Number(simulacao.densidadeFluido || 0).toLocaleString('pt-BR');
+  
+  let textoGeometria = '';
+  const geo = simulacao.geometria;
 
-  if (dados.tipo === 'corpos-imersos') {
-      if (dados.geometria === 'CUBE') return `um bloco cúbico de aresta ${formatMeters(dim1)}`;
-      if (dados.geometria === 'SPHERE') return `uma esfera de raio ${formatMeters(dim1)}`;
-      if (dados.geometria === 'CYLINDER') return `um cilindro de raio ${formatMeters(dim1)} e altura ${formatMeters(dim2)}`;
-      if (dados.geometria === 'RECT' || dados.geometria === 'CUBOID') return `um paralelepípedo de seção quadrática de aresta da base ${formatMeters(dim1)} e altura ${formatMeters(dim2)}`;
-      return `um bloco de aresta ${formatMeters(dim1)}`;
+  if (geo === 'CUBE') {
+    const aresta = dimensoes.find(d => d.label.includes('Aresta'))?.value || '1,00 m';
+    textoGeometria = `Um bloco cúbico de aresta **${aresta}**`;
+  } else if (geo === 'SPHERE') {
+    const raio = dimensoes.find(d => d.label.includes('Raio'))?.value || '0,50 m';
+    textoGeometria = `Uma esfera de raio **${raio}**`;
+  } else if (geo === 'CYLINDER') {
+    const raio = dimensoes.find(d => d.label.includes('Raio'))?.value || '0,50 m';
+    const altura = dimensoes.find(d => d.label.includes('Altura'))?.value || '1,00 m';
+    textoGeometria = `Um cilindro de raio **${raio}** e altura **${altura}**`;
+  } else {
+    // Paralelepípedo ou genérico
+    const largura = dimensoes.find(d => d.label.includes('Largura'))?.value || '1,00 m';
+    const comprimento = dimensoes.find(d => d.label.includes('Comprimento'))?.value || '1,00 m';
+    const l = largura.replace(' m', '');
+    const c = comprimento.replace(' m', '');
+    textoGeometria = `Um paralelepípedo de dimensões **${l} m × ${l} m × ${c} m**`;
   }
 
-  if (dados.tipo === 'barragens') {
-      return `uma ${dados.geometria.toLowerCase()} de altura ${Number(dim2).toLocaleString('pt-BR')} m e base ${Number(dim1).toLocaleString('pt-BR')} m`;
-  }
-  if (dados.tipo === 'comportas') {
-      return `uma comporta`;
-  }
+  // Se tiver peso extra
+  const pesoExtraStr = simulacao.pesoExtra > 0 ? ` e uma carga adicional de **${simulacao.pesoExtra} N** no topo` : '';
 
-  return `um objeto avaliado nas dimensões da simulação`;
-};
-
-export const montarEnunciado = (dados) => {
-  const descricao = montarDescricaoGeometria(dados);
-
-  if (dados.tipo === 'corpos-imersos') {
-    return `Um ${descricao.substring(3)} e densidade de ${dados.densidadeObjetoFmt} é colocado em um recipiente contendo um fluido de densidade ${dados.densidadeFluidoFmt}. Considerando a aceleração da gravidade g = ${dados.gravidade}, determine:`;
-  }
-
-  return `Considere um sistema físico contendo ${descricao}, onde atua um fluido de densidade ${dados.densidadeFluidoFmt}. Considerando a aceleração da gravidade g = ${dados.gravidade}, analise as propriedades:`;
+  return `${textoGeometria} e densidade de **${densidadeObj} kg/m³** é colocado${pesoExtraStr} em um recipiente contendo um fluido de densidade **${densidadeFluido} kg/m³**. Considerando a aceleração da gravidade **g = 9,81 m/s²**, determine:`;
 };

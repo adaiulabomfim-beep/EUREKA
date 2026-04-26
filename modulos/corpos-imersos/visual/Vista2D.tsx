@@ -60,6 +60,9 @@ interface Vista2DProps {
   obj2Color?: string;
   extraWeight?: number;
 
+  shape2?: ObjectShape;
+  visualWidth2?: number;
+
   pan?: { x: number; y: number };
 }
 
@@ -189,6 +192,8 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   cordLength_visual = 0,
   obj2Color = '#475569',
   extraWeight = 0,
+  shape2 = ObjectShape.CUBE,
+  visualWidth2 = 0,
 }) => {
   const clipId = useId().replace(/:/g, '');
   const clipUnderWaterId = `clip-under-water-${clipId}`;
@@ -230,19 +235,6 @@ export const Vista2D: React.FC<Vista2DProps> = ({
 
   return (
     <div className="relative w-full h-full">
-      {onToggleCenterOfBuoyancy && (
-        <div className="absolute top-4 right-4 flex gap-2 z-30" onMouseDown={(e) => e.stopPropagation()}>
-          <button
-            onClick={onToggleCenterOfBuoyancy}
-            className={`bg-white/85 p-2 rounded-full shadow-md border border-blue-100/70 backdrop-blur ${
-              showCenterOfBuoyancy ? 'text-blue-600' : 'text-slate-400'
-            }`}
-            title="Mostrar Centro de Carena"
-          >
-            <BoxIcon className="w-4 h-4" />
-          </button>
-        </div>
-      )}
       <svg
         width="100%"
         height="100%"
@@ -314,21 +306,49 @@ export const Vista2D: React.FC<Vista2DProps> = ({
 
       {/* Bloco 2 (Sempre submerso visualmente se houver equilíbrio) */}
       {twoBlocks && (
-        <g transform={`translate(${cx - visualWidth / 2}, ${cy + visualHeight + cordLength_visual})`}>
-          <rect
-            width={visualWidth}
-            height={H2_visual}
-            fill={obj2Color}
-            stroke={OBJECT_BORDER_COLOR}
-            strokeWidth="1"
-            opacity="0.9"
-          />
-          <rect
-            width={visualWidth}
-            height={H2_visual}
-            fill="url(#sphereLight)"
-            opacity="0.2"
-          />
+        <g transform={`translate(${cx}, ${cy + visualHeight + cordLength_visual})`}>
+          {shape2 === ObjectShape.SPHERE ? (
+            <>
+              <circle
+                cx={0}
+                cy={H2_visual / 2}
+                r={visualWidth2 / 2}
+                fill={obj2Color}
+                stroke={OBJECT_BORDER_COLOR}
+                strokeWidth="1"
+                opacity="0.9"
+              />
+              <circle
+                cx={0}
+                cy={H2_visual / 2}
+                r={visualWidth2 / 2}
+                fill="url(#sphereLight)"
+                opacity="0.2"
+              />
+              <text x={0} y={H2_visual / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontWeight="bold" fontSize={Math.max(12, visualWidth2/3)}>B</text>
+            </>
+          ) : (
+            <>
+              <rect
+                x={-visualWidth2 / 2}
+                y={0}
+                width={visualWidth2}
+                height={H2_visual}
+                fill={obj2Color}
+                stroke={OBJECT_BORDER_COLOR}
+                strokeWidth="1"
+                opacity="0.9"
+              />
+              <rect
+                x={-visualWidth2 / 2}
+                y={0}
+                width={visualWidth2}
+                height={H2_visual}
+                fill="url(#sphereLight)"
+                opacity="0.2"
+              />
+            </>
+          )}
         </g>
       )}
 
@@ -366,6 +386,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
               fill="url(#sphereLight)"
               stroke="none"
             />
+            <text x={cx} y={cy + visualHeight / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontWeight="bold" fontSize={Math.max(12, visualWidth/3)}>A</text>
           </>
         ) : (
           <>
@@ -427,6 +448,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
               stroke="none"
               pointerEvents="none"
             />
+            <text x={cx} y={cy + visualHeight / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontWeight="bold" fontSize={Math.max(12, visualWidth/3)}>A</text>
           </>
         ) : (
           <>
@@ -484,35 +506,24 @@ export const Vista2D: React.FC<Vista2DProps> = ({
 
           {showBuoyancyVector && (
             <>
-              {/* Empuxo (E) - Abaixo do bloco apontando para cima */}
+              {/* Empuxo (E) - Abaixo do bloco (ou do bloco 2) apontando para cima */}
               <line
                 x1={cx}
-                y1={cy + visualHeight + arrowLenE}
+                y1={cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0) + arrowLenE}
                 x2={cx}
-                y2={cy + visualHeight}
+                y2={cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0)}
                 stroke="#16a34a"
                 strokeWidth="3"
                 markerEnd={`url(#${arrowGreenId})`}
               />
-              <circle cx={cx} cy={cy + visualHeight} r={3} fill="#16a34a" />
-              <g transform={`translate(${cx + 10}, ${cy + visualHeight + arrowLenE / 2})`}>
+              <circle cx={cx} cy={cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0)} r={3} fill="#16a34a" />
+              <g transform={`translate(${cx + 10}, ${cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0) + arrowLenE / 2})`}>
                 <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
                 <text x="12" y="4" textAnchor="middle" fill="#16a34a" fontSize="12" fontWeight="bold">
                   E
                 </text>
               </g>
             </>
-          )}
-
-          {showCenterOfBuoyancy && h_sub_actual > 0.001 && (
-            <circle
-              cx={centerOfBuoyancy.x}
-              cy={centerOfBuoyancy.y}
-              r={6}
-              fill="white"
-              stroke="#16a34a"
-              strokeWidth="2"
-            />
           )}
         </g>
       )}

@@ -9,7 +9,8 @@ export const criarFace = (
   normal?: Point3D,
   kind: "DAM" | "WATER" | "GATE" = "DAM",
   hatchPattern?: string,
-  priority: number = 0
+  priority: number = 0,
+  holes3?: Point3D[][]
 ): WorldFace => ({
   pts3,
   fill,
@@ -20,7 +21,47 @@ export const criarFace = (
   kind,
   hatchPattern,
   priority,
+  holes3,
 });
+
+export const criarTubo = (
+  holeFront: Point3D[],
+  holeBack: Point3D[],
+  matColor: string,
+  matStroke: string,
+  matPattern?: string,
+  priority: number = 2
+): WorldFace[] => {
+  const faces: WorldFace[] = [];
+  if (!holeFront || !holeBack || holeFront.length !== holeBack.length || holeFront.length < 3) return faces;
+
+  for (let i = 0; i < holeFront.length; i++) {
+    const nextI = (i + 1) % holeFront.length;
+    const p1F = holeFront[i];
+    const p2F = holeFront[nextI];
+    const p1B = holeBack[i];
+    const p2B = holeBack[nextI];
+
+    // Calcula a normal apontando para "dentro" do túnel
+    const dx1 = p2F.x - p1F.x;
+    const dy1 = p2F.y - p1F.y;
+    const dz1 = p2F.z - p1F.z;
+    const dx2 = p1B.x - p1F.x;
+    const dy2 = p1B.y - p1F.y;
+    const dz2 = p1B.z - p1F.z;
+    let nx = dy1 * dz2 - dz1 * dy2;
+    let ny = dz1 * dx2 - dx1 * dz2;
+    let nz = dx1 * dy2 - dy1 * dx2;
+    const len = Math.hypot(nx, ny, nz);
+    if (len > 0) { nx /= len; ny /= len; nz /= len; }
+
+    faces.push(criarFace(
+      [p1F, p2F, p2B, p1B],
+      matColor, 1, matStroke, 1, { x: nx, y: ny, z: nz }, 'DAM', matPattern, priority
+    ));
+  }
+  return faces;
+};
 
 export const criarPrisma = (
   profile: { x: number; y: number }[],
@@ -136,9 +177,12 @@ export const caixaAgua3D = (
   toWorldX: (x: number) => number,
   offsetFn?: (z: number) => number,
   fillId: "A" | "B" = "A",
-  stepsZ?: number
+  stepsZ?: number,
+  floorY: number = 0
 ): WorldFace[] => {
   const faces: WorldFace[] = [];
+
+  if (waterLevelY <= floorY) return faces;
 
   const steps = stepsZ !== undefined ? stepsZ : 1;
   const dz = depth / steps;
@@ -165,25 +209,25 @@ export const caixaAgua3D = (
     const z1 = zStart + s * dz;
     const z2 = zStart + (s + 1) * dz;
 
-    const xC1_y0 = getContactX(0, z1);
+    const xC1_y0 = getContactX(floorY, z1);
     const xC1_yW = getContactX(waterLevelY, z1);
-    const xC2_y0 = getContactX(0, z2);
+    const xC2_y0 = getContactX(floorY, z2);
     const xC2_yW = getContactX(waterLevelY, z2);
 
     const offset = damFaceSide === "UPSTREAM" ? 0.05 : -0.05;
 
     const contactWallPts = damFaceSide === "UPSTREAM"
         ? [
-            { x: xC1_y0 + offset, y: 0, z: z1 },
+            { x: xC1_y0 + offset, y: floorY, z: z1 },
             { x: xC1_yW + offset, y: waterLevelY, z: z1 },
             { x: xC2_yW + offset, y: waterLevelY, z: z2 },
-            { x: xC2_y0 + offset, y: 0, z: z2 },
+            { x: xC2_y0 + offset, y: floorY, z: z2 },
           ]
         : [
-            { x: xC2_y0 + offset, y: 0, z: z2 },
+            { x: xC2_y0 + offset, y: floorY, z: z2 },
             { x: xC2_yW + offset, y: waterLevelY, z: z2 },
             { x: xC1_yW + offset, y: waterLevelY, z: z1 },
-            { x: xC1_y0 + offset, y: 0, z: z1 },
+            { x: xC1_y0 + offset, y: floorY, z: z1 },
           ];
 
     faces.push(
@@ -196,21 +240,21 @@ export const caixaAgua3D = (
     const z1 = zStart + s * dz;
     const z2 = zStart + (s + 1) * dz;
     
-    const cx1 = getContactX(0, z1);
-    const cx2 = getContactX(0, z2);
+    const cx1 = getContactX(floorY, z1);
+    const cx2 = getContactX(floorY, z2);
 
     const pts = damFaceSide === "UPSTREAM"
       ? [
-          { x: farWorldX, y: 0, z: z2 },
-          { x: cx2, y: 0, z: z2 },
-          { x: cx1, y: 0, z: z1 },
-          { x: farWorldX, y: 0, z: z1 },
+          { x: farWorldX, y: floorY, z: z2 },
+          { x: cx2, y: floorY, z: z2 },
+          { x: cx1, y: floorY, z: z1 },
+          { x: farWorldX, y: floorY, z: z1 },
         ]
       : [
-          { x: farWorldX, y: 0, z: z1 },
-          { x: cx1, y: 0, z: z1 },
-          { x: cx2, y: 0, z: z2 },
-          { x: farWorldX, y: 0, z: z2 },
+          { x: farWorldX, y: floorY, z: z1 },
+          { x: cx1, y: floorY, z: z1 },
+          { x: cx2, y: floorY, z: z2 },
+          { x: farWorldX, y: floorY, z: z2 },
         ];
 
     faces.push(
@@ -226,43 +270,43 @@ export const caixaAgua3D = (
     const farWallPts =
       damFaceSide === "UPSTREAM"
         ? [
-            { x: farWorldX, y: 0, z: z2 },
+            { x: farWorldX, y: floorY, z: z2 },
             { x: farWorldX, y: waterLevelY, z: z2 },
             { x: farWorldX, y: waterLevelY, z: z1 },
-            { x: farWorldX, y: 0, z: z1 },
+            { x: farWorldX, y: floorY, z: z1 },
           ]
         : [
-            { x: farWorldX, y: 0, z: z1 },
+            { x: farWorldX, y: floorY, z: z1 },
             { x: farWorldX, y: waterLevelY, z: z1 },
             { x: farWorldX, y: waterLevelY, z: z2 },
-            { x: farWorldX, y: 0, z: z2 },
+            { x: farWorldX, y: floorY, z: z2 },
           ];
 
     faces.push(
-      criarFace(farWallPts, fill, waterVolumeOpacity, "none", 0, { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 }, "WATER", undefined, 0)
+      criarFace(farWallPts, fill, waterVolumeOpacity, "none", 0, { x: damFaceSide === "UPSTREAM" ? -1 : 1, y: 0, z: 0 }, "WATER", undefined, 4)
     );
   }
 
   // 4. Trás e Frente
   const zBack = zStart;
   const backPts = [
-    { x: farWorldX, y: 0, z: zBack },
-    { x: getContactX(0, zBack), y: 0, z: zBack },
+    { x: farWorldX, y: floorY, z: zBack },
+    { x: getContactX(floorY, zBack), y: floorY, z: zBack },
     { x: getContactX(waterLevelY, zBack), y: waterLevelY, z: zBack },
     { x: farWorldX, y: waterLevelY, z: zBack }
   ];
   if (damFaceSide === "UPSTREAM") backPts.reverse();
-  faces.push(criarFace(backPts, fill, waterVolumeOpacity, "none", 0, { x: 0, y: 0, z: -1 }, "WATER", undefined, 0));
+  faces.push(criarFace(backPts, fill, waterVolumeOpacity, "none", 0, { x: 0, y: 0, z: -1 }, "WATER", undefined, 4));
 
   const zFront = zStart + depth;
   const frontPts = [
-    { x: farWorldX, y: 0, z: zFront },
-    { x: getContactX(0, zFront), y: 0, z: zFront },
+    { x: farWorldX, y: floorY, z: zFront },
+    { x: getContactX(floorY, zFront), y: floorY, z: zFront },
     { x: getContactX(waterLevelY, zFront), y: waterLevelY, z: zFront },
     { x: farWorldX, y: waterLevelY, z: zFront }
   ];
   if (damFaceSide === "DOWNSTREAM") frontPts.reverse();
-  faces.push(criarFace(frontPts, fill, waterVolumeOpacity, "none", 0, { x: 0, y: 0, z: 1 }, "WATER", undefined, 0));
+  faces.push(criarFace(frontPts, fill, waterVolumeOpacity, "none", 0, { x: 0, y: 0, z: 1 }, "WATER", undefined, 4));
 
   // 5. Superfície da Água
   for (let s = 0; s < steps; s++) {
@@ -288,7 +332,7 @@ export const caixaAgua3D = (
 
     faces.push(
       // Aplicamos a cor da superfície + hatch das ondinhas para padronizar perfeitamente com os corpos imersos!
-      criarFace(pts, surfColor, waterVolumeOpacity, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", ripplePattern, 0)
+      criarFace(pts, surfColor, waterVolumeOpacity, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", ripplePattern, 4)
     );
   }
 

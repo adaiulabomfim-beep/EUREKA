@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { formatarDadosSimulacao, adicionarCabecalhoAcademico, adicionarImagemSimulacaoNoPDF } from './formatarDadosSimulacao';
 import { montarEnunciado } from './montarEnunciado';
+import { forcarDownloadPDF } from './forcarDownloadPDF';
 
 export const gerarPDFProva = async (simulacao, elementId = 'areaSimulacao') => {
   const dados = formatarDadosSimulacao(simulacao);
@@ -69,5 +70,5 @@ export const gerarPDFProva = async (simulacao, elementId = 'areaSimulacao') => {
 
   pdf.roundedRect(20, startY, 170, boxHeight, 3, 3, 'FD');
 
-  pdf.save(`Prova_Empuxo_${new Date().getTime()}.pdf`);
+  forcarDownloadPDF(pdf, `Prova_Empuxo_${new Date().getTime()}.pdf`);
 };
