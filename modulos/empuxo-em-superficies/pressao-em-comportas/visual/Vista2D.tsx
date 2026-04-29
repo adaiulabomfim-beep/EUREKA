@@ -50,6 +50,46 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     return ORIGIN_X;
   };
 
+  const gateWidth = props.gateWidth * SCALE;
+  const gateHeight = props.gateHeight * SCALE;
+  const gateTopY = ORIGIN_Y - (props.upstreamLevel - props.gateDepthFromCrest) * SCALE;
+  const gateTopX = getWallX(gateTopY);
+  const gateAngleRad = (props.gateInclination * Math.PI) / 180;
+  const gateBottomX = gateTopX + Math.cos(gateAngleRad) * gateHeight;
+  const gateBottomY = gateTopY + Math.sin(gateAngleRad) * gateHeight;
+
+  // The wall is now rendered as two pieces: top block and bottom block to leave a hole.
+  // Assumes a vertical wall for simplicity in 2D section.
+  const wallTopBlock = {
+    id: 'wall-top',
+    kind: 'DAM',
+    pts: [
+      { x: ORIGIN_X, y: gateTopY },
+      { x: ORIGIN_X + wallBaseWidth, y: gateTopY },
+      { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y - wallHeight },
+      { x: ORIGIN_X + dxTop, y: ORIGIN_Y - wallHeight },
+    ],
+    fill: 'url(#concretePattern)',
+    stroke: '#6b7280',
+    strokeWidth: 1.2,
+    opacity: 1,
+  };
+
+  const wallBottomBlock = {
+    id: 'wall-bottom',
+    kind: 'DAM',
+    pts: [
+      { x: ORIGIN_X, y: ORIGIN_Y },
+      { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
+      { x: ORIGIN_X + wallBaseWidth, y: gateBottomY },
+      { x: ORIGIN_X, y: gateBottomY },
+    ],
+    fill: 'url(#concretePattern)',
+    stroke: '#6b7280',
+    strokeWidth: 1.2,
+    opacity: 1,
+  };
+
   const renderedFaces: any[] = [
     {
       id: 'earth-base',
@@ -66,20 +106,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       hatchPattern: 'url(#earthPattern)',
       opacity: 1,
     },
-    {
-      id: 'wall',
-      kind: 'DAM',
-      pts: [
-        { x: ORIGIN_X, y: ORIGIN_Y },
-        { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
-        { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y - wallHeight },
-        { x: ORIGIN_X + dxTop, y: ORIGIN_Y - wallHeight },
-      ],
-      fill: 'url(#concretePattern)',
-      stroke: '#6b7280',
-      strokeWidth: 1.2,
-      opacity: 1,
-    },
+    wallBottomBlock,
+    wallTopBlock,
     {
       id: 'water-up',
       kind: 'WATER_UP',
@@ -177,17 +205,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   }
 
   if (props.hasGate) {
-    const gateWidth = props.gateWidth * SCALE;
-    const gateHeight = props.gateHeight * SCALE;
-    // Surface is at ORIGIN_Y - (upstreamLevel * SCALE)
-    const gateTopY = ORIGIN_Y - (props.upstreamLevel - props.gateDepthFromCrest) * SCALE;
-    const gateTopX = getWallX(gateTopY);
-    const gateAngleRad = (props.gateInclination * Math.PI) / 180;
-    
-    const gateBottomX = gateTopX + Math.cos(gateAngleRad) * gateHeight;
-    const gateBottomY = gateTopY + Math.sin(gateAngleRad) * gateHeight;
-
-
     renderedFaces.push({
       id: 'gate',
       pts: [
@@ -272,6 +289,43 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         isResultant: true,
         val: `${(props.force / 1000).toFixed(1)} kN`
       });
+    }
+  } else {
+    // Rendereiza comporta levantada
+    const liftY = gateHeight * 1.1;
+    renderedFaces.push({
+      id: 'gate-open',
+      pts: [
+        { x: gateTopX, y: gateTopY - liftY },
+        { x: gateBottomX, y: gateBottomY - liftY },
+        { x: gateBottomX - Math.sin(gateAngleRad) * 5, y: gateBottomY - Math.cos(gateAngleRad) * 5 - liftY },
+        { x: gateTopX - Math.sin(gateAngleRad) * 5, y: gateTopY - Math.cos(gateAngleRad) * 5 - liftY },
+      ],
+      fill: 'url(#metalLinear)',
+      stroke: '#1e293b',
+      strokeWidth: 1,
+      opacity: 1,
+    });
+
+    // Renderiza fluxo de água passando
+    const waterTop = Math.min(ORIGIN_Y - props.upstreamLevel * SCALE, gateTopY);
+    if (ORIGIN_Y - props.upstreamLevel * SCALE < ORIGIN_Y) {
+      if (waterTop < ORIGIN_Y) {
+        renderedFaces.push({
+          id: 'water-flow',
+          kind: 'WATER',
+          pts: [
+            { x: ORIGIN_X, y: waterTop },
+            { x: ORIGIN_X + wallBaseWidth, y: waterTop },
+            { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
+            { x: ORIGIN_X, y: ORIGIN_Y },
+          ],
+          fill: 'url(#fluidDepthA)',
+          stroke: 'none',
+          strokeWidth: 0,
+          opacity: 1,
+        });
+      }
     }
   }
 

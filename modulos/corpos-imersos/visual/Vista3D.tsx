@@ -59,6 +59,8 @@ interface Vista3DProps {
   cordLength_visual?: number;
   obj2Color?: string;
   extraWeight?: number;
+  shape2?: ObjectShape;
+  visualWidth2?: number;
 }
 
 type FaceDef = {

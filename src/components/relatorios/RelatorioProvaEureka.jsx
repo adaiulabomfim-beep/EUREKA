@@ -20,13 +20,13 @@ import { LogoEureka } from '../ui/LogoEureka';
 
 /* ─────────────────────────────────────────────
    SectionTitle
-   FIX: flex + h-[24px] + items-center — ícone e
+   FIX: flex + items-center — ícone e
         texto sempre no centro vertical da linha.
 ───────────────────────────────────────────── */
 const SectionTitle = ({ icon: Icon, children, number }) => (
-  <div className="mb-[8px] flex h-[24px] items-center gap-[6px] border-b border-[#dbe8f7] pb-[7px]">
-    {Icon && <Icon size={16} strokeWidth={2.3} className="shrink-0 text-[#3478f6]" />}
-    <h3 className="m-0 text-[12px] font-black uppercase leading-none tracking-[0.5px] text-[#23477f]">
+  <div className="mb-[8px] flex items-center gap-[6px] border-b border-[#dbe8f7] pb-[7px]">
+    {Icon && <Icon size={16} strokeWidth={2.3} className="shrink-0 text-[#3478f6] translate-y-[-1px]" />}
+    <h3 className="m-0 flex items-center pt-[2px] text-[12px] font-black uppercase leading-none tracking-[0.5px] text-[#23477f]">
       {number ? `${number}. ` : ''}{children}
     </h3>
   </div>

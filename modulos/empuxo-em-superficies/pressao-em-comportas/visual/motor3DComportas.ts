@@ -16,6 +16,7 @@ export interface WorldFace {
   kind: 'DAM' | 'WATER' | 'GATE';
   hatchPattern?: string;
   priority?: number;
+  holes3?: Point3D[][];
 }
 
 export interface Face {
@@ -31,6 +32,7 @@ export interface Face {
   id: number;
   priority: number;
   normal?: Point3D;
+  holes?: { x: number; y: number }[][];
 }
 
 export const useSceneEngine = (
@@ -322,6 +324,7 @@ export const useSceneEngine = (
       }
 
       let hatchPattern = wf.hatchPattern;
+      let projectedHoles = wf.holes3 ? wf.holes3.map(hole => hole.map(project)) : undefined;
 
       projected.push({
         id: index,
@@ -336,6 +339,7 @@ export const useSceneEngine = (
         hatchPattern,
         priority: wf.priority ?? 0,
         normal: wf.normal,
+        holes: projectedHoles ? projectedHoles.map(h => h.map(p => ({ x: p.x, y: p.y }))) : undefined
       });
     });
 

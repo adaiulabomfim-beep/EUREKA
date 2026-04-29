@@ -89,14 +89,6 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       { x: getFaceX(floorY), y: floorY }
     ];
 
-    // 2. PILARES LATERAIS MACIÇOS — mesmo estilo concreto do Barragens
-    geometry.push(...criarPrisma(
-      pillarProfile, sideWallWidth, '#a3a3a3', 1, '#6b7280', 1.2, 'DAM', undefined, leftWallZOffset, 'url(#concretePattern)', toWorldX, 2, 1, 1
-    ));
-    geometry.push(...criarPrisma(
-      pillarProfile, sideWallWidth, '#a3a3a3', 1, '#6b7280', 1.2, 'DAM', undefined, rightWallZOffset, 'url(#concretePattern)', toWorldX, 2, 1, 1
-    ));
-
     const H = props.gateHeight;
     const W = props.gateWidth;
     
@@ -142,11 +134,8 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       return pts;
     };
 
-    let holeFront, holeBack;
-    if (props.hasGate) {
-      holeFront = genHoleSafe(getFaceX);
-      holeBack = genHoleSafe(getBackX);
-    }
+    let holeFront = genHoleSafe(getFaceX);
+    let holeBack = genHoleSafe(getBackX);
 
     const zStart = -reservoirWidth / 2;
     const zEnd = reservoirWidth / 2;
@@ -172,7 +161,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       { x: pUp_bot.x, y: pUp_bot.y, z: zEnd },
       { x: pUp_bot.x, y: pUp_bot.y, z: zStart }
     ];
-    geometry.push(criarFace(upstreamFacePts, matColor, 1, matStroke, 1.2, { x: -Math.sin(thetaRad), y: Math.cos(thetaRad), z: 0 }, 'DAM', matPattern, 2, holeFront ? [holeFront] : undefined));
+    geometry.push(criarFace(upstreamFacePts, matColor, 1, matStroke, 1.2, { x: -Math.sin(thetaRad), y: Math.cos(thetaRad), z: 0 }, 'DAM', matPattern, 2, [holeFront]));
 
     const downstreamFacePts = [
       { x: pDown_top.x, y: pDown_top.y, z: zEnd },
@@ -180,7 +169,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       { x: pDown_bot.x, y: pDown_bot.y, z: zStart },
       { x: pDown_bot.x, y: pDown_bot.y, z: zEnd }
     ];
-    geometry.push(criarFace(downstreamFacePts, matColor, 1, matStroke, 1.2, { x: 1, y: 0, z: 0 }, 'DAM', matPattern, 2, holeBack ? [holeBack] : undefined));
+    geometry.push(criarFace(downstreamFacePts, matColor, 1, matStroke, 1.2, { x: 1, y: 0, z: 0 }, 'DAM', matPattern, 2, [holeBack]));
 
     const leftFacePts = [
       { x: pDown_top.x, y: pDown_top.y, z: zStart },
@@ -198,14 +187,42 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
     ];
     geometry.push(criarFace(rightFacePts, matColor, 1, matStroke, 1.2, { x: 0, y: 0, z: 1 }, 'DAM', matPattern, 2));
 
-    if (props.hasGate && holeFront && holeBack) {
-      geometry.push(...criarTubo(holeFront, holeBack, matColor, matStroke, matPattern, 2));
+    geometry.push(...criarTubo(holeFront, holeBack, matColor, matStroke, matPattern, 2));
 
+    if (props.hasGate) {
       const gatePtsFront = holeFront.map(p => ({ x: p.x - 0.03, y: p.y, z: p.z }));
       geometry.push(criarFace(gatePtsFront, 'url(#metalLinear)', 1, '#1e293b', 1.5, { x: -Math.sin(thetaRad), y: Math.cos(thetaRad), z: 0 }, 'GATE', undefined, 3));
       
       const gatePtsBack = holeFront.map(p => ({ x: p.x - 0.01, y: p.y, z: p.z })).reverse();
       geometry.push(criarFace(gatePtsBack, '#475569', 1, '#1e293b', 1.5, { x: 1, y: 0, z: 0 }, 'GATE', undefined, 3));
+    } else {
+      // Comporta aberta: levantada
+      const lift = props.gateHeight * 1.1; // levanta 10% a mais que sua altura
+      const gatePtsFront = holeFront.map(p => ({ x: p.x - 0.03, y: p.y + lift, z: p.z }));
+      geometry.push(criarFace(gatePtsFront, 'url(#metalLinear)', 1, '#1e293b', 1.5, { x: -Math.sin(thetaRad), y: Math.cos(thetaRad), z: 0 }, 'GATE', undefined, 3));
+      
+      const gatePtsBack = holeFront.map(p => ({ x: p.x - 0.01, y: p.y + lift, z: p.z })).reverse();
+      geometry.push(criarFace(gatePtsBack, '#475569', 1, '#1e293b', 1.5, { x: 1, y: 0, z: 0 }, 'GATE', undefined, 3));
+      
+      // Água atravessando o vão (lâmina d'água)
+      // Apenas renderiza fluxo se o nível de montante for suficiente
+      if (props.upstreamLevel > floorY) {
+         // Clipa a água pelo topo da comporta, ou usa o nível de montante, o que for menor
+         const waterTop = Math.min(props.upstreamLevel, gateTopY);
+         if (waterTop > floorY) {
+             const flowFront = holeFront.map(p => {
+                 const newY = Math.min(p.y, waterTop);
+                 return { x: getFaceX(newY), y: newY, z: p.z };
+             });
+             const flowBack = holeBack.map(p => {
+                 const newY = Math.min(p.y, waterTop);
+                 return { x: getBackX(newY), y: newY, z: p.z };
+             });
+             
+             // Cria as faces do fluxo de água
+             geometry.push(...criarTubo(flowFront, flowBack, "url(#fluidDepthA)", "none", undefined, 4));
+         }
+      }
     }
 
     // 7. ÁGUA MONTANTE E JUSANTE

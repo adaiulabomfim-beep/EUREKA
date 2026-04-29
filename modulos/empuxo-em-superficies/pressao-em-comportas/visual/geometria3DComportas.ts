@@ -49,9 +49,9 @@ export const criarTubo = (
     const dx2 = p1B.x - p1F.x;
     const dy2 = p1B.y - p1F.y;
     const dz2 = p1B.z - p1F.z;
-    let nx = dy1 * dz2 - dz1 * dy2;
-    let ny = dz1 * dx2 - dx1 * dz2;
-    let nz = dx1 * dy2 - dy1 * dx2;
+    let nx = -(dy1 * dz2 - dz1 * dy2);
+    let ny = -(dz1 * dx2 - dx1 * dz2);
+    let nz = -(dx1 * dy2 - dy1 * dx2);
     const len = Math.hypot(nx, ny, nz);
     if (len > 0) { nx /= len; ny /= len; nz /= len; }
 
