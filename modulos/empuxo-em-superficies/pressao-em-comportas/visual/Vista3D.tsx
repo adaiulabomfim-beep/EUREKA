@@ -120,11 +120,8 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
          }
       } else if (gateShapeStr.includes('SEMI')) {
          const steps = 16;
-         const r = H / 2;
-         const yBot = gateBotY;
-         pts.push({ x: fn(yBot), y: yBot, z: -r });
-         pts.push({ x: fn(yBot), y: yBot, z: r });
-         for (let i = 0; i <= steps; i++) {
+         const r = H;
+         for (let i = steps; i >= 0; i--) {
            const angle = (i / steps) * Math.PI;
            const lY = gateBotY + r * Math.sin(angle) * Math.sin(thetaRad);
            const lZ = r * Math.cos(angle);

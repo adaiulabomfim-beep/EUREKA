@@ -200,16 +200,44 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
-                      <div>
-                          <label className={labelClass}>Altura/Comp. (m)</label>
-                          <NumberInput value={config.comporta.altura} onChange={props.handleHeightChange} min={0.1} max={props.maxGateHeight} step={0.1} />
+                  {config.comporta.forma === FormaComporta.RETANGULAR && (
+                      <div className="grid grid-cols-2 gap-3">
+                          <div>
+                              <label className={labelClass}>Altura/Comp. (m)</label>
+                              <NumberInput value={config.comporta.altura} onChange={props.handleHeightChange} min={0.1} max={props.maxGateHeight} step={0.1} />
+                          </div>
+                          <div>
+                              <label className={labelClass}>Largura (m)</label>
+                              <NumberInput value={config.comporta.largura} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, largura: val}}))} min={0.1} max={100} step={0.1} />
+                          </div>
                       </div>
-                      <div>
-                          <label className={labelClass}>Largura (m)</label>
-                          <NumberInput value={config.comporta.largura} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, largura: val}}))} min={0.1} max={100} step={0.1} disabled={config.comporta.forma !== FormaComporta.RETANGULAR} />
+                  )}
+
+                  {config.comporta.forma === FormaComporta.CIRCULAR && (
+                      <div className="grid grid-cols-2 gap-3">
+                          <div>
+                              <label className={labelClass}>Diâmetro (m)</label>
+                              <NumberInput value={config.comporta.altura} onChange={props.handleHeightChange} min={0.1} max={props.maxGateHeight} step={0.1} />
+                          </div>
+                          <div>
+                              <label className={labelClass}>Raio (m)</label>
+                              <NumberInput value={parseFloat((config.comporta.altura / 2).toFixed(2))} onChange={(val) => props.handleHeightChange(val * 2)} min={0.05} max={props.maxGateHeight / 2} step={0.1} />
+                          </div>
                       </div>
-                  </div>
+                  )}
+
+                  {config.comporta.forma === FormaComporta.SEMI_CIRCULAR && (
+                      <div className="grid grid-cols-2 gap-3">
+                          <div>
+                              <label className={labelClass}>Diâmetro da Base (m)</label>
+                              <NumberInput value={parseFloat((config.comporta.altura * 2).toFixed(2))} onChange={(val) => props.handleHeightChange(val / 2)} min={0.2} max={props.maxGateHeight * 2} step={0.1} />
+                          </div>
+                          <div>
+                              <label className={labelClass}>Raio (m)</label>
+                              <NumberInput value={config.comporta.altura} onChange={props.handleHeightChange} min={0.1} max={props.maxGateHeight} step={0.1} />
+                          </div>
+                      </div>
+                  )}
 
                   <div>
                       <label className={labelClass}>Profundidade do Topo (h1)</label>
