@@ -5,8 +5,8 @@ import {
   UserRound,
   Cuboid,
   ListChecks,
-  Zap,
-  BarChart3,
+  HelpCircle,
+  ClipboardList,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -19,22 +19,13 @@ import { montarEnunciado } from '../../utils/exportacao/montarEnunciado';
 import { LogoEureka } from '../ui/LogoEureka';
 
 /* ─────────────────────────────────────────────
-   IconSlot
-───────────────────────────────────────────── */
-const IconSlot = ({ icon: Icon, size = 16 }) => (
-  <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
-    <Icon size={size} strokeWidth={2.3} className="block text-[#3478f6]" />
-  </span>
-);
-
-/* ─────────────────────────────────────────────
    SectionTitle
-   – flex com items-center: ícone e texto sempre
-     alinhados no centro vertical da linha.
+   FIX: flex + h-[24px] + items-center — ícone e
+        texto sempre no centro vertical da linha.
 ───────────────────────────────────────────── */
 const SectionTitle = ({ icon: Icon, children, number }) => (
-  <div className="mb-[8px] flex h-[24px] items-center gap-[7px] border-b border-[#dbe8f7] pb-[7px]">
-    {Icon ? <IconSlot icon={Icon} size={16} /> : <span className="w-[18px]" />}
+  <div className="mb-[8px] flex h-[24px] items-center gap-[6px] border-b border-[#dbe8f7] pb-[7px]">
+    {Icon && <Icon size={16} strokeWidth={2.3} className="shrink-0 text-[#3478f6]" />}
     <h3 className="m-0 text-[12px] font-black uppercase leading-none tracking-[0.5px] text-[#23477f]">
       {number ? `${number}. ` : ''}{children}
     </h3>
@@ -56,7 +47,10 @@ const Card = ({ children, className = '' }) => (
    InfoLine
    FIX 1 – items-end: label e underline ficam no
             mesmo baseline (linha não sobra acima).
-   FIX 2 – prop noLine: campo Data não exibe underline.
+   FIX 2 – removido justify-center no inner div.
+   FIX 3 – prop noLine: campo Data sem underline.
+   FIX 4 – shrink-0 no label para não comprimir
+            o underline.
 ───────────────────────────────────────────── */
 const InfoLine = ({ label, wide, value, noLine }) => (
   <div className={`${wide ? 'col-span-2' : ''} flex h-[26px] items-end gap-[6px]`}>
@@ -85,7 +79,8 @@ const InfoLine = ({ label, wide, value, noLine }) => (
 /* ─────────────────────────────────────────────
    DataRow
    FIX – flex + h fixo + items-center: conteúdo
-         sempre no centro vertical do card-row.
+         sempre no centro vertical do card-row;
+         shrink-0 no value evita compressão.
 ───────────────────────────────────────────── */
 const DataRow = ({ label, value }) => (
   <div className="flex h-[30px] items-center justify-between gap-[8px] rounded-[7px] border border-[#dce8f6] bg-[#fbfdff] px-[10px]">
@@ -99,68 +94,38 @@ const DataRow = ({ label, value }) => (
 );
 
 /* ─────────────────────────────────────────────
-   FormulaRow
-   FIX – flex + h fixo: fórmula centralizada
-         horizontal e verticalmente; sem corte
-         em sub/superscripts.
+   QuestionItem
+   FIX – items-start: letra e texto alinhados
+         pelo topo quando o texto quebra linha.
 ───────────────────────────────────────────── */
-const FormulaRow = ({ label, children }) => (
-  <div className="flex h-[40px] items-center rounded-[8px] bg-[#f8fbff] px-[10px]">
-    <span className="w-[112px] shrink-0 text-[10px] font-black leading-none text-[#2472ff]">
-      {label}
-    </span>
-    <div className="flex flex-1 items-center justify-center font-serif text-[14px] italic leading-[1.4] text-[#333]">
-      {children}
-    </div>
-  </div>
+const QuestionItem = ({ letter, children }) => (
+  <li className="grid grid-cols-[20px_1fr] items-start gap-[4px] text-[11.5px] font-semibold leading-[1.45] text-[#314b73]">
+    <span className="font-black leading-[1.45] text-[#1f6fff]">{letter})</span>
+    <span>{children}</span>
+  </li>
 );
 
 /* ─────────────────────────────────────────────
-   ResultRow
-   FIX – flex + h fixo: label e value centralizados
-         verticalmente; shrink-0 no value evita
-         compressão do número.
+   AnswerLine
+   FIX – flex + items-center para linhas simples;
+         items-start quando sub/superscripts.
 ───────────────────────────────────────────── */
-const ResultRow = ({ label, value, tone }) => {
-  const tones = {
-    red:   { bg: 'bg-[#fffafa]', border: 'border-[#ff3b30]', text: 'text-[#ff3b30]' },
-    green: { bg: 'bg-[#f8fffb]', border: 'border-[#1fc896]', text: 'text-[#1eae82]' },
-    blue:  { bg: 'bg-[#f8fbff]', border: 'border-[#2676ff]', text: 'text-[#2676ff]' },
-  };
-  const t = tones[tone];
-
-  return (
-    <div
-      className={`flex h-[36px] items-center justify-between gap-[8px] rounded-[8px] border-l-[4px] px-[10px] ${t.border} ${t.bg}`}
-    >
-      <span className="text-[10px] font-medium leading-none text-[#6d82a7]">
-        {label}
-      </span>
-      <span className={`shrink-0 text-right text-[11.5px] font-black leading-none ${t.text}`}>
-        {value}
-      </span>
-    </div>
-  );
-};
-
-/* ─────────────────────────────────────────────
-   HeaderInfoItem
-───────────────────────────────────────────── */
-const HeaderInfoItem = ({ icon: Icon, children }) => (
-  <div className="flex items-start gap-[7px]">
-    <span className="flex h-[14px] w-[14px] shrink-0 translate-y-[1px] items-center justify-center">
-      <Icon size={13} className="block text-[#3478f6]" />
-    </span>
-    <span className="text-[10px] font-bold leading-[1.35] text-[#4a638b]">
-      {children}
-    </span>
+const AnswerLine = ({ letter, children }) => (
+  <div className="flex items-center gap-[8px] rounded-[8px] bg-white/70 px-[10px] py-[6px] text-[12px] leading-snug text-[#314b73]">
+    <strong className="shrink-0 text-[#13996d]">{letter})</strong>
+    <span className="leading-[1.4]">{children}</span>
   </div>
 );
 
 /* ═══════════════════════════════════════════════
    Componente principal
 ═══════════════════════════════════════════════ */
-export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) => {
+export const RelatorioProvaEureka = ({
+  simulacao,
+  imagemSimulacao,
+  dataText,
+  isGabarito,
+}) => {
   const dados      = formatarDadosSimulacao(simulacao);
   const dimsLimpas = obterDimensoesLimpas(dados);
   const enunciado  = montarEnunciado(dados);
@@ -173,22 +138,34 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
     return `${d} / ${m} / ${y}`;
   })();
 
-  let statusLabel = 'EQUILÍBRIO';
-  let relCond     = '(P = E)';
+  const parseNumero = (valor) => {
+    if (typeof valor === 'number') return valor;
+    if (valor === null || valor === undefined) return NaN;
 
-  if (dados.statusFisico?.includes('AFUNDAR') || dados.statusFisico?.includes('AFUNDA')) {
-    statusLabel = 'AFUNDA';
-    relCond     = '(P > E)';
-  } else if (dados.statusFisico?.includes('FLUTUAR') || dados.statusFisico?.includes('FLUTUA')) {
-    statusLabel = 'FLUTUA';
-    relCond     = '(P < E)';
-  }
+    let texto = String(valor)
+      .replace(/\s/g, '')
+      .replace(/[^\d,.-]/g, '');
 
-  const statusColor = {
-    AFUNDA:     { bg: '#f3e8ff', color: '#8b3bea' },
-    FLUTUA:     { bg: '#dcfce7', color: '#16a34a' },
-    EQUILÍBRIO: { bg: '#e0f2fe', color: '#0284c7' },
-  }[statusLabel];
+    if (!texto) return NaN;
+
+    if (texto.includes(',')) {
+      texto = texto.replace(/\./g, '').replace(',', '.');
+    } else {
+      const partes = texto.split('.');
+      const ultimo = partes[partes.length - 1];
+      if (partes.length > 1 && ultimo.length === 3) {
+        texto = texto.replace(/\./g, '');
+      }
+    }
+
+    return Number(texto);
+  };
+
+  const formatarVolume = (valor) =>
+    `${valor.toLocaleString('pt-BR', {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    })} m³`;
 
   const formatMeters = (valor) => {
     const numero = Number(valor) || 0;
@@ -200,12 +177,15 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
 
   const alturaSubmersa = (() => {
     if (dados.tipo !== 'corpos-imersos') return null;
+
     const dim       = simulacao.dimensoes || {};
     const dim1      = dim['Aresta/Raio (cm)'] || dim['Aresta/Raio'] || 0;
     const dim2      = dim['Comprimento (cm)'] || dim['Comprimento'] || 0;
-    const objDens   = parseFloat(simulacao.densidadeObjeto) || 0;
-    const fluidDens = parseFloat(simulacao.densidadeFluido) || 0;
+    const objDens   = parseNumero(simulacao.densidadeObjeto)  || 0;
+    const fluidDens = parseNumero(simulacao.densidadeFluido)  || 0;
+
     if (fluidDens === 0) return null;
+
     const ratio = Math.min(1, objDens / fluidDens);
     let h = 0;
 
@@ -227,6 +207,37 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
     })} m`;
   })();
 
+  const volumeSubmersoCorrigido = (() => {
+    const candidatos = [
+      dados.volumeDeslocado,
+      simulacao.volumeDeslocado,
+      simulacao.volumeSubmerso,
+      simulacao.resultados?.volumeDeslocado,
+      simulacao.resultados?.volumeSubmerso,
+    ];
+
+    for (const candidato of candidatos) {
+      const valor = parseNumero(candidato);
+      if (Number.isFinite(valor) && valor > 0) return formatarVolume(valor);
+    }
+
+    const volumeAtual = parseNumero(dados.volumeDeslocadoFmt);
+    if (Number.isFinite(volumeAtual) && volumeAtual > 0) return dados.volumeDeslocadoFmt;
+
+    const empuxo        = parseNumero(dados.empuxoFmt);
+    const densidadeFluido = parseNumero(simulacao.densidadeFluido ?? dados.densidadeFluidoFmt);
+    const gravidade     = parseNumero(simulacao.gravidade ?? dados.gravidade);
+
+    if (
+      Number.isFinite(empuxo) && Number.isFinite(densidadeFluido) &&
+      Number.isFinite(gravidade) && empuxo > 0 && densidadeFluido > 0 && gravidade > 0
+    ) {
+      return formatarVolume(empuxo / (densidadeFluido * gravidade));
+    }
+
+    return dados.volumeDeslocadoFmt;
+  })();
+
   const descricaoProblema = () => {
     const dim  = simulacao.dimensoes || {};
     const dim1 = dim['Aresta/Raio (cm)'] || dim['Aresta/Raio'] || dim['Base (m)'] || 0;
@@ -242,22 +253,23 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
     };
 
     if (dados.tipo === 'corpos-imersos') {
-      let objeto;
+      let desc;
+
       if (dados.geometria === 'CUBE') {
-        objeto = <>Um bloco cúbico de aresta <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong></>;
+        desc = <>Um bloco cúbico de aresta <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong></>;
       } else if (dados.geometria === 'SPHERE') {
-        objeto = <>Uma esfera de raio <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong></>;
+        desc = <>Uma esfera de raio <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong></>;
       } else if (dados.geometria === 'CYLINDER') {
-        objeto = <>Um cilindro de raio <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong> e altura <strong className="font-black text-[#253957]">{formatMeters(dim2)}</strong></>;
+        desc = <>Um cilindro de raio <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong> e altura <strong className="font-black text-[#253957]">{formatMeters(dim2)}</strong></>;
       } else if (dados.geometria === 'RECT' || dados.geometria === 'CUBOID') {
-        objeto = <>Um paralelepípedo de base <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong> e altura <strong className="font-black text-[#253957]">{formatMeters(dim2)}</strong></>;
+        desc = <>Um paralelepípedo de base <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong> e altura <strong className="font-black text-[#253957]">{formatMeters(dim2)}</strong></>;
       } else {
-        objeto = <>Um corpo de dimensão característica <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong></>;
+        desc = <>Um corpo de dimensão característica <strong className="font-black text-[#253957]">{formatMeters(dim1)}</strong></>;
       }
 
       return (
         <>
-          {objeto} e densidade de{' '}
+          {desc} e densidade de{' '}
           <strong className="font-black text-[#253957]">{dados.densidadeObjetoFmt}</strong>{' '}
           é colocado em um recipiente contendo um fluido de densidade{' '}
           <strong className="font-black text-[#253957]">{dados.densidadeFluidoFmt}</strong>.
@@ -268,18 +280,6 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
     }
 
     return <>{parseBoldText(enunciado)}</>;
-  };
-
-  const analiseQualitativa = () => {
-    if (statusLabel === 'AFUNDA') return (
-      <>Como o peso do corpo (P) é maior que o empuxo (E), a força resultante é dirigida para baixo. Assim, o corpo tenderá a{' '}<strong className="font-black text-[#7c3aed]">AFUNDAR</strong>{' '}no fluido.</>
-    );
-    if (statusLabel === 'FLUTUA') return (
-      <>Como a densidade do corpo é menor que a do fluido, o corpo irá{' '}<strong className="font-black text-[#16a34a]">FLUTUAR</strong>. Parte do volume permanecerá submersa até que o empuxo equilibre o peso.</>
-    );
-    return (
-      <>O peso e o empuxo apresentam equilíbrio entre si. O objeto permanecerá em{' '}<strong className="font-black text-[#2563eb]">EQUILÍBRIO</strong>{' '}no fluido.</>
-    );
   };
 
   /* ── Render ─────────────────────────── */
@@ -297,23 +297,31 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
       {/* ── Header ─────────────────────── */}
       <header className="h-[96px] shrink-0 rounded-b-[6px] border-b border-[#dce8f6] bg-white px-[32px] shadow-[0_8px_20px_rgba(25,96,180,0.06)]">
         <div className="flex h-full items-center justify-between">
+          {/* logo + subtítulo */}
           <div>
             <LogoEureka size="md" animated={false} theme="colored" />
-            <p className="m-0 mt-[5px] text-[10.5px] font-black tracking-[1.8px] text-[#244a82]">
-              Laboratório Virtual de Hidrostática e Empuxo
+            <p className="m-0 mt-[5px] text-[10.5px] font-black tracking-[1.5px] text-[#244a82]">
+              {isGabarito ? 'GABARITO — Estudo Dirigido' : 'ESTUDO DIRIGIDO — Hidrostática e Empuxo'}
             </p>
           </div>
 
-          <div className="flex w-[255px] flex-col gap-[10px]">
-            <HeaderInfoItem icon={CalendarDays}>
-              Data da Simulação: {dataText}
-            </HeaderInfoItem>
-            <HeaderInfoItem icon={FileText}>
-              <span>
-                Relatório gerado automaticamente
+          {/* info direita
+              FIX: items-start + translate-y no ícone para alinhar
+                   com a primeira linha do texto multiline.
+          */}
+          <div className="flex w-[255px] flex-col gap-[10px] text-[10px] font-bold leading-snug text-[#4a638b]">
+            <div className="flex items-start gap-[7px]">
+              <CalendarDays size={13} className="mt-[1px] shrink-0 text-[#3478f6]" />
+              <span className="leading-none pt-[1px]">Data da Simulação: {dataText}</span>
+            </div>
+
+            <div className="flex items-start gap-[7px]">
+              <FileText size={13} className="mt-[1px] shrink-0 text-[#3478f6]" />
+              <span className="leading-[1.35]">
+                {isGabarito ? 'Material exclusivo do professor' : 'Atividade gerada automaticamente'}
                 <br />pelo sistema <strong className="text-[#3478f6]">EUREKA</strong>
               </span>
-            </HeaderInfoItem>
+            </div>
           </div>
         </div>
       </header>
@@ -336,26 +344,26 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
 
         {/* Descrição do Problema */}
         <section className="mt-[14px] shrink-0">
-          <h2 className="m-0 mb-[5px] text-[16px] font-black uppercase text-[#1057cc]">
+          <h2 className="m-0 mb-[6px] text-[16px] font-black uppercase text-[#1057cc]">
             1. DESCRIÇÃO DO PROBLEMA
           </h2>
-          <p className="m-0 text-[12.3px] font-medium leading-[1.6] text-[#3b557c]">
+          <p className="m-0 text-[12.2px] font-medium leading-[1.55] text-[#3b557c]">
             {descricaoProblema()}
           </p>
         </section>
 
-        {/* Visualização + Dados */}
-        <div className="mt-[14px] grid h-[346px] shrink-0 grid-cols-[1.16fr_0.94fr] gap-[15px]">
+        {/* Cena + Dados */}
+        <div className="mt-[12px] grid h-[292px] shrink-0 grid-cols-[1.16fr_0.94fr] gap-[15px]">
           <Card className="p-[12px]">
-            <SectionTitle icon={Cuboid}>Visualização da Simulação</SectionTitle>
-            <div className="relative flex h-[283px] items-center justify-center overflow-hidden rounded-[9px] border border-[#dce8f6] bg-white">
+            <SectionTitle icon={Cuboid}>Cena da Simulação</SectionTitle>
+            <div className="relative flex h-[207px] items-center justify-center overflow-hidden rounded-[9px] border border-[#dce8f6] bg-white">
               <div className="absolute right-[8px] top-[8px] z-10 flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#dce8f6] bg-white shadow-sm">
                 <Cuboid size={14} className="text-[#4d83f6]" />
               </div>
               {imagemSimulacao ? (
                 <img
                   src={imagemSimulacao}
-                  alt="Visualização da simulação"
+                  alt="Cena da simulação"
                   style={{ width: '108%', height: '108%', objectFit: 'contain', transform: 'scale(1.2)' }}
                 />
               ) : (
@@ -381,80 +389,80 @@ export const RelatorioVisualEureka = ({ simulacao, imagemSimulacao, dataText }) 
               )}
               <DataRow label={<>Densidade do Fluido (&rho;<sub>f</sub>):</>} value={dados.densidadeFluidoFmt} />
               <DataRow label="Gravidade (g):" value={dados.gravidade} />
-              {dados.tipo === 'corpos-imersos' && alturaSubmersa && (
+              {alturaSubmersa && (
                 <DataRow label="Altura Submersa (h):" value={alturaSubmersa} />
               )}
-              <DataRow label="Volume Submerso:" value={dados.volumeDeslocadoFmt} />
+              <DataRow label="Volume Submerso:" value={volumeSubmersoCorrigido} />
             </div>
           </Card>
         </div>
 
-        {/* Fórmulas + Resultados */}
-        <div className="mt-[12px] grid h-[234px] shrink-0 grid-cols-2 gap-[15px]">
-          <Card className="p-[12px]">
-            <SectionTitle icon={Zap} number="2">Fórmulas Utilizadas</SectionTitle>
-            <div className="space-y-[4px]">
-              <FormulaRow label="Peso (P):">
-                P = &rho;<sub>o</sub> &middot; g &middot; V<sub>total</sub>
-              </FormulaRow>
-              <FormulaRow label="Empuxo (E):">
-                E = &rho;<sub>f</sub> &middot; g &middot; V<sub>submerso</sub>
-              </FormulaRow>
-              <FormulaRow label={<>Peso Aparente (P<sub>ap</sub>):</>}>
-                P<sub>ap</sub>&nbsp;=&nbsp;P &minus; E
-              </FormulaRow>
-            </div>
-          </Card>
+        {/* Questões Propostas */}
+        <Card className="mt-[12px] h-[188px] shrink-0 px-[12px] py-[10px]">
+          <SectionTitle icon={ClipboardList} number="2">
+            Questões propostas
+          </SectionTitle>
 
-          <Card className="p-[12px]">
-            <SectionTitle icon={BarChart3} number="3">Resultados Obtidos</SectionTitle>
-            <div className="space-y-[4px]">
-              <ResultRow label="Peso Real (P):"  value={dados.pesoFmt}      tone="red"   />
-              <ResultRow label="Empuxo (E):"     value={dados.empuxoFmt}    tone="green" />
-              <ResultRow
-                label={<>Peso Aparente (P<sub>ap</sub>):</>}
-                value={dados.pesoAparenteFmt}
-                tone="blue"
-              />
+          <div className="grid h-[136px] grid-cols-[1fr_1fr] gap-[12px]">
+            <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+              <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                <QuestionItem letter="a">Calcule o peso real do objeto.</QuestionItem>
+                <QuestionItem letter="b">Calcule o empuxo exercido pelo fluido.</QuestionItem>
+                <QuestionItem letter="c">Calcule o peso aparente do objeto.</QuestionItem>
+              </ul>
+            </div>
+
+            <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+              <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                <QuestionItem letter="d">
+                  Determine se o corpo flutua, afunda ou permanece em equilíbrio.
+                </QuestionItem>
+                <QuestionItem letter="e">Determine a altura submersa do corpo.</QuestionItem>
+                <QuestionItem letter="f">Determine o volume de fluido deslocado.</QuestionItem>
+              </ul>
+            </div>
+          </div>
+        </Card>
+
+        {/* Gabarito / Espaço para resolução */}
+        <Card className="mt-[12px] h-[260px] shrink-0 px-[12px] py-[10px]">
+          <SectionTitle icon={isGabarito ? ShieldCheck : HelpCircle} number="3">
+            {isGabarito ? 'Gabarito' : 'Espaço para resolução'}
+          </SectionTitle>
+
+          {isGabarito ? (
+            <div className="relative h-[190px] overflow-hidden rounded-[9px] border border-emerald-200 bg-[#f7fffb] px-[12px] py-[10px]">
+              {/* barra lateral verde */}
+              <div className="absolute left-0 top-0 h-full w-[4px] bg-[#1fc896]" />
 
               {/*
-                Condição — FIX: badge com flex items-center justify-center
-                para texto centralizado dentro do pill.
+                FIX: grid com items-center para as AnswerLines ficarem
+                     centralizadas verticalmente em cada célula.
               */}
-              <div className="flex h-[40px] items-center justify-between rounded-[8px] bg-[#fbf7ff] px-[10px]">
-                <span className="text-[10px] font-medium leading-none text-[#6d82a7]">
-                  Condição:
-                </span>
-                <div className="flex flex-col items-center justify-center gap-[3px]">
-                  <span
-                    className="flex items-center justify-center rounded-full px-[14px] py-[4px] text-[10.5px] font-black leading-none"
-                    style={{ background: statusColor.bg, color: statusColor.color }}
-                  >
-                    {statusLabel}
-                  </span>
-                  <span className="text-center text-[9px] font-bold leading-none text-[#667895]">
-                    {relCond}
-                  </span>
-                </div>
+              <div className="grid h-full grid-cols-2 items-center gap-[3px] pl-[2px]">
+                <AnswerLine letter="a">P = {dados.pesoFmt}</AnswerLine>
+                <AnswerLine letter="b">E = {dados.empuxoFmt}</AnswerLine>
+                <AnswerLine letter="c">
+                  P<sub>ap</sub> = {dados.pesoAparenteFmt}
+                </AnswerLine>
+                <AnswerLine letter="d">{dados.statusFisico}</AnswerLine>
+                <AnswerLine letter="e">
+                  h<sub>submersa</sub> = {alturaSubmersa || '—'}
+                </AnswerLine>
+                <AnswerLine letter="f">V = {volumeSubmersoCorrigido}</AnswerLine>
               </div>
             </div>
-          </Card>
-        </div>
-
-        {/* Análise Qualitativa
-            FIX: sem h fixo; flex items-center centraliza
-                 o texto verticalmente no bg rounded.
-        */}
-        <Card className="mt-[12px] shrink-0 px-[12px] py-[10px]">
-          <SectionTitle icon={ShieldCheck} number="4">Análise Qualitativa</SectionTitle>
-          <div className="flex min-h-[36px] items-center justify-center rounded-[8px] bg-[#f8fbff] px-[12px] py-[8px] text-[10.8px] font-medium leading-[1.5] text-[#3b557c] text-center">
-            {analiseQualitativa()}
-          </div>
+          ) : (
+            <div className="grid h-[190px] grid-cols-2 gap-[8px]">
+              <div className="rounded-[9px] border border-dashed border-[#b8cce8] bg-[#fbfdff]" />
+              <div className="rounded-[9px] border border-dashed border-[#b8cce8] bg-[#fbfdff]" />
+            </div>
+          )}
         </Card>
       </main>
 
       {/* ── Footer ─────────────────────── */}
-      <footer className="h-[58px] shrink-0 border-t border-[#d8e8f8] bg-gradient-to-r from-[#dff3ff] via-[#eef9ff] to-[#d8f4ff]">
+      <footer className="h-[52px] shrink-0 border-t border-[#d8e8f8] bg-gradient-to-r from-[#dff3ff] via-[#eef9ff] to-[#d8f4ff]">
         <div className="flex h-full flex-col items-center justify-center gap-[3px]">
           <LogoEureka size="sm" animated={false} theme="colored" />
           <p className="m-0 text-[8px] font-black tracking-[0.5px] text-[#6982a3]">

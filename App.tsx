@@ -8,7 +8,7 @@ import { TheoryReference } from './interface/ReferenciaTeorica';
 import { ChatBot } from './interface/ChatBot';
 import { PaginaInicial } from './interface/PaginaInicial';
 import { SimulationMode } from './types';
-import { gerarPDFCompleto } from './src/utils/exportacao';
+// Remove the unused import
 
 const App: React.FC = () => {
   const [hasStarted, setHasStarted] = useState<boolean>(false);

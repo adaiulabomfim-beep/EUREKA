@@ -1,4 +1,5 @@
-import { Point3D, WorldFace } from "./motorCena3D";
+import { Point3D, Face, WorldFace } from "./motorCena3D";
+export type { WorldFace, Point3D };
 
 // Calcula a normal de uma face a partir de seus vértices (regra da mão direita).
 // Assume que os vértices estão em ordem CCW quando vistos do lado de fora.
@@ -187,53 +188,62 @@ export const criarPrisma = (
   );
 
   // --- Laterais ---
-  for (let s = 0; s < steps; s++) {
-    // Overlap para compensar gap de anti-aliasing do SVG
-    const isCurved = steps > 1 && xOffsetFn;
-    const overlapZ = isCurved ? dz * 0.05 : 0;
-    const sz1 = zStart + s * dz - overlapZ;
-    const sz2 = zStart + (s + 1) * dz + overlapZ;
+  for (let i = 0; i < profile.length; i++) {
+    const p1 = profile[i];
+    const p2 = profile[(i + 1) % profile.length];
 
-    for (let i = 0; i < profile.length; i++) {
-      const p1 = profile[i];
-      const p2 = profile[(i + 1) % profile.length];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
 
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
+    for (let j = 0; j < stepsY; j++) {
+      const t1 = j / stepsY;
+      const t2 = (j + 1) / stepsY;
 
-      for (let j = 0; j < stepsY; j++) {
-        const t1 = j / stepsY;
-        const t2 = (j + 1) / stepsY;
+      const subP1 = { x: p1.x + t1 * dx, y: p1.y + t1 * dy };
+      const subP2 = { x: p1.x + t2 * dx, y: p1.y + t2 * dy };
 
-        const subP1 = { x: p1.x + t1 * dx, y: p1.y + t1 * dy };
-        const subP2 = { x: p1.x + t2 * dx, y: p1.y + t2 * dy };
+      const facePts: Point3D[] = [];
 
-        const p1_z1 = mapPt(subP1, sz1);
-        const p2_z1 = mapPt(subP2, sz1);
-        const p2_z2 = mapPt(subP2, sz2);
-        const p1_z2 = mapPt(subP1, sz2);
-
-        const facePts = profileIsCW
-          ? [p1_z1, p1_z2, p2_z2, p2_z1]
-          : [p1_z1, p2_z1, p2_z2, p1_z2];
-
-        const trueNormal = computeFaceNormal(facePts);
-        const isMainWaterFace = !(kind.startsWith("WATER") && i !== 1);
-
-        faces.push(
-          criarFace(
-            facePts,
-            fill,
-            opacity,
-            "none",
-            0,
-            trueNormal,
-            kind,
-            isMainWaterFace ? hatchPattern : undefined,
-            p,
-          ),
-        );
+      // Sentido do +Z
+      for (let s = 0; s <= steps; s++) {
+        const sz = zStart + s * dz;
+        facePts.push(mapPt(subP1, sz));
       }
+
+      // Retorno do -Z
+      for (let s = steps; s >= 0; s--) {
+        const sz = zStart + s * dz;
+        facePts.push(mapPt(subP2, sz));
+      }
+
+      // Normal baseada no centro para sombreamento suave em toda a face
+      const sMid = Math.floor(steps / 2);
+      const szMid = zStart + sMid * dz;
+      const szMid2 = zStart + (sMid + 1) * dz;
+      
+      const pt1A = mapPt(subP1, szMid);
+      const pt1B = mapPt(subP1, szMid2);
+      const pt2B = mapPt(subP2, szMid2);
+      const pt2A = mapPt(subP2, szMid);
+
+      const trueNormal = computeFaceNormal([pt1A, pt1B, pt2B, pt2A]);
+      const isMainWaterFace = !(kind.startsWith("WATER") && i !== 1);
+
+      const finalPts = profileIsCW ? facePts : facePts.reverse();
+
+      faces.push(
+        criarFace(
+          finalPts,
+          fill,
+          opacity,
+          "none",
+          0,
+          trueNormal,
+          kind,
+          isMainWaterFace ? hatchPattern : undefined,
+          p,
+        ),
+      );
     }
   }
 

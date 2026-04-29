@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Play, Waves, ShieldCheck, Zap } from "lucide-react";
+import { LogoEureka } from "../src/components/ui/LogoEureka";
 
 interface LandingPageProps {
   onStart: () => void;
