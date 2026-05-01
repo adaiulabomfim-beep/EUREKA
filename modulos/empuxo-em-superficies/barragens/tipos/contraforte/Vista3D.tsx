@@ -70,7 +70,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         'url(#concretePattern)',
         toWorldX,
         2,
-        1,
+        24,
         1,
         true
       ),
@@ -87,7 +87,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           getDamXAtY,
           toWorldX,
           undefined,
-          'A'
+          'A',
+          24
         )
       );
     }
@@ -102,7 +103,8 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
           getDamXAtY,
           toWorldX,
           undefined,
-          'B'
+          'B',
+          24
         )
       );
     }

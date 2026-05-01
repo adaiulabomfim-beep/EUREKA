@@ -19,37 +19,18 @@ import { montarEnunciado } from '../../utils/exportacao/montarEnunciado';
 import { LogoEureka } from '../ui/LogoEureka';
 
 const SectionTitle = ({ icon: Icon, children, number }) => (
-  <div className="mb-[8px] border-b border-[#dbe8f7] pb-[7px]">
-    <div className="relative h-[22px]">
-      {Icon && (
-        <Icon
-          size={16}
-          strokeWidth={2.3}
-          className="absolute left-0 text-[#3478f6]"
-          style={{
-            top: '3px',
-            width: '16px',
-            height: '16px',
-            display: 'block',
-            margin: 0,
-            padding: 0,
-          }}
-        />
-      )}
-
-      <div
-        className="absolute right-0 top-0 flex h-[22px] items-center text-[12px] font-black uppercase tracking-[0.5px] text-[#23477f]"
-        style={{
-          left: Icon ? '25px' : '0px',
-          lineHeight: '22px',
-        }}
-      >
-        <span>
-          {number ? `${number}. ` : ''}
-          {children}
-        </span>
-      </div>
-    </div>
+  <div className="mb-[8px] flex items-center gap-[6px] border-b border-[#dbe8f7] pb-[7px]">
+    {Icon && (
+      <Icon
+        size={16}
+        strokeWidth={2.3}
+        className="shrink-0 text-[#3478f6]"
+      />
+    )}
+    <h3 className="m-0 text-[12px] font-black uppercase leading-tight tracking-[0.5px] text-[#23477f]">
+      {number ? `${number}. ` : ''}
+      {children}
+    </h3>
   </div>
 );
 
@@ -62,25 +43,19 @@ const Card = ({ children, className = '' }) => (
 );
 
 const InfoLine = ({ label, wide, value, noLine }) => (
-  <div
-    className={`${
-      wide ? 'col-span-2' : ''
-    } grid h-[24px] grid-cols-[auto_1fr] items-center gap-[6px]`}
-  >
-    <span className="shrink-0 whitespace-nowrap text-[10.5px] font-semibold leading-[1.2] text-[#6b82a9]">
+  <div className={`${wide ? 'col-span-2' : ''} flex min-h-[26px] items-center gap-[6px]`}>
+    <span className="shrink-0 whitespace-nowrap text-[10.5px] font-semibold leading-tight text-[#6b82a9]">
       {label}:
     </span>
 
     {noLine ? (
-      <span className="flex h-[18px] items-center text-[11.5px] font-black leading-[1.2] tracking-[2px] text-[#244a82]">
+      <span className="text-[11.5px] font-black leading-tight tracking-[2px] text-[#244a82]">
         {value}
       </span>
     ) : (
-      <div className="relative h-[18px]">
-        <div className="absolute bottom-[2px] left-0 right-0 border-b border-[#bfd2ef]" />
-
+      <div className="flex flex-1 items-center border-b border-[#bfd2ef] pt-[4px]">
         {value && (
-          <span className="relative z-10 flex h-[18px] items-center text-[11.5px] font-black leading-[1.2] tracking-[2px] text-[#244a82]">
+          <span className="text-[11.5px] font-black leading-tight tracking-[2px] text-[#244a82] translate-y-[-2px]">
             {value}
           </span>
         )}
@@ -90,24 +65,24 @@ const InfoLine = ({ label, wide, value, noLine }) => (
 );
 
 const DataRow = ({ label, value }) => (
-  <div className="grid h-[30px] grid-cols-[1fr_auto] items-center gap-[8px] rounded-[7px] border border-[#dce8f6] bg-[#fbfdff] px-[10px]">
-    <span className="flex h-[18px] items-center text-[10px] font-medium leading-[1.2] text-[#6d82a7]">
+  <div className="flex min-h-[28px] items-center justify-between gap-[8px] rounded-[7px] border border-[#dce8f6] bg-[#fbfdff] px-[10px] py-[4px]">
+    <span className="text-[10px] font-medium leading-tight text-[#6d82a7]">
       {label}
     </span>
 
-    <span className="flex h-[18px] shrink-0 items-center justify-end text-right text-[10px] font-black leading-[1.2] text-[#2f4468]">
+    <span className="shrink-0 text-right text-[10px] font-black leading-tight text-[#2f4468]">
       {value}
     </span>
   </div>
 );
 
 const FormulaRow = ({ label, children }) => (
-  <div className="grid h-[40px] grid-cols-[112px_1fr] items-center rounded-[8px] bg-[#f8fbff] px-[10px]">
-    <span className="flex h-[20px] items-center text-[10px] font-black leading-[1.2] text-[#2472ff]">
+  <div className="flex min-h-[36px] items-center gap-[8px] rounded-[8px] bg-[#f8fbff] px-[10px] py-[4px]">
+    <span className="w-[112px] shrink-0 text-[10px] font-black leading-tight text-[#2472ff]">
       {label}
     </span>
 
-    <div className="flex h-[26px] items-center justify-center font-serif text-[14px] italic leading-[1.35] text-[#333]">
+    <div className="flex flex-1 items-center justify-center font-serif text-[14px] italic leading-[1.35] text-[#333]">
       {children}
     </div>
   </div>
@@ -136,14 +111,14 @@ const ResultRow = ({ label, value, tone }) => {
 
   return (
     <div
-      className={`grid h-[36px] grid-cols-[1fr_auto] items-center gap-[8px] rounded-[8px] border-l-[4px] px-[10px] ${t.border} ${t.bg}`}
+      className={`flex min-h-[32px] items-center justify-between gap-[8px] rounded-[8px] border-l-[4px] px-[10px] py-[4px] ${t.border} ${t.bg}`}
     >
-      <span className="flex h-[18px] items-center text-[10px] font-medium leading-[1.2] text-[#6d82a7]">
+      <span className="text-[10px] font-medium leading-tight text-[#6d82a7]">
         {label}
       </span>
 
       <span
-        className={`flex h-[18px] shrink-0 items-center justify-end text-right text-[11.5px] font-black leading-[1.2] ${t.text}`}
+        className={`shrink-0 text-right text-[11.5px] font-black leading-tight ${t.text}`}
       >
         {value}
       </span>
@@ -152,27 +127,12 @@ const ResultRow = ({ label, value, tone }) => {
 };
 
 const HeaderInfoItem = ({ icon: Icon, children }) => (
-  <div className="relative min-h-[16px]">
+  <div className="flex min-h-[16px] items-center gap-[6px]">
     <Icon
       size={13}
-      className="absolute left-0 text-[#3478f6]"
-      style={{
-        top: '1px',
-        width: '13px',
-        height: '13px',
-        display: 'block',
-        margin: 0,
-        padding: 0,
-      }}
+      className="shrink-0 text-[#3478f6]"
     />
-
-    <div
-      className="text-[10px] font-bold text-[#4a638b]"
-      style={{
-        marginLeft: '20px',
-        lineHeight: '1.25',
-      }}
-    >
+    <div className="text-[10px] font-bold leading-tight text-[#4a638b]">
       {children}
     </div>
   </div>
@@ -464,6 +424,31 @@ export const RelatorioVisualEureka = ({
   };
 
   const analiseQualitativa = () => {
+    if (dados.tipo === 'comportas') {
+      if (!dados.analyzedResults) {
+        return <span>Sem análise realizada. Insira dados e execute a simulação.</span>;
+      }
+      return (
+        <span>
+          A força hidrostática resultante atua no <strong className="font-black text-[#2563eb]">centro de pressão</strong>, localizado abaixo do centro de gravidade da região submersa, devido à variação linear de pressão.
+        </span>
+      );
+    }
+    
+    if (dados.tipo === 'barragens') {
+       if (!dados.analyzedResults || !dados.analyzedResults.stabilityData) {
+          return <span>Sem análise realizada. Insira dados e execute a simulação.</span>;
+       }
+       const st = dados.analyzedResults.stabilityData;
+       const slideSafe = st.fs_desl >= 1.5;
+       const overSafe = st.fs_tomb >= 1.5;
+       return (
+         <span>
+           A barragem apresenta-se {slideSafe && overSafe ? <strong className="font-black text-[#16a34a]">ESTÁVEL</strong> : <strong className="font-black text-[#ff3b30]">INSTÁVEL</strong>} de acordo com os coeficientes de segurança usuais de estabilidade ao deslizamento e tombamento.
+         </span>
+       );
+    }
+
     if (statusLabel === 'AFUNDA') {
       return (
         <span>
@@ -638,38 +623,80 @@ export const RelatorioVisualEureka = ({
                 <DataRow label="Altura Submersa (h):" value={alturaSubmersa} />
               )}
 
-              <DataRow
-                label="Volume Submerso:"
-                value={volumeSubmersoCorrigido}
-              />
+              {dados.tipo === 'corpos-imersos' && (
+                <DataRow
+                  label="Volume Submerso:"
+                  value={volumeSubmersoCorrigido}
+                />
+              )}
+              {dados.tipo !== 'corpos-imersos' && (
+                <DataRow
+                  label="Nível d'água (Montante):"
+                  value={dados.alturaSubmersa ? `${Number(dados.alturaSubmersa).toLocaleString('pt-BR', {minimumFractionDigits: 2})} m` : '0,00 m'}
+                />
+              )}
             </div>
           </Card>
         </div>
 
-        <div className="mt-[12px] grid h-[234px] shrink-0 grid-cols-2 gap-[15px]">
+        <div className="mt-[12px] grid min-h-[234px] flex-1 shrink-0 grid-cols-2 gap-[15px]">
           <Card className="p-[12px]">
             <SectionTitle icon={Zap} number="2">
-              Fórmulas Utilizadas
+               {dados.tipo === 'corpos-imersos' ? 'Fórmulas Utilizadas' : 'Conceitos Utilizados'}
             </SectionTitle>
 
             <div className="space-y-[4px]">
-              <FormulaRow label="Peso (P):">
-                P = &rho;<sub>o</sub> &middot; g &middot; V<sub>total</sub>
-              </FormulaRow>
+              {dados.tipo === 'corpos-imersos' && (
+                <>
+                  <FormulaRow label="Peso (P):">
+                    P = &rho;<sub>o</sub> &middot; g &middot; V<sub>total</sub>
+                  </FormulaRow>
 
-              <FormulaRow label="Empuxo (E):">
-                E = &rho;<sub>f</sub> &middot; g &middot; V<sub>submerso</sub>
-              </FormulaRow>
+                  <FormulaRow label="Empuxo (E):">
+                    E = &rho;<sub>f</sub> &middot; g &middot; V<sub>submerso</sub>
+                  </FormulaRow>
 
-              <FormulaRow
-                label={
-                  <>
-                    Peso Aparente (P<sub>ap</sub>):
-                  </>
-                }
-              >
-                P<sub>ap</sub>&nbsp;=&nbsp;P &minus; E
-              </FormulaRow>
+                  <FormulaRow
+                    label={
+                      <>
+                        Peso Aparente (P<sub>ap</sub>):
+                      </>
+                    }
+                  >
+                    P<sub>ap</sub>&nbsp;=&nbsp;P &minus; E
+                  </FormulaRow>
+                </>
+              )}
+              {dados.tipo === 'comportas' && (
+                <>
+                  <FormulaRow label="Pressão (P):">
+                    p = &rho; &middot; g &middot; h
+                  </FormulaRow>
+
+                  <FormulaRow label="Força (F):">
+                    F = &rho; &middot; g &middot; h<sub>cg</sub> &middot; A
+                  </FormulaRow>
+
+                  <FormulaRow label="Centro (y_cp):">
+                    y<sub>cp</sub> = y<sub>cg</sub> + I<sub>cg</sub> / (y<sub>cg</sub> &middot; A)
+                  </FormulaRow>
+                </>
+              )}
+              {dados.tipo === 'barragens' && (
+                <>
+                  <FormulaRow label="Força Horiz.:">
+                    F<sub>H</sub> = &rho; &middot; g &middot; h<sub>cg</sub> &middot; A<sub>proj</sub>
+                  </FormulaRow>
+
+                  <FormulaRow label="Força Vert.:">
+                    F<sub>V</sub> = &gamma; &middot; Vol<sub>água</sub>
+                  </FormulaRow>
+
+                  <FormulaRow label="Peso (W):">
+                    W = &gamma;<sub>concreto</sub> &middot; Vol<sub>barragem</sub>
+                  </FormulaRow>
+                </>
+              )}
             </div>
           </Card>
 
@@ -679,49 +706,110 @@ export const RelatorioVisualEureka = ({
             </SectionTitle>
 
             <div className="space-y-[4px]">
-              <ResultRow
-                label="Peso Real (P):"
-                value={dados.pesoFmt}
-                tone="red"
-              />
+              {dados.tipo === 'corpos-imersos' && (
+                <>
+                  <ResultRow
+                    label="Peso Real (P):"
+                    value={dados.pesoFmt}
+                    tone="red"
+                  />
 
-              <ResultRow
-                label="Empuxo (E):"
-                value={dados.empuxoFmt}
-                tone="green"
-              />
+                  <ResultRow
+                    label="Empuxo (E):"
+                    value={dados.empuxoFmt}
+                    tone="green"
+                  />
 
-              <ResultRow
-                label={
-                  <>
-                    Peso Aparente (P<sub>ap</sub>):
-                  </>
-                }
-                value={dados.pesoAparenteFmt}
-                tone="blue"
-              />
+                  <ResultRow
+                    label={
+                      <>
+                        Peso Aparente (P<sub>ap</sub>):
+                      </>
+                    }
+                    value={dados.pesoAparenteFmt}
+                    tone="blue"
+                  />
 
-              <div className="grid h-[40px] grid-cols-[1fr_auto] items-center gap-[8px] rounded-[8px] bg-[#fbf7ff] px-[10px]">
-                <span className="flex h-[18px] items-center text-[10px] font-medium leading-[1.2] text-[#6d82a7]">
-                  Condição:
-                </span>
+                  <div className="flex min-h-[40px] items-center justify-between gap-[8px] rounded-[8px] bg-[#fbf7ff] px-[10px] py-[6px]">
+                    <span className="text-[10px] font-medium leading-tight text-[#6d82a7]">
+                      Condição:
+                    </span>
 
-                <div className="grid min-w-[78px] place-items-center gap-[3px]">
-                  <span
-                    className="flex h-[18px] items-center justify-center rounded-full px-[14px] text-[10.5px] font-black leading-[1]"
-                    style={{
-                      background: statusColor.bg,
-                      color: statusColor.color,
-                    }}
-                  >
-                    {statusLabel}
-                  </span>
+                    <div className="flex flex-col items-center justify-center gap-[3px]">
+                      <span
+                        className="flex items-center justify-center rounded-full px-[14px] py-[2px] text-[10.5px] font-black leading-none"
+                        style={{
+                          background: statusColor.bg,
+                          color: statusColor.color,
+                        }}
+                      >
+                        {statusLabel}
+                      </span>
 
-                  <span className="text-center text-[9px] font-bold leading-[1] text-[#667895]">
-                    {relCond}
-                  </span>
-                </div>
-              </div>
+                      <span className="text-center text-[9px] font-bold leading-none text-[#667895]">
+                        {relCond}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+              {dados.tipo === 'comportas' && (
+                <>
+                  <ResultRow
+                    label="Força Resultante:"
+                    value={dados.analyzedResults ? `${(dados.analyzedResults.forceData.FR_net / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN` : '0,00 kN'}
+                    tone="green"
+                  />
+
+                  <ResultRow
+                    label="Posição (s_cp):"
+                    value={dados.analyzedResults ? `${dados.analyzedResults.forceData.s_cp_net.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} m` : '0,00 m'}
+                    tone="blue"
+                  />
+                  
+                  <ResultRow
+                     label={
+                      <>
+                        Força de Abertura:
+                      </>
+                     }
+                     value={dados.analyzedResults && dados.analyzedResults.equilibrium ? `${(dados.analyzedResults.equilibrium.F_tie / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN` : '-'}
+                     tone="red"
+                  />
+                </>
+              )}
+              {dados.tipo === 'barragens' && (
+                <>
+                  <ResultRow
+                    label="Força Res. (kN):"
+                    value={dados.analyzedResults ? `${(dados.analyzedResults.forceData.FR_net / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN` : '0,00 kN'}
+                    tone="green"
+                  />
+                  
+                  <ResultRow
+                    label="Posição (y_cp):"
+                    value={dados.analyzedResults ? `${dados.analyzedResults.forceData.y_cp_net.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} m` : '0,00 m'}
+                    tone="blue"
+                  />
+
+                  <ResultRow
+                    label="Peso Barragem:"
+                    value={dados.analyzedResults && dados.analyzedResults.stabilityData ? `${(dados.analyzedResults.stabilityData.weight / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN` : '0,00 kN'}
+                    tone="blue"
+                  />
+                  
+                  <ResultRow
+                     label="FS Deslizamento:"
+                     value={dados.analyzedResults && dados.analyzedResults.stabilityData ? `${dados.analyzedResults.stabilityData.fs_desl.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
+                     tone={dados.analyzedResults && dados.analyzedResults.stabilityData && dados.analyzedResults.stabilityData.fs_desl >= 1.5 ? 'green' : 'red'}
+                  />
+                   <ResultRow
+                     label="FS Tombamento:"
+                     value={dados.analyzedResults && dados.analyzedResults.stabilityData ? `${dados.analyzedResults.stabilityData.fs_tomb.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
+                     tone={dados.analyzedResults && dados.analyzedResults.stabilityData && dados.analyzedResults.stabilityData.fs_tomb >= 1.5 ? 'green' : 'red'}
+                  />
+                </>
+              )}
             </div>
           </Card>
         </div>

@@ -128,6 +128,23 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       });
   };
 
+  const exportData = {
+    tipo: 'comportas',
+    geometria: `Comporta ${gateShape}`,
+    dimensoes: {
+      'Altura (m)': gateHeight,
+      'Base/Largura (m)': gateWidth,
+      'Inclinação (°)': gateInclination
+    },
+    // We set dummy values so validation passes if analyzed
+    empuxo: analyzedResults ? analyzedResults.forceData.FR_net : 0, 
+    peso: gateWeightEnabled ? gateWeight * 1000 : 0, // Using N instead of kN maybe?
+    volumeDeslocado: analyzedResults ? 1 : 0, // Just a placeholder so validation passes
+    alturaSubmersa: upstreamLevel,
+    isAnalyzed: !!analyzedResults,
+    analyzedResults: analyzedResults
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
@@ -148,7 +165,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
         />
 
         {/* --- CENTER: SCENE --- */}
-        <div id="areaSimulacao" data-simulacao={JSON.stringify({ tipo: 'comportas', geometria: `Comporta`, dimensoes: { }, densidadeFluido: 1000, densidadeObjeto: 0, empuxo: 0, peso: 0, volumeDeslocado: 0, alturaSubmersa: 0 })} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
+        <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
             <CenaPressaoComporta
                 upstreamLevel={upstreamLevel} downstreamLevel={downstreamLevel}

@@ -25,8 +25,8 @@ import { LogoEureka } from '../ui/LogoEureka';
 ───────────────────────────────────────────── */
 const SectionTitle = ({ icon: Icon, children, number }) => (
   <div className="mb-[8px] flex items-center gap-[6px] border-b border-[#dbe8f7] pb-[7px]">
-    {Icon && <Icon size={16} strokeWidth={2.3} className="shrink-0 text-[#3478f6] translate-y-[-1px]" />}
-    <h3 className="m-0 flex items-center pt-[2px] text-[12px] font-black uppercase leading-none tracking-[0.5px] text-[#23477f]">
+    {Icon && <Icon size={16} strokeWidth={2.3} className="shrink-0 text-[#3478f6]" />}
+    <h3 className="m-0 text-[12px] font-black uppercase leading-tight tracking-[0.5px] text-[#23477f]">
       {number ? `${number}. ` : ''}{children}
     </h3>
   </div>
@@ -53,21 +53,21 @@ const Card = ({ children, className = '' }) => (
             o underline.
 ───────────────────────────────────────────── */
 const InfoLine = ({ label, wide, value, noLine }) => (
-  <div className={`${wide ? 'col-span-2' : ''} flex h-[26px] items-end gap-[6px]`}>
-    <span className="shrink-0 whitespace-nowrap pb-[2px] text-[10.5px] font-semibold leading-none text-[#6b82a9]">
+  <div className={`${wide ? 'col-span-2' : ''} flex min-h-[26px] items-center gap-[6px]`}>
+    <span className="shrink-0 whitespace-nowrap text-[10.5px] font-semibold leading-tight text-[#6b82a9]">
       {label}:
     </span>
 
     {noLine ? (
       /* sem underline — apenas o valor (ex.: Data) */
-      <span className="pb-[2px] text-[11.5px] font-black leading-none tracking-[2px] text-[#244a82]">
+      <span className="text-[11.5px] font-black leading-tight tracking-[2px] text-[#244a82]">
         {value}
       </span>
     ) : (
       /* com underline */
-      <div className="flex flex-1 items-end border-b border-[#bfd2ef] pb-[2px]">
+      <div className="flex flex-1 items-center border-b border-[#bfd2ef] pt-[4px]">
         {value && (
-          <span className="text-[11.5px] font-black leading-none tracking-[2px] text-[#244a82]">
+          <span className="text-[11.5px] font-black leading-tight tracking-[2px] text-[#244a82] translate-y-[-2px]">
             {value}
           </span>
         )}
@@ -83,11 +83,11 @@ const InfoLine = ({ label, wide, value, noLine }) => (
          shrink-0 no value evita compressão.
 ───────────────────────────────────────────── */
 const DataRow = ({ label, value }) => (
-  <div className="flex h-[30px] items-center justify-between gap-[8px] rounded-[7px] border border-[#dce8f6] bg-[#fbfdff] px-[10px]">
-    <span className="text-[10px] font-medium leading-none text-[#6d82a7]">
+  <div className="flex min-h-[28px] items-center justify-between gap-[8px] rounded-[7px] border border-[#dce8f6] bg-[#fbfdff] px-[10px] py-[4px]">
+    <span className="text-[10px] font-medium leading-tight text-[#6d82a7]">
       {label}
     </span>
-    <span className="shrink-0 text-right text-[10px] font-black leading-none text-[#2f4468]">
+    <span className="shrink-0 text-right text-[10px] font-black leading-tight text-[#2f4468]">
       {value}
     </span>
   </div>
@@ -353,7 +353,7 @@ export const RelatorioProvaEureka = ({
         </section>
 
         {/* Cena + Dados */}
-        <div className="mt-[12px] grid h-[292px] shrink-0 grid-cols-[1.16fr_0.94fr] gap-[15px]">
+        <div className="mt-[12px] grid min-h-[292px] flex-1 shrink-0 grid-cols-[1.16fr_0.94fr] gap-[15px]">
           <Card className="p-[12px]">
             <SectionTitle icon={Cuboid}>Cena da Simulação</SectionTitle>
             <div className="relative flex h-[207px] items-center justify-center overflow-hidden rounded-[9px] border border-[#dce8f6] bg-white">
@@ -389,49 +389,101 @@ export const RelatorioProvaEureka = ({
               )}
               <DataRow label={<>Densidade do Fluido (&rho;<sub>f</sub>):</>} value={dados.densidadeFluidoFmt} />
               <DataRow label="Gravidade (g):" value={dados.gravidade} />
-              {alturaSubmersa && (
+              {dados.tipo === 'corpos-imersos' && alturaSubmersa && (
                 <DataRow label="Altura Submersa (h):" value={alturaSubmersa} />
               )}
-              <DataRow label="Volume Submerso:" value={volumeSubmersoCorrigido} />
+              {dados.tipo === 'corpos-imersos' && (
+                <DataRow label="Volume Submerso:" value={volumeSubmersoCorrigido} />
+              )}
+              {dados.tipo !== 'corpos-imersos' && (
+                <DataRow
+                  label="Nível d'água (Montante):"
+                  value={dados.alturaSubmersa ? `${Number(dados.alturaSubmersa).toLocaleString('pt-BR', {minimumFractionDigits: 2})} m` : '0,00 m'}
+                />
+              )}
             </div>
           </Card>
         </div>
 
         {/* Questões Propostas */}
-        <Card className="mt-[12px] h-[188px] shrink-0 px-[12px] py-[10px]">
+        <Card className="mt-[12px] min-h-[188px] shrink-0 px-[12px] py-[10px]">
           <SectionTitle icon={ClipboardList} number="2">
             Questões propostas
           </SectionTitle>
 
-          <div className="grid h-[136px] grid-cols-[1fr_1fr] gap-[12px]">
-            <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
-              <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
-                <QuestionItem letter="a">Calcule o peso real do objeto.</QuestionItem>
-                <QuestionItem letter="b">Calcule o empuxo exercido pelo fluido.</QuestionItem>
-                <QuestionItem letter="c">Calcule o peso aparente do objeto.</QuestionItem>
-              </ul>
-            </div>
+          <div className="grid min-h-[136px] flex-1 grid-cols-[1fr_1fr] gap-[12px]">
+            {dados.tipo === 'corpos-imersos' && (
+              <>
+                <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+                  <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                    <QuestionItem letter="a">Calcule o peso real do objeto.</QuestionItem>
+                    <QuestionItem letter="b">Calcule o empuxo exercido pelo fluido.</QuestionItem>
+                    <QuestionItem letter="c">Calcule o peso aparente do objeto.</QuestionItem>
+                  </ul>
+                </div>
 
-            <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
-              <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
-                <QuestionItem letter="d">
-                  Determine se o corpo flutua, afunda ou permanece em equilíbrio.
-                </QuestionItem>
-                <QuestionItem letter="e">Determine a altura submersa do corpo.</QuestionItem>
-                <QuestionItem letter="f">Determine o volume de fluido deslocado.</QuestionItem>
-              </ul>
-            </div>
+                <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+                  <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                    <QuestionItem letter="d">
+                      Determine se o corpo flutua, afunda ou permanece em equilíbrio.
+                    </QuestionItem>
+                    <QuestionItem letter="e">Determine a altura submersa do corpo.</QuestionItem>
+                    <QuestionItem letter="f">Determine o volume de fluido deslocado.</QuestionItem>
+                  </ul>
+                </div>
+              </>
+            )}
+            {dados.tipo === 'comportas' && (
+              <>
+                <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+                  <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                    <QuestionItem letter="a">Calcule a profundidade do centróide (h_cg).</QuestionItem>
+                    <QuestionItem letter="b">Calcule a força hidrostática resultante atuante na comporta.</QuestionItem>
+                    <QuestionItem letter="c">Determine a profundidade do centro de pressão (h_cp).</QuestionItem>
+                  </ul>
+                </div>
+
+                <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+                  <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                    <QuestionItem letter="d">Determine o braço de alavanca da força hidrostática em relação à articulação.</QuestionItem>
+                    <QuestionItem letter="e">Caso aplicável, calcule o peso da comporta.</QuestionItem>
+                    <QuestionItem letter="f">Através da equação de momentos, dimensione a força mínima no tirante para que ocorra equilíbrio.</QuestionItem>
+                  </ul>
+                </div>
+              </>
+            )}
+            {dados.tipo === 'barragens' && (
+              <>
+                <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+                  <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                    <QuestionItem letter="a">Calcule o peso total e volume em 1m linear da barragem e componentes extras.</QuestionItem>
+                    <QuestionItem letter="b">Determine a força hidrostática horizontal e seu centro de aplicação.</QuestionItem>
+                    <QuestionItem letter="c">Determine a componente vertical hidrostática.</QuestionItem>
+                  </ul>
+                </div>
+
+                <div className="rounded-[9px] border border-[#dce8f6] bg-[#fbfdff] px-[14px] py-[12px]">
+                  <ul className="m-0 flex h-full list-none flex-col justify-between p-0">
+                    <QuestionItem letter="d">
+                      Calcule a subpressão ao longo da base, se houver percolação assumida de forma linear.
+                    </QuestionItem>
+                    <QuestionItem letter="e">Determine o Fator de Segurança ao Deslizamento.</QuestionItem>
+                    <QuestionItem letter="f">Determine o Fator de Segurança ao Tombamento na crista de jusante.</QuestionItem>
+                  </ul>
+                </div>
+              </>
+            )}
           </div>
         </Card>
 
         {/* Gabarito / Espaço para resolução */}
-        <Card className="mt-[12px] h-[260px] shrink-0 px-[12px] py-[10px]">
+        <Card className="mt-[12px] min-h-[260px] shrink-0 px-[12px] py-[10px]">
           <SectionTitle icon={isGabarito ? ShieldCheck : HelpCircle} number="3">
             {isGabarito ? 'Gabarito' : 'Espaço para resolução'}
           </SectionTitle>
 
           {isGabarito ? (
-            <div className="relative h-[190px] overflow-hidden rounded-[9px] border border-emerald-200 bg-[#f7fffb] px-[12px] py-[10px]">
+            <div className="relative min-h-[190px] w-full overflow-hidden rounded-[9px] border border-emerald-200 bg-[#f7fffb] px-[12px] py-[10px]">
               {/* barra lateral verde */}
               <div className="absolute left-0 top-0 h-full w-[4px] bg-[#1fc896]" />
 
@@ -440,20 +492,44 @@ export const RelatorioProvaEureka = ({
                      centralizadas verticalmente em cada célula.
               */}
               <div className="grid h-full grid-cols-2 items-center gap-[3px] pl-[2px]">
-                <AnswerLine letter="a">P = {dados.pesoFmt}</AnswerLine>
-                <AnswerLine letter="b">E = {dados.empuxoFmt}</AnswerLine>
-                <AnswerLine letter="c">
-                  P<sub>ap</sub> = {dados.pesoAparenteFmt}
-                </AnswerLine>
-                <AnswerLine letter="d">{dados.statusFisico}</AnswerLine>
-                <AnswerLine letter="e">
-                  h<sub>submersa</sub> = {alturaSubmersa || '—'}
-                </AnswerLine>
-                <AnswerLine letter="f">V = {volumeSubmersoCorrigido}</AnswerLine>
+                {dados.tipo === 'corpos-imersos' && (
+                  <>
+                    <AnswerLine letter="a">P = {dados.pesoFmt}</AnswerLine>
+                    <AnswerLine letter="b">E = {dados.empuxoFmt}</AnswerLine>
+                    <AnswerLine letter="c">
+                      P<sub>ap</sub> = {dados.pesoAparenteFmt}
+                    </AnswerLine>
+                    <AnswerLine letter="d">{dados.statusFisico}</AnswerLine>
+                    <AnswerLine letter="e">
+                      h<sub>submersa</sub> = {alturaSubmersa || '—'}
+                    </AnswerLine>
+                    <AnswerLine letter="f">V = {volumeSubmersoCorrigido}</AnswerLine>
+                  </>
+                )}
+                {dados.tipo === 'comportas' && (
+                  <>
+                    <AnswerLine letter="a">h<sub>cg</sub> = {dados.analyzedResults && dados.analyzedResults.forceData.up ? (dados.analyzedResults.forceData.up.h_cg).toLocaleString('pt-BR', {minimumFractionDigits: 3}) : '-'} m</AnswerLine>
+                    <AnswerLine letter="b">F = {dados.analyzedResults ? (dados.analyzedResults.forceData.FR_net / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN</AnswerLine>
+                    <AnswerLine letter="c">y<sub>cp</sub> = {dados.analyzedResults ? (dados.analyzedResults.forceData.s_cp_net).toLocaleString('pt-BR', {minimumFractionDigits: 3}) : '-'} m</AnswerLine>
+                    <AnswerLine letter="d">braço = {dados.analyzedResults ? Math.abs((dados.analyzedResults.forceData.s_cp_net || 0)).toLocaleString('pt-BR', {minimumFractionDigits: 3}) : '-'} m</AnswerLine>
+                    <AnswerLine letter="e">P = {dados.peso ? (dados.peso).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' N' : '-'}</AnswerLine>
+                    <AnswerLine letter="f">F<sub>tirante</sub> = {dados.analyzedResults && dados.analyzedResults.equilibrium ? (dados.analyzedResults.equilibrium.F_tie).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' N' : '-'}</AnswerLine>
+                  </>
+                )}
+                {dados.tipo === 'barragens' && (
+                  <>
+                    <AnswerLine letter="a">W = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.weight / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN</AnswerLine>
+                    <AnswerLine letter="b">F<sub>H</sub> = {dados.analyzedResults ? (dados.analyzedResults.forceData.FR_net / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN, y<sub>cp</sub> = {dados.analyzedResults ? (dados.analyzedResults.forceData.y_cp_net).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} m</AnswerLine>
+                    <AnswerLine letter="c">F<sub>V</sub> = -</AnswerLine>
+                    <AnswerLine letter="d">U = -</AnswerLine>
+                    <AnswerLine letter="e">FS<sub>desliz</sub> = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.fs_desl).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</AnswerLine>
+                    <AnswerLine letter="f">FS<sub>tomba</sub> = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.fs_tomb).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</AnswerLine>
+                  </>
+                )}
               </div>
             </div>
           ) : (
-            <div className="grid h-[190px] grid-cols-2 gap-[8px]">
+            <div className="grid min-h-[190px] grid-cols-2 gap-[8px]">
               <div className="rounded-[9px] border border-dashed border-[#b8cce8] bg-[#fbfdff]" />
               <div className="rounded-[9px] border border-dashed border-[#b8cce8] bg-[#fbfdff]" />
             </div>

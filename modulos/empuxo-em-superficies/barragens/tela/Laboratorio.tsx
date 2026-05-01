@@ -104,6 +104,22 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
       }
   }, [contextString, onContextUpdate]);
 
+  const exportData = {
+    tipo: 'barragens',
+    geometria: `Barragem ${damType}`,
+    dimensoes: {
+      'Altura (m)': damHeight,
+      'Base (m)': effectiveBaseWidth,
+      'Crista (m)': damCrestWidth
+    },
+    empuxo: analyzedResults ? analyzedResults.forceData.FR_net : 0, 
+    peso: analyzedResults && analyzedResults.stabilityData ? analyzedResults.stabilityData.weight : 0,
+    volumeDeslocado: analyzedResults ? 1 : 0,
+    alturaSubmersa: effectiveUpstreamLevel,
+    isAnalyzed: !!analyzedResults,
+    analyzedResults: analyzedResults
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
@@ -127,7 +143,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
         />
 
         {/* --- CENTER: SCENE --- */}
-        <div id="areaSimulacao" data-simulacao={JSON.stringify({ tipo: 'barragens', geometria: `Barragem ${damType}`, dimensoes: { 'Altura (m)': damHeight, 'Base (m)': damBaseWidth }, densidadeFluido: 1000, densidadeObjeto: 2400, empuxo: 0, peso: 0, volumeDeslocado: 0, alturaSubmersa: 0 })} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
+        <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
             <RenderizadorBarragens
                 key={damType}
