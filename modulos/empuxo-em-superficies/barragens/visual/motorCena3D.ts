@@ -293,16 +293,25 @@ export const useSceneEngine = (
       if (wf.normal) {
         const rn = rotateDirection(wf.normal);
         facingScore = rn.z;
+        // BACKFACE CULLING: Se a normal apontar para longe da câmera (Z < -0.05), ignora a face.
+        if (facingScore < -0.05) return;
       }
 
       const proj = wf.pts3.map(project);
 
-      // Determinar centroide base
-      let cX = wf.pts3.reduce((sum, p) => sum + p.x, 0) / Math.max(1, wf.pts3.length);
-      const cY = wf.pts3.reduce((sum, p) => sum + p.y, 0) / Math.max(1, wf.pts3.length);
-      const cZ = wf.pts3.reduce((sum, p) => sum + p.z, 0) / Math.max(1, wf.pts3.length);
-
-      let zDepth = rotate({ x: cX - center.x, y: cY - center.y, z: cZ - center.z }).z;
+      // Calcular o Z aproximado baseado nos vértices reais em direção à câmera
+      let zDepths = wf.pts3.map(p => {
+        return rotate({ x: p.x - center.x, y: p.y - center.y, z: p.z - center.z }).z;
+      });
+      // Para polígonos grandes como a água, a distância do Ponto Central pode falhar.
+      // Math.min garante que o polígono não pule para a frente se a maior parte dele estiver atrás.
+      let zDepth = 0;
+      if (wf.kind.startsWith('WATER') || wf.kind === 'EARTH') {
+        zDepth = Math.min(...zDepths) + (Math.max(...zDepths) - Math.min(...zDepths)) * 0.2; // Leve peso para o centro
+      } else {
+        // Dam e outros menores, média ou centroide
+        zDepth = zDepths.reduce((sum, z) => sum + z, 0) / Math.max(1, zDepths.length);
+      }
 
       // Desempate sutil automático
       if (wf.kind.startsWith('WATER')) zDepth -= 0.1;
@@ -345,9 +354,8 @@ export const useSceneEngine = (
       const zDiff = a.zDepth - b.zDepth;
       if (Math.abs(zDiff) > 0.05) return zDiff;
 
-      // Regra 3: Empate coplanar milimétrico
+      // Regra 3: Tie-breaker de prioridade e de ID
       if (a.priority !== b.priority) return a.priority - b.priority;
-
       return a.id - b.id;
     });
 

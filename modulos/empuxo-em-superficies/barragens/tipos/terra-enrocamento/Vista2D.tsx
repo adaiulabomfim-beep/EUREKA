@@ -295,10 +295,16 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       const p1Off = { x: p1.x + offsetPx.x, y: p1.y + offsetPx.y };
       const p2Off = { x: p2.x + offsetPx.x, y: p2.y + offsetPx.y };
 
+      const cx = (p1Off.x + p2Off.x) / 2 + textOffsetPx.x;
+      const cy = (p1Off.y + p2Off.y) / 2 + textOffsetPx.y;
+
+      const textW = text.length * 6.5 + 8;
+      const textH = 16;
+
       return (
-        <g key={key} stroke="#475569" strokeWidth="1.5" fill="none" opacity="0.8">
-          <line x1={p1.x} y1={p1.y} x2={p1Off.x} y2={p1Off.y} strokeDasharray="3 3" opacity="0.5" />
-          <line x1={p2.x} y1={p2.y} x2={p2Off.x} y2={p2Off.y} strokeDasharray="3 3" opacity="0.5" />
+        <g key={key} stroke="#64748b" strokeWidth="1" fill="none" opacity="0.9">
+          <line x1={p1.x} y1={p1.y} x2={p1Off.x} y2={p1Off.y} strokeDasharray="2 2" opacity="0.3" />
+          <line x1={p2.x} y1={p2.y} x2={p2Off.x} y2={p2Off.y} strokeDasharray="2 2" opacity="0.3" />
           
           <line 
             x1={p1Off.x} y1={p1Off.y} 
@@ -307,13 +313,24 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
             markerEnd="url(#arrow)" 
           />
           
+          <rect
+            x={cx - textW / 2}
+            y={cy - textH / 2}
+            width={textW}
+            height={textH}
+            fill="white"
+            rx="4"
+            stroke="none"
+            opacity="0.9"
+          />
+          
           <text
-            x={(p1Off.x + p2Off.x) / 2 + textOffsetPx.x}
-            y={(p1Off.y + p2Off.y) / 2 + textOffsetPx.y}
+            x={cx}
+            y={cy}
             textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#334155"
-            fontSize="12"
+            dominantBaseline="central"
+            fill="#475569"
+            fontSize="10"
             fontWeight="bold"
             stroke="none"
           >

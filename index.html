@@ -51,16 +51,13 @@
         outline: none;
       }
 
-      /* Scrollbar styling */
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
+      /* Hide scrollbars globally */
+      ::-webkit-scrollbar {
+        display: none;
       }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent; 
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1; 
-        border-radius: 20px; 
+      * {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
       }
 
       /* Hide number spinners */

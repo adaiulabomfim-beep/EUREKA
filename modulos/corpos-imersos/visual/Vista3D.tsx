@@ -359,6 +359,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, zCenter, depth);
     return (
       <g>
+        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#fluidDepthA)', 1)}
         {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#ripplePattern)', 1)}
         <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p2.x} y2={ptsADynamic.p2.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
         <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p5.x} y2={ptsADynamic.p5.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
@@ -373,6 +374,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, zCenter, depth);
     return (
       <g>
+        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#fluidDepthA)', 1)}
         {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#ripplePattern)', 1)}
         <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p5.x} y2={ptsADynamic.p5.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
         <line x1={ptsADynamic.p2.x} y1={ptsADynamic.p2.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />

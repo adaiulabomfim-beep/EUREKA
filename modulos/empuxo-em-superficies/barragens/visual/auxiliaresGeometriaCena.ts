@@ -202,53 +202,43 @@ export const criarPrisma = (
       const subP1 = { x: p1.x + t1 * dx, y: p1.y + t1 * dy };
       const subP2 = { x: p1.x + t2 * dx, y: p1.y + t2 * dy };
 
-      const facePts: Point3D[] = [];
+      for (let s = 0; s < steps; s++) {
+        const sz1 = zStart + s * dz;
+        const sz2 = zStart + (s + 1) * dz;
 
-      // Sentido do +Z
-      for (let s = 0; s <= steps; s++) {
-        const sz = zStart + s * dz;
-        facePts.push(mapPt(subP1, sz));
+        const facePts: Point3D[] = [
+          mapPt(subP1, sz1),
+          mapPt(subP1, sz2),
+          mapPt(subP2, sz2),
+          mapPt(subP2, sz1)
+        ];
+
+        const isMainWaterFace = !(kind.startsWith("WATER") && i !== 1);
+
+        const finalPts = profileIsCW ? facePts : facePts.reverse();
+        const trueNormal = computeFaceNormal(finalPts);
+
+        faces.push(
+          criarFace(
+            finalPts,
+            fill,
+            opacity,
+            "none",
+            0,
+            trueNormal,
+            kind,
+            isMainWaterFace ? hatchPattern : undefined,
+            p,
+          ),
+        );
       }
-
-      // Retorno do -Z
-      for (let s = steps; s >= 0; s--) {
-        const sz = zStart + s * dz;
-        facePts.push(mapPt(subP2, sz));
-      }
-
-      // Normal baseada no centro para sombreamento suave em toda a face
-      const sMid = Math.floor(steps / 2);
-      const szMid = zStart + sMid * dz;
-      const szMid2 = zStart + (sMid + 1) * dz;
-      
-      const pt1A = mapPt(subP1, szMid);
-      const pt1B = mapPt(subP1, szMid2);
-      const pt2B = mapPt(subP2, szMid2);
-      const pt2A = mapPt(subP2, szMid);
-
-      const trueNormal = computeFaceNormal([pt1A, pt1B, pt2B, pt2A]);
-      const isMainWaterFace = !(kind.startsWith("WATER") && i !== 1);
-
-      const finalPts = profileIsCW ? facePts : facePts.reverse();
-
-      faces.push(
-        criarFace(
-          finalPts,
-          fill,
-          opacity,
-          "none",
-          0,
-          trueNormal,
-          kind,
-          isMainWaterFace ? hatchPattern : undefined,
-          p,
-        ),
-      );
     }
   }
 
   // Bordas da barragem (segmentadas por steps para acompanhar curvas)
+  // Desativado internamente para usar stroke nas próprias faces
   if (showEdges && stroke !== "none" && strokeWidth > 0) {
+
     // Arestas longitudinais acompanhando o steps Z (acompanha curvas)
     for (let i = 0; i < profile.length; i++) {
       const pt = profile[i];
@@ -372,8 +362,8 @@ export const caixaAgua3D = (
     ripplePattern,
     toWorldX,
     1,
-    stepsZ || 1, // Restaurado para 1, usamos 1 gigante para barragens retas (topologia resolve o z-depth)
-    1,
+    stepsZ || 1, // Z (largura do canal) - passos no extruir
+    1, // stepsY
     false,
   );
 

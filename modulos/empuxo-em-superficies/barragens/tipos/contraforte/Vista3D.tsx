@@ -70,7 +70,7 @@ export const Vista3D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         'url(#concretePattern)',
         toWorldX,
         2,
-        10,
+        1,
         1,
         true
       ),

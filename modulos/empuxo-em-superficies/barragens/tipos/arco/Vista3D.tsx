@@ -120,7 +120,7 @@ export const Vista3D: React.FC<
         2,
         24,
         1,
-        false
+        true
       ),
     ];
 

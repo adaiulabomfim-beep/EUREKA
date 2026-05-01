@@ -22,6 +22,7 @@ type RenderedFace = {
   opacity?: number;
   stroke?: string;
   strokeWidth?: number;
+  strokeDasharray?: string;
   brightness?: number;
   kind?: 'DAM' | 'WATER' | 'GATE' | string;
   hatchPattern?: string;
@@ -278,13 +279,13 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
           let strokeToUse = f.stroke ?? 'none';
           let strokeWidthToUse = f.strokeWidth ?? 0;
 
-          if (!isLine && !isWater && strokeToUse === 'none' && baseFill !== 'none') {
+          if (!isLine && strokeToUse === 'none' && baseFill !== 'none') {
             strokeToUse = baseFill;
-            strokeWidthToUse = 0.5;
+            strokeWidthToUse = 0.2;
           }
 
           const overlayOpacity =
-            isWater || isDam
+            isWater
               ? 0
               : typeof f.brightness === 'number'
                 ? f.brightness < 1
@@ -312,6 +313,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                 opacity={baseOpacity}
                 stroke={strokeToUse}
                 strokeWidth={strokeWidthToUse}
+                strokeDasharray={f.strokeDasharray}
                 vectorEffect="non-scaling-stroke"
                 shapeRendering="geometricPrecision"
                 strokeLinejoin="round"

@@ -8,13 +8,13 @@ interface SvgDefsProps {
 export const SvgDefs = ({ colorA = '#3b82f6', colorB = '#2563eb' }: SvgDefsProps) => (
   <defs>
     <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor={colorA} stopOpacity="0.2" />
-      <stop offset="100%" stopColor={colorA} stopOpacity="0.7" />
+      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45" />
+      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.85" />
     </linearGradient>
 
     <linearGradient id="fluidDepthB" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor={colorB} stopOpacity="0.4" />
-      <stop offset="100%" stopColor={colorB} stopOpacity="0.9" />
+      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.55" />
+      <stop offset="100%" stopColor="#1d4ed8" stopOpacity="0.95" />
     </linearGradient>
 
     <linearGradient id="goldGradient2D" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -114,7 +114,7 @@ export const SvgDefs = ({ colorA = '#3b82f6', colorB = '#2563eb' }: SvgDefsProps
       <stop offset="100%" stopColor="white" stopOpacity="0" />
     </radialGradient>
     <linearGradient id="surfaceGradientA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor={colorA} stopOpacity="0.5" />
+      <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.55" />
       <stop offset="100%" stopColor={colorA} stopOpacity="0.8" />
     </linearGradient>
   </defs>

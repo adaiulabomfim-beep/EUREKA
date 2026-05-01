@@ -398,6 +398,12 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       const p1Off = { x: p1.x + offsetPx.x, y: p1.y + offsetPx.y };
       const p2Off = { x: p2.x + offsetPx.x, y: p2.y + offsetPx.y };
 
+      const cx = (p1Off.x + p2Off.x) / 2 + textOffsetPx.x;
+      const cy = (p1Off.y + p2Off.y) / 2 + textOffsetPx.y;
+      
+      const textW = text.length * 7 + 8;
+      const textH = 18;
+
       return (
         <g key={key} stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.9">
           <line
@@ -424,11 +430,20 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
             markerStart="url(#arrow)"
             markerEnd="url(#arrow)"
           />
+          <rect
+            x={cx - textW / 2}
+            y={cy - textH / 2}
+            width={textW}
+            height={textH}
+            fill="white"
+            rx="3"
+            stroke="none"
+          />
           <text
-            x={(p1Off.x + p2Off.x) / 2 + textOffsetPx.x}
-            y={(p1Off.y + p2Off.y) / 2 + textOffsetPx.y}
+            x={cx}
+            y={cy}
             textAnchor="middle"
-            dominantBaseline="middle"
+            dominantBaseline="central"
             fill="#475569"
             fontSize="12"
             fontWeight="700"

@@ -331,8 +331,8 @@ export const caixaAgua3D = (
         ];
 
     faces.push(
-      // Aplicamos a cor da superfície + hatch das ondinhas para padronizar perfeitamente com os corpos imersos!
-      criarFace(pts, surfColor, waterVolumeOpacity, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", ripplePattern, 4)
+      // Aplicamos a cor de profundidade + hatch das ondinhas para padronizar perfeitamente com barragens!
+      criarFace(pts, fill, waterVolumeOpacity, "none", 0, { x: 0, y: 1, z: 0 }, "WATER", ripplePattern, 4)
     );
   }
 

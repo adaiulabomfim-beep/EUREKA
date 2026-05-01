@@ -37,8 +37,8 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
 
   const maxH = Math.max(props.upstreamLevel, props.downstreamLevel, props.gateHeight) || 10;
   
-  const ORIGIN_X = SVG_W / 2;
-  const ORIGIN_Y = SVG_H * 0.75; 
+  const ORIGIN_X = SVG_W * 0.52;
+  const ORIGIN_Y = SVG_H * 0.82; 
 
   const toWorldX = useCallback((x: number) => x, []);
 

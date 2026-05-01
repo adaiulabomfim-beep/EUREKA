@@ -82,7 +82,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
         2,
         1,
         1,
-        false
+        true
       ),
     ];
 
