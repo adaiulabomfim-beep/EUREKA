@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResultsPanel, ResultsCard } from '../../../../interface/PainelResultados';
-import { Calculator, ArrowDown, MoveVertical, RotateCw, Maximize, AlertCircle } from 'lucide-react';
+import { Calculator, ArrowDown, MoveVertical, RotateCw, Maximize, AlertCircle, Droplets } from 'lucide-react';
 import { PosicaoDobradica } from '../dominio/tipos';
 
 interface PainelResultadosProps {
@@ -35,7 +35,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             value={analyzedResults ? (Math.abs(analyzedResults.forceData.FR_net) / 1000).toFixed(2) : '???'}
             unit={analyzedResults ? 'kN' : ''}
             theme="blue"
-            icon={ArrowDown}
+            leftIcon={Droplets}
           />
 
           {/* Center of Pressure Depth */}
@@ -44,7 +44,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             value={analyzedResults ? analyzedResults.forceData.s_cp_net.toFixed(2) : '?'}
             unit={analyzedResults ? 'm' : ''}
             theme="cyan"
-            icon={MoveVertical}
+            leftIcon={MoveVertical}
             secondaryValue="Posição ao longo da face (do topo)"
           />
 
@@ -57,7 +57,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                   value={analyzedResults ? (Math.abs(analyzedResults.equilibrium.M_hinge) / 1000).toFixed(2) : '???'}
                   unit={analyzedResults ? 'kN·m' : ''}
                   theme="purple"
-                  icon={RotateCw}
+                  leftIcon={RotateCw}
                 />
               )}
               {hasTieRod && (
@@ -66,7 +66,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                   value={analyzedResults ? (Math.abs(analyzedResults.equilibrium.F_tie) / 1000).toFixed(2) : '???'}
                   unit={analyzedResults ? 'kN' : ''}
                   theme="amber"
-                  icon={RotateCw}
+                  leftIcon={ArrowDown}
                 />
               )}
             </>
@@ -78,7 +78,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             value={analyzedResults ? analyzedResults.forceData.up.area.toFixed(2) : '?'}
             unit={analyzedResults ? 'm²' : ''}
             theme="slate"
-            icon={Maximize}
+            leftIcon={Maximize}
           />
           
           <ResultsCard
@@ -86,7 +86,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             value={analyzedResults ? analyzedResults.forceData.down.area.toFixed(2) : '?'}
             unit={analyzedResults ? 'm²' : ''}
             theme="slate"
-            icon={Maximize}
+            leftIcon={Maximize}
           />
         </>
       </ResultsPanel>

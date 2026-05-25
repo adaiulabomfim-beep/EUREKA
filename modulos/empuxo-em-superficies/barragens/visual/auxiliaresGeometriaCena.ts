@@ -202,36 +202,44 @@ export const criarPrisma = (
       const subP1 = { x: p1.x + t1 * dx, y: p1.y + t1 * dy };
       const subP2 = { x: p1.x + t2 * dx, y: p1.y + t2 * dy };
 
-      for (let s = 0; s < steps; s++) {
-        const sz1 = zStart + s * dz;
-        const sz2 = zStart + (s + 1) * dz;
+      // Normal compartilhada por todas as fatias da mesma extensão longitudinal para não gerar "listras" de shading (esconde o fatiamento)
+      const midZ1 = zStart + (zWidth / 2) - 0.01;
+      const midZ2 = zStart + (zWidth / 2) + 0.01;
+      const refFace: Point3D[] = [
+        mapPt(subP1, midZ1),
+        mapPt(subP1, midZ2),
+        mapPt(subP2, midZ2),
+        mapPt(subP2, midZ1)
+      ];
+      const sharedNormal = computeFaceNormal(profileIsCW ? refFace : refFace.reverse());
 
-        const facePts: Point3D[] = [
-          mapPt(subP1, sz1),
-          mapPt(subP1, sz2),
-          mapPt(subP2, sz2),
-          mapPt(subP2, sz1)
-        ];
-
-        const isMainWaterFace = !(kind.startsWith("WATER") && i !== 1);
-
-        const finalPts = profileIsCW ? facePts : facePts.reverse();
-        const trueNormal = computeFaceNormal(finalPts);
-
-        faces.push(
-          criarFace(
-            finalPts,
-            fill,
-            opacity,
-            "none",
-            0,
-            trueNormal,
-            kind,
-            isMainWaterFace ? hatchPattern : undefined,
-            p,
-          ),
-        );
+      const facePts: Point3D[] = [];
+      for (let s = 0; s <= steps; s++) {
+        const sz = zStart + s * dz;
+        facePts.push(mapPt(subP1, sz));
       }
+      for (let s = steps; s >= 0; s--) {
+        const sz = zStart + s * dz;
+        facePts.push(mapPt(subP2, sz));
+      }
+
+      const isMainWaterFace = !(kind.startsWith("WATER") && i !== 1);
+
+      const finalPts = profileIsCW ? facePts : facePts.reverse();
+
+      faces.push(
+        criarFace(
+          finalPts,
+          fill,
+          opacity,
+          "none",
+          0,
+          sharedNormal,
+          kind,
+          isMainWaterFace ? hatchPattern : undefined,
+          p,
+        ),
+      );
     }
   }
 

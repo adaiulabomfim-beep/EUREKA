@@ -7,7 +7,8 @@ export interface ResultsCardProps {
   title: string;
   value: string | number;
   unit?: string;
-  icon?: LucideIcon;
+  icon?: LucideIcon; // Keeps backwards compatibility as rightIcon
+  leftIcon?: LucideIcon;
   theme?: CardTheme;
   badge?: string;
   secondaryValue?: string;
@@ -18,7 +19,8 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
   title,
   value,
   unit,
-  icon: Icon,
+  icon: RightIcon,
+  leftIcon: LeftIcon,
   theme = 'blue',
   badge,
   secondaryValue,
@@ -26,13 +28,13 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
 }) => {
 
   const themeStyles = {
-    red: { border: 'border-l-red-500', text: 'text-red-500', title: 'text-slate-400' },
-    green: { border: 'border-l-emerald-500', text: 'text-emerald-500', title: 'text-slate-400' },
-    blue: { border: 'border-l-blue-600', text: 'text-blue-600', title: 'text-blue-600' },
-    purple: { border: 'border-l-purple-400', text: 'text-purple-600', title: 'text-purple-400' },
-    amber: { border: 'border-l-amber-500', text: 'text-amber-600', title: 'text-slate-400' },
-    cyan: { border: 'border-l-cyan-500', text: 'text-cyan-500', title: 'text-blue-500' },
-    slate: { border: 'border-l-slate-400', text: 'text-slate-500', title: 'text-slate-400' },
+    red: { border: 'border-l-red-500', text: 'text-red-500', title: 'text-slate-400', bg: 'bg-red-50' },
+    green: { border: 'border-l-emerald-500', text: 'text-emerald-500', title: 'text-slate-400', bg: 'bg-emerald-50' },
+    blue: { border: 'border-l-blue-600', text: 'text-blue-600', title: 'text-blue-600', bg: 'bg-blue-50' },
+    purple: { border: 'border-l-purple-400', text: 'text-purple-600', title: 'text-purple-400', bg: 'bg-purple-50' },
+    amber: { border: 'border-l-amber-500', text: 'text-amber-600', title: 'text-slate-400', bg: 'bg-amber-50' },
+    cyan: { border: 'border-l-cyan-500', text: 'text-cyan-500', title: 'text-blue-500', bg: 'bg-cyan-50' },
+    slate: { border: 'border-l-slate-400', text: 'text-slate-500', title: 'text-slate-400', bg: 'bg-slate-50' },
   };
 
   const currentTheme = themeStyles[theme];
@@ -40,16 +42,20 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
   // CARD HIGHLIGHT (Estado do objeto)
   if (highlight) {
     return (
-      <div className="rounded-lg border border-purple-100 bg-purple-50/50 py-2 px-3 text-center shadow-sm">
-        <div className="text-[8px] font-bold uppercase tracking-widest text-purple-400/70">
+      <div className="rounded-xl border border-purple-100 bg-purple-50/50 py-3 px-3 flex flex-col items-center justify-center shadow-sm">
+        {LeftIcon && (
+          <div className="w-10 h-10 rounded-full bg-purple-100 mb-2 flex items-center justify-center">
+            <LeftIcon className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
+          </div>
+        )}
+        <div className="text-[10px] font-bold uppercase tracking-widest text-purple-500/80">
           {title}
         </div>
-
-        <div className="text-[12px] font-black text-purple-600 uppercase tracking-wide">
+        <div className="text-[16px] font-black text-purple-600 uppercase tracking-wide mt-0.5">
           {value}
         </div>
         {secondaryValue && (
-          <div className="text-[9px] mt-1 text-purple-500 font-bold">
+          <div className="text-[10px] mt-1 text-purple-500 font-bold">
             {secondaryValue}
           </div>
         )}
@@ -60,46 +66,54 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
   return (
     <div
       className={`
-        relative rounded-lg border border-slate-100 bg-white py-2.5 px-3
-        shadow-sm border-l-[4px] ${currentTheme.border}
+        relative rounded-xl border border-slate-100 bg-white py-3 px-3.5
+        shadow-sm flex items-center gap-3.5 border-l-[4px] ${currentTheme.border}
       `}
     >
-
-      {badge && (
-        <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-md uppercase">
-          {badge}
+      {/* Left Icon (Colored Circle) */}
+      {LeftIcon && (
+        <div className={`w-10 h-10 rounded-full ${currentTheme.bg} flex items-center justify-center shrink-0`}>
+          <LeftIcon className={`w-5 h-5 ${currentTheme.text}`} strokeWidth={2} />
         </div>
       )}
 
-      <div className={`text-[9px] font-bold uppercase tracking-tight ${currentTheme.title}`}>
-        {title}
-      </div>
+      {/* Content Area */}
+      <div className="flex-1 min-w-0">
+        <div className={`text-[10px] font-bold uppercase tracking-tight truncate ${currentTheme.title}`}>
+          {title}
+        </div>
 
-      <div className="flex items-center justify-between mt-1">
-        <div className="flex items-baseline">
-          <span className="text-[18px] font-bold text-slate-800 leading-none">
+        <div className="flex items-baseline mt-0.5">
+          <span className="text-[18px] font-bold text-slate-800 leading-none truncate">
             {value}
           </span>
-
           {unit && (
-            <span className="text-[10px] font-bold text-slate-700 ml-1">
+            <span className="text-[11px] font-bold text-slate-600 ml-1 shrink-0">
               {unit}
             </span>
           )}
         </div>
 
-        {Icon && (
-          <Icon className={`w-4 h-4 ${currentTheme.text}`} />
+        {secondaryValue && (
+          <div className="text-[10px] mt-1 text-blue-500 flex flex-wrap gap-x-2 truncate">
+            {secondaryValue.split('|').map((val, idx) => (
+              <span key={idx}>{val.trim()}</span>
+            ))}
+          </div>
         )}
       </div>
 
-      {secondaryValue && (
-        <div className="text-[9px] mt-1 text-blue-500 flex flex-wrap gap-x-2">
-          {secondaryValue.split('|').map((val, idx) => (
-            <span key={idx}>{val.trim()}</span>
-          ))}
-        </div>
-      )}
+      {/* Right Side (Badge or Right Icon) */}
+      <div className="shrink-0 flex items-center justify-end">
+        {badge ? (
+          <div className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1.5 rounded-md uppercase tracking-wider">
+            {badge}
+          </div>
+        ) : RightIcon ? (
+          <RightIcon className={`w-4 h-4 ${currentTheme.text}`} strokeWidth={2.5} />
+        ) : null}
+      </div>
+
     </div>
   );
 };

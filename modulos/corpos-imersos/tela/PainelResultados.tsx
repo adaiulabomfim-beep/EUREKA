@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDown, ArrowUp, EyeOff, Ruler, Calculator } from 'lucide-react';
+import { ArrowDown, ArrowUp, EyeOff, Ruler, Calculator, Weight, Droplets, Scale, CheckCircle2, Box } from 'lucide-react';
 import { ResultsPanel, ResultsCard } from '../../../interface/PainelResultados';
 
 interface PainelResultadosProps {
@@ -40,6 +40,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           title="Peso Real (P)"
           value={physics.objectWeight >= 10000 ? (physics.objectWeight / 1000).toFixed(1) : physics.objectWeight.toFixed(1)}
           unit={physics.objectWeight >= 10000 ? 'kN' : 'N'}
+          leftIcon={Weight}
           icon={ArrowDown}
           theme="red"
         />
@@ -48,6 +49,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           title="Empuxo Total (E)"
           value={isSimulating ? (physics.buoyancyForce >= 10000 ? (physics.buoyancyForce / 1000).toFixed(1) : physics.buoyancyForce.toFixed(1)) : '???'}
           unit={isSimulating ? (physics.buoyancyForce >= 10000 ? 'kN' : 'N') : ''}
+          leftIcon={Droplets}
           icon={isSimulating ? ArrowUp : EyeOff}
           theme="green"
         />
@@ -55,6 +57,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
         <ResultsCard
           title="Peso Aparente (Pap)"
           value={forceText}
+          leftIcon={Scale}
           theme="blue"
           badge="DINAMÔMETRO"
         />
@@ -63,6 +66,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           title="Estado do Objeto"
           value={isSimulating ? physics.status : 'PRONTO'}
           highlight={true}
+          leftIcon={CheckCircle2}
           secondaryValue={isSimulating && physics.equivalentDensity ? `Densidade Eq.: ${physics.equivalentDensity.toFixed(1)} kg/m³` : undefined}
         />
 
@@ -70,6 +74,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           title="Altura Submersa (Hsub)"
           value={isSimulating ? (physics.h_sub_actual / 100).toFixed(2) : '?'}
           unit="m"
+          leftIcon={Droplets}
           icon={Ruler}
           theme="cyan"
           secondaryValue={enableTwoFluids && isSimulating ? `A: ${(physics.h_in_A / 100).toFixed(2)}m | B: ${(physics.h_in_B / 100).toFixed(2)}m` : undefined}
@@ -79,6 +84,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           title="Volume Deslocado (Vdesl)"
           value={isSimulating ? physics.vol_deslocado.toFixed(4) : '?'}
           unit="m³"
+          leftIcon={Box}
           theme="amber"
           badge="Vdesl = Vsub"
           secondaryValue={`Elevação do Nível (Δh): ${isSimulating ? physics.deltaH_cm.toFixed(2) : '?'} cm`}

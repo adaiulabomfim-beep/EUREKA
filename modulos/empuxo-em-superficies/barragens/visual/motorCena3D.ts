@@ -293,8 +293,8 @@ export const useSceneEngine = (
       if (wf.normal) {
         const rn = rotateDirection(wf.normal);
         facingScore = rn.z;
-        // BACKFACE CULLING: Se a normal apontar para longe da câmera (Z < -0.05), ignora a face.
-        if (facingScore < -0.05) return;
+        // BACKFACE CULLING REMOVIDO
+        // Isso resolve geometria sumindo nas laterais, já que a estrutura deve parecer sempre um prisma sólido.
       }
 
       const proj = wf.pts3.map(project);
@@ -303,19 +303,10 @@ export const useSceneEngine = (
       let zDepths = wf.pts3.map(p => {
         return rotate({ x: p.x - center.x, y: p.y - center.y, z: p.z - center.z }).z;
       });
-      // Para polígonos grandes como a água, a distância do Ponto Central pode falhar.
-      // Math.min garante que o polígono não pule para a frente se a maior parte dele estiver atrás.
-      let zDepth = 0;
-      if (wf.kind.startsWith('WATER') || wf.kind === 'EARTH') {
-        zDepth = Math.min(...zDepths) + (Math.max(...zDepths) - Math.min(...zDepths)) * 0.2; // Leve peso para o centro
-      } else {
-        // Dam e outros menores, média ou centroide
-        zDepth = zDepths.reduce((sum, z) => sum + z, 0) / Math.max(1, zDepths.length);
-      }
-
-      // Desempate sutil automático
-      if (wf.kind.startsWith('WATER')) zDepth -= 0.1;
-      if (wf.kind === 'DAM') zDepth += 0.1;
+      let zDepth = zDepths.reduce((sum, z) => sum + z, 0) / Math.max(1, zDepths.length);
+      
+      // Para faces coincidentes, confiamos na priority
+      // A waterFace compartilha a exata superfície da damFace. Seus centroides serão iguais.
 
       let b = 1;
       if (wf.normal) {

@@ -19,15 +19,14 @@ import { montarEnunciado } from '../../utils/exportacao/montarEnunciado';
 import { LogoEureka } from '../ui/LogoEureka';
 
 const SectionTitle = ({ icon: Icon, children, number }) => (
-  <div className="mb-[8px] flex items-center gap-[6px] border-b border-[#dbe8f7] pb-[7px]">
+  <div className="mb-[10px] flex items-center gap-[8px] border-b border-[#dbe8f7] pb-[8px]">
     {Icon && (
-      <Icon
-        size={16}
-        strokeWidth={2.3}
-        className="shrink-0 text-[#3478f6]"
-      />
+      <Icon size={16} strokeWidth={2.5} className="shrink-0 text-[#3478f6]" />
     )}
-    <h3 className="m-0 text-[12px] font-black uppercase leading-tight tracking-[0.5px] text-[#23477f]">
+    <h3 
+      className="m-0 p-0 text-[13px] font-black uppercase tracking-[0.5px] text-[#23477f]"
+      style={{ lineHeight: '1', transform: 'translateY(-3.5px)' }}
+    >
       {number ? `${number}. ` : ''}
       {children}
     </h3>
@@ -43,46 +42,44 @@ const Card = ({ children, className = '' }) => (
 );
 
 const InfoLine = ({ label, wide, value, noLine }) => (
-  <div className={`${wide ? 'col-span-2' : ''} flex min-h-[26px] items-center gap-[6px]`}>
-    <span className="shrink-0 whitespace-nowrap text-[10.5px] font-semibold leading-tight text-[#6b82a9]">
+  <div className={`${wide ? 'col-span-2' : ''} flex min-h-[30px] items-center gap-[6px]`}>
+    <span className="shrink-0 text-[11px] font-semibold text-[#6b82a9]" style={{ transform: 'translateY(-1.5px)' }}>
       {label}:
     </span>
 
     {noLine ? (
-      <span className="text-[11.5px] font-black leading-tight tracking-[2px] text-[#244a82]">
+      <span className="text-[12px] font-black tracking-[0.5px] text-[#244a82]" style={{ transform: 'translateY(-1.5px)' }}>
         {value}
       </span>
     ) : (
-      <div className="flex flex-1 items-center border-b border-[#bfd2ef] pt-[4px]">
-        {value && (
-          <span className="text-[11.5px] font-black leading-tight tracking-[2px] text-[#244a82] translate-y-[-2px]">
-            {value}
-          </span>
-        )}
+      <div className="relative flex flex-1 items-center justify-end h-[30px]">
+        <div className="absolute left-0 right-0 top-[20px] border-b border-[#bfd2ef]"></div>
+        <span className="relative z-10 text-[12px] font-black tracking-[0.5px] text-[#244a82] bg-white pl-[6px]" style={{ transform: 'translateY(-1.5px)' }}>
+          {value}
+        </span>
       </div>
     )}
   </div>
 );
 
 const DataRow = ({ label, value }) => (
-  <div className="flex min-h-[28px] items-center justify-between gap-[8px] rounded-[7px] border border-[#dce8f6] bg-[#fbfdff] px-[10px] py-[4px]">
-    <span className="text-[10px] font-medium leading-tight text-[#6d82a7]">
+  <div className="flex min-h-[32px] items-center justify-between gap-[8px] rounded-[7px] border border-[#dce8f6] bg-[#fbfdff] px-[12px]">
+    <span className="text-[11px] font-medium text-[#6d82a7]" style={{ transform: 'translateY(-1px)' }}>
       {label}
     </span>
-
-    <span className="shrink-0 text-right text-[10px] font-black leading-tight text-[#2f4468]">
+    <span className="shrink-0 text-right text-[11.5px] font-black text-[#2f4468]" style={{ transform: 'translateY(-1px)' }}>
       {value}
     </span>
   </div>
 );
 
 const FormulaRow = ({ label, children }) => (
-  <div className="flex min-h-[36px] items-center gap-[8px] rounded-[8px] bg-[#f8fbff] px-[10px] py-[4px]">
-    <span className="w-[112px] shrink-0 text-[10px] font-black leading-tight text-[#2472ff]">
+  <div className="flex min-h-[44px] items-center gap-[8px] rounded-[8px] bg-[#f8fbff] px-[12px]">
+    <span className="w-[112px] shrink-0 text-[11px] font-black text-[#2472ff]" style={{ transform: 'translateY(-1.5px)' }}>
       {label}
     </span>
 
-    <div className="flex flex-1 items-center justify-center font-serif text-[14px] italic leading-[1.35] text-[#333]">
+    <div className="flex flex-1 items-center justify-center font-serif text-[15px] italic text-[#333]" style={{ transform: 'translateY(-1.5px)' }}>
       {children}
     </div>
   </div>
@@ -111,14 +108,14 @@ const ResultRow = ({ label, value, tone }) => {
 
   return (
     <div
-      className={`flex min-h-[32px] items-center justify-between gap-[8px] rounded-[8px] border-l-[4px] px-[10px] py-[4px] ${t.border} ${t.bg}`}
+      className={`flex min-h-[38px] items-center justify-between gap-[8px] rounded-[8px] border-l-[4px] px-[12px] ${t.border} ${t.bg}`}
     >
-      <span className="text-[10px] font-medium leading-tight text-[#6d82a7]">
+      <span className="text-[11px] font-medium text-[#6d82a7]" style={{ transform: 'translateY(-1.5px)' }}>
         {label}
       </span>
 
       <span
-        className={`shrink-0 text-right text-[11.5px] font-black leading-tight ${t.text}`}
+        className={`shrink-0 text-right text-[12.5px] font-black tracking-[0.5px] ${t.text}`} style={{ transform: 'translateY(-1.5px)' }}
       >
         {value}
       </span>

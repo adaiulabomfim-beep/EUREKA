@@ -254,14 +254,21 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
           if (!f.pts || f.pts.length < 2) return null;
 
           const isLine = f.pts.length === 2;
-          const d = isLine 
-            ? `M ${f.pts[0].x},${f.pts[0].y} L ${f.pts[1].x},${f.pts[1].y}`
-            : `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
+          const baseFill = isLine ? 'none' : (f.fill ?? 'none');
+          const isWireframe = baseFill === 'none' && f.pts.length > 2;
+          
+          let d = '';
+          if (isLine) {
+             d = `M ${f.pts[0].x},${f.pts[0].y} L ${f.pts[1].x},${f.pts[1].y}`;
+          } else if (isWireframe) {
+             d = `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')}`;
+          } else {
+             d = `M ${f.pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
+          }
 
           const isDam = f.kind === 'DAM';
           const isWater = f.kind === 'WATER' || f.kind === 'WATER_UP' || f.kind === 'WATER_DOWN';
 
-          const baseFill = isLine ? 'none' : (f.fill ?? 'none');
           const baseOpacity = f.opacity ?? 1;
 
           // Para evitar os "gaps" de anti-aliasing do SVG (que parecem uma malha),
@@ -270,11 +277,20 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
           let strokeWidthToUse = f.strokeWidth ?? 0;
 
           if (!isLine && strokeToUse === 'none' && baseFill !== 'none') {
-            strokeToUse = baseFill;
-            // Usamos 0.2 apenas para fechar o anti-aliasing subpixel caso o SVG vaze mínimo,
-            // mas o fatiamento real foi resolvido mesclando os polígonos nas construtoras.
-            strokeWidthToUse = 0.2; 
+            // Seamas do SVG vêm do anti-aliasing.
+            if (isWater || baseOpacity < 1) {
+              strokeToUse = 'none';
+              strokeWidthToUse = 0;
+            } else if (isDam) {
+              strokeToUse = baseFill;
+              strokeWidthToUse = 0.75; // Preenche o gap do fatiamento horizontal do profile
+            } else {
+              strokeToUse = baseFill;
+              strokeWidthToUse = 0.5;
+            }
           }
+
+          const shapeRenderingBase = "geometricPrecision";
 
           const overlayOpacity =
             isWater
@@ -305,7 +321,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                 stroke={strokeToUse}
                 strokeWidth={strokeWidthToUse}
                 vectorEffect="non-scaling-stroke"
-                shapeRendering="geometricPrecision"
+                shapeRendering={shapeRenderingBase}
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 paintOrder="stroke fill"
@@ -317,12 +333,11 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                   fill={typeof f.brightness === 'number' && f.brightness > 1 ? "#ffffff" : "#000000"}
                   opacity={overlayOpacity}
                   stroke={typeof f.brightness === 'number' && f.brightness > 1 ? "#ffffff" : "#000000"}
-                  strokeWidth={strokeWidthToUse}
+                  strokeWidth={isDam ? 0.75 : 0}
+                  vectorEffect="non-scaling-stroke"
                   style={{ mixBlendMode: overlayBlend }}
                   pointerEvents="none"
-                  shapeRendering="geometricPrecision"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
+                  shapeRendering={shapeRenderingBase}
                 />
               )}
 
@@ -333,7 +348,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                   opacity={1}
                   stroke="none"
                   pointerEvents="none"
-                  shapeRendering="geometricPrecision"
+                  shapeRendering={shapeRenderingBase}
                 />
               )}
             </g>
