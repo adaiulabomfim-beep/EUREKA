@@ -35,17 +35,29 @@ export function createHatchTexture(type: MaterialType) {
 
   if (type === 'concrete') {
     // Concreto: padrão idêntico ao SVG com triângulos e grânulos
+    ctx.fillStyle = '#a3a3a3';
+    ctx.fillRect(0, 0, 1024, 1024);
+    
+    // Diagonal lines for technical hatch
+    ctx.save();
+    ctx.strokeStyle = 'rgba(80, 80, 80, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = -1024; i < 2048; i += 16) {
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + 1024, 1024);
+    }
+    ctx.stroke();
+    ctx.restore();
+
     for(let y=0; y<1024; y+=32) {
       for(let x=0; x<1024; x+=32) {
-        ctx.fillStyle = '#a3a3a3';
-        ctx.fillRect(x, y, 32, 32);
-
-        ctx.fillStyle = 'rgba(60, 60, 60, 0.45)';
+        ctx.fillStyle = 'rgba(50, 50, 50, 0.45)';
         ctx.beginPath(); ctx.moveTo(x+4, y+8); ctx.lineTo(x+6, y+6); ctx.lineTo(x+8, y+8); ctx.fill();
         ctx.beginPath(); ctx.moveTo(x+18, y+22); ctx.lineTo(x+20, y+20); ctx.lineTo(x+22, y+22); ctx.fill();
         ctx.beginPath(); ctx.moveTo(x+25, y+10); ctx.lineTo(x+26.5, y+8.5); ctx.lineTo(x+28, y+10); ctx.fill();
 
-        ctx.fillStyle = 'rgba(60, 60, 60, 0.35)';
+        ctx.fillStyle = 'rgba(50, 50, 50, 0.35)';
         ctx.beginPath(); ctx.arc(x+10, y+15, 1.2, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(x+22, y+7, 1.2, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(x+5, y+28, 1.2, 0, Math.PI*2); ctx.fill();
@@ -53,28 +65,29 @@ export function createHatchTexture(type: MaterialType) {
       }
     }
   } else if (type === 'earthDam') {
-    ctx.fillStyle = '#bfa58a';
+    ctx.fillStyle = '#8f6848';
     ctx.fillRect(0, 0, 1024, 1024);
-    drawSpeckles(ctx, 1024, 1024, 12000, 'rgba(76, 52, 26, 0.3)', 1.0, 3.0);
-    drawSpeckles(ctx, 1024, 1024, 4000, 'rgba(58, 39, 18, 0.5)', 2.0, 6.0);
-    drawSpeckles(ctx, 1024, 1024, 1000, 'rgba(40, 25, 10, 0.6)', 3.0, 8.0);
+    drawSpeckles(ctx, 1024, 1024, 12000, 'rgba(50, 30, 15, 0.3)', 1.0, 3.0);
+    drawSpeckles(ctx, 1024, 1024, 4000, 'rgba(40, 20, 10, 0.5)', 2.0, 6.0);
+    drawSpeckles(ctx, 1024, 1024, 1000, 'rgba(30, 15, 5, 0.6)', 3.0, 8.0);
   } else if (type === 'ground') {
-    ctx.fillStyle = '#d4b796';
+    ctx.fillStyle = '#b08358';
     ctx.fillRect(0, 0, 1024, 1024);
     ctx.save();
-    ctx.strokeStyle = 'rgba(70, 44, 18, 0.15)';
+    ctx.strokeStyle = 'rgba(50, 30, 20, 0.25)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    for (let i = -1024; i < 2048; i += 32) {
+    for (let i = -1024; i < 2048; i += 40) {
       ctx.moveTo(i, 0);
       ctx.lineTo(i + 1024, 1024);
+      // Cross hatch for earth
       ctx.moveTo(i, 1024);
       ctx.lineTo(i + 1024, 0);
     }
     ctx.stroke();
     ctx.restore();
 
-    drawSpeckles(ctx, 1024, 1024, 8000, 'rgba(50, 30, 10, 0.25)', 1.0, 2.5);
+    drawSpeckles(ctx, 1024, 1024, 8000, 'rgba(50, 30, 10, 0.3)', 1.0, 3.0);
   }
 
   const texture = new THREE.CanvasTexture(canvas);

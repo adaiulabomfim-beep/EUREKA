@@ -70,9 +70,9 @@ export const AnimatedWaterMaterial: React.FC<{ opacity?: number }> = ({ opacity 
                 `#include <worldpos_vertex>\n vWorldPosWater = (modelMatrix * vec4(position, 1.0)).xyz; vWorldNormalWater = normalize((modelMatrix * vec4(normal, 0.0)).xyz);`
             );
             
-            shader.uniforms.colorTopo = { value: new THREE.Color('#8FB7FF') }; // Topo claro
-            shader.uniforms.colorCorpo = { value: new THREE.Color('#4A86F7') }; // Azul principal
-            shader.uniforms.colorSombra = { value: new THREE.Color('#2F6EEB') }; // Azul profundo
+            shader.uniforms.colorTopo = { value: new THREE.Color('#5dade2') }; // lighter blue
+            shader.uniforms.colorCorpo = { value: new THREE.Color('#2874a6') }; // deep blue
+            shader.uniforms.colorSombra = { value: new THREE.Color('#154360') }; // dark deep blue
             shader.uniforms.waveColor = { value: new THREE.Color('#ffffff') };
 
             shader.fragmentShader = `uniform float time;\nuniform vec3 colorTopo;\nuniform vec3 colorCorpo;\nuniform vec3 colorSombra;\nuniform vec3 waveColor;\n` + shader.fragmentShader;
@@ -85,28 +85,30 @@ export const AnimatedWaterMaterial: React.FC<{ opacity?: number }> = ({ opacity 
                 '#include <map_fragment>',
                 `#ifdef USE_MAP
                    // Apply waves ONLY on the top surface (where normal Y is close to 1)
-                   float isTop = smoothstep(0.8, 0.99, vWorldNormalWater.y);
+                   float isTop = smoothstep(0.85, 0.99, vWorldNormalWater.y);
                    
                    float depthMix = clamp((vWorldPosWater.y + 15.0) / 30.0, 0.0, 1.0);
                    vec3 sideColor = mix(colorSombra, colorCorpo, depthMix);
+                   
+                   // Fresnel effect for sides
+                   vec3 viewDir = normalize(cameraPosition - vWorldPosWater);
+                   float fresnel = pow(1.0 - max(dot(viewDir, vWorldNormalWater), 0.0), 3.0);
+                   sideColor = mix(sideColor, colorTopo, fresnel * 0.5 * (1.0 - isTop));
                    
                    // Base color depends on normal mapping (top vs side)
                    diffuseColor.rgb = mix(sideColor, colorTopo, isTop);
                    
                    if (isTop > 0.0) {
-                       float scale = 0.025; // Adjusted scale for larger, elegant curves
+                       float scale = 0.035; // Fine elegant waves
                        
-                       // vWorldPosWater.z -> Canvas X (width, parallel to dam)
-                       // vWorldPosWater.x -> Canvas Y (length, flow direction)
-                       // Slow, gentle animation flow
-                       vec2 timeOffset = vec2(-time * 0.015, time * -0.04); 
-                       
+                       vec2 timeOffset = vec2(-time * 0.015, time * -0.02); 
                        vec4 topPattern = texture2D(map, vWorldPosWater.zx * scale + timeOffset);
                        
-                       // Mix waves with base water color using pattern alpha
-                       diffuseColor.rgb = mix(diffuseColor.rgb, waveColor, topPattern.a * 0.45 * isTop);
+                       // Soften the wave mix
+                       diffuseColor.rgb = mix(diffuseColor.rgb, waveColor, topPattern.a * 0.3 * isTop);
                    }
                  #endif`
+
         );
         tex.userData.shader = shader;
     };
