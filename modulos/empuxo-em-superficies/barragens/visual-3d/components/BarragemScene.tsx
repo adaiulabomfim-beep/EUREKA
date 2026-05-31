@@ -53,7 +53,7 @@ export const BarragemScene: React.FC<any> = ({
 
   return (
     <group>
-      <GroundPlane damHeight={damHeight} damBaseWidth={damBaseWidth} channelWidth={channelWidth} />
+      <GroundPlane damHeight={damHeight} damBaseWidth={damBaseWidth} channelWidth={channelWidth} actualBaseWidth={actualBaseWidth} />
 
       {/* Gravity Dam Solid */}
       <mesh geometry={damGeometry} castShadow receiveShadow>
@@ -65,7 +65,6 @@ export const BarragemScene: React.FC<any> = ({
       {upstreamGeometry && (
         <mesh geometry={upstreamGeometry} receiveShadow>
           <AnimatedWaterMaterial />
-          <Edges color="#2652a3" threshold={15} opacity={0.4} transparent />
         </mesh>
       )}
 
@@ -73,7 +72,6 @@ export const BarragemScene: React.FC<any> = ({
       {downstreamGeometry && (
         <mesh geometry={downstreamGeometry} receiveShadow>
           <AnimatedWaterMaterial />
-          <Edges color="#2652a3" threshold={15} opacity={0.4} transparent />
         </mesh>
       )}
 
@@ -88,20 +86,8 @@ export const BarragemScene: React.FC<any> = ({
                 actualBaseWidth={actualBaseWidth}
                 offsetX={actualBaseWidth / 2}
                 isUpstream={true}
-                color="#1e3a8a"
+                color="#2563eb" // Bright royal blue (same configuration as 2D)
                 channelWidth={channelWidth}
-              />
-              <EmpuxoVector3D
-                force={up.FR}
-                y_cp={up.y_cp}
-                s_cp={up.s_cp}
-                inclinationAngle={inclinationAngle}
-                damHeight={damHeight}
-                actualBaseWidth={actualBaseWidth}
-                offsetX={actualBaseWidth / 2}
-                isUpstream={true}
-                label="Montante"
-                color="#3b82f6" // blue
               />
             </>
           )}
@@ -113,20 +99,10 @@ export const BarragemScene: React.FC<any> = ({
                 actualBaseWidth={actualBaseWidth}
                 offsetX={actualBaseWidth / 2}
                 isUpstream={false}
-                color="#0c4a6e"
+                color="#3b82f6" // Bright sky blue (same configuration as 2D)
                 channelWidth={channelWidth}
-              />
-              <EmpuxoVector3D
-                force={down.FR}
-                y_cp={down.y_cp}
-                s_cp={down.s_cp}
-                inclinationAngle={inclinationAngle}
                 damHeight={damHeight}
-                actualBaseWidth={actualBaseWidth}
-                offsetX={actualBaseWidth / 2}
-                isUpstream={false}
-                label="Jusante"
-                color="#0ea5e9" // sky-500
+                damCrestWidth={damCrestWidth}
               />
             </>
           )}
@@ -142,7 +118,6 @@ export const BarragemScene: React.FC<any> = ({
               isUpstream={force > 0}
               label={force > 0 ? "Resultante (Net)" : "Resultante (Jusante)"}
               color={force > 0 ? "#ef4444" : "#f59e0b"}
-              zOffset={4} // Offset resultant in Z so it doesn't z-fight with up/down
             />
           )}
         </>

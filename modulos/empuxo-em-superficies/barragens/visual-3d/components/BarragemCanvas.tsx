@@ -117,6 +117,10 @@ export const BarragemCanvas: React.FC<{ children: ReactNode, targetY?: number, o
         <Canvas 
           camera={{ position: [-38, 32, 60], fov: 32 }} 
           shadows
+          gl={{ 
+            toneMapping: THREE.NoToneMapping,
+            antialias: true,
+          }}
           onCreated={({ gl }) => {
             // Se o canvas perder contexto, o onError não seria chamado pela boundary,
             // mas podemos forçar fallback se ele não conseguir restaurar
@@ -128,7 +132,7 @@ export const BarragemCanvas: React.FC<{ children: ReactNode, targetY?: number, o
           }}
         >
           <Lights />
-          <Environment preset="city" />
+          <Environment preset="city" environmentIntensity={0.3} />
           {children}
           
           <OrbitControls makeDefault target={[0, targetY, 0]} maxPolarAngle={Math.PI / 2 - 0.05} />

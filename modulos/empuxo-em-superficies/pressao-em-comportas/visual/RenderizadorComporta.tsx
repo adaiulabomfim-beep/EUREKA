@@ -1,6 +1,6 @@
 import React from 'react';
 import { Vista2D } from './Vista2D';
-import { Vista3D } from './Vista3D';
+import { Scene3D } from '../visual-3d/Scene3D';
 import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
 
 interface RenderizadorComportaProps {
@@ -27,8 +27,9 @@ interface RenderizadorComportaProps {
   setIs3D: (v: boolean) => void;
   showVectors: boolean;
   setShowVectors: (v: boolean) => void;
+  wallDims: { height: number; thickness: number; width: number; };
 }
 
 export const RenderizadorComporta: React.FC<RenderizadorComportaProps> = (props) => {
-  return props.is3D ? <Vista3D {...props} /> : <Vista2D {...props} />;
+  return props.is3D ? <Scene3D {...props} /> : <Vista2D {...props} />;
 };

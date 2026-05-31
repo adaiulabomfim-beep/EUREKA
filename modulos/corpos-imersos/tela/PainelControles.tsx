@@ -173,81 +173,6 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
         </div>
       </div>
 
-      {/* Two Blocks Mode */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-        <div className="flex items-center gap-2.5 mb-3 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100/50">
-          <input
-            type="checkbox"
-            checked={twoBlocks}
-            onChange={(e) => onTwoBlocksChange(e.target.checked)}
-            id="two-blocks"
-            className="accent-blue-600 w-4 h-4 cursor-pointer rounded"
-          />
-          <label
-            htmlFor="two-blocks"
-            className="text-[10px] font-bold text-blue-700 cursor-pointer select-none uppercase tracking-widest flex-1"
-          >
-            Dois Blocos Ligados
-          </label>
-          <Layers className={`w-4 h-4 ${twoBlocks ? 'text-blue-500' : 'text-slate-300'}`} />
-        </div>
-
-        {twoBlocks && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className={inputGroupClass}>
-              <label className={labelClass}>Geometria Bloco 2</label>
-              <select className={selectClass} value={shape2} onChange={(e) => onShape2Change(e.target.value as ObjectShape)}>
-                <option value={ObjectShape.CUBE}>Cubo</option>
-                <option value={ObjectShape.SPHERE}>Esfera</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className={inputGroupClass}>
-                <label className={labelClass}>{shape2 === ObjectShape.CUBE ? 'Aresta 2 (cm)' : 'Raio 2 (cm)'}</label>
-                <NumberInput value={dim1_2} min={1} onChange={onDim1_2Change} />
-              </div>
-              <div className={inputGroupClass}>
-                <label className={labelClass}>Cabo (cm)</label>
-                <NumberInput value={cordLength} min={1} onChange={onCordLengthChange} />
-              </div>
-            </div>
-
-            <div className={inputGroupClass}>
-              <label className={labelClass}>Material Bloco 2</label>
-              <select className={selectClass} value={selectedMaterial2} onChange={onMaterial2Change}>
-                {MATERIALS.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.name}
-                  </option>
-                ))}
-                <option value="Custom">Personalizado...</option>
-              </select>
-            </div>
-
-            <div className={inputGroupClass}>
-              <label className={labelClass}>Densidade 2 (kg/m³)</label>
-              <NumberInput value={density2} onChange={onDensity2Change} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Tank Properties */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-        <SectionHeader icon={<Settings2 className="w-4 h-4" />} title="Tanque" />
-        <div className="grid grid-cols-2 gap-3">
-          <div className={inputGroupClass}>
-            <label className={labelClass}>Largura (cm)</label>
-            <NumberInput value={tankWidth} min={50} max={2000} onChange={onTankWidthChange} />
-          </div>
-          <div className={inputGroupClass}>
-            <label className={labelClass}>Profund. (cm)</label>
-            <NumberInput value={tankDepth} min={10} max={1000} onChange={onTankDepthChange} />
-          </div>
-        </div>
-      </div>
-
       {/* Fluids */}
       <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
         <SectionHeader icon={<Droplets className="w-4 h-4" />} title="Fluidos" />
@@ -329,6 +254,81 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Tank Properties */}
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+        <SectionHeader icon={<Settings2 className="w-4 h-4" />} title="Tanque" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className={inputGroupClass}>
+            <label className={labelClass}>Largura (cm)</label>
+            <NumberInput value={tankWidth} min={50} max={2000} onChange={onTankWidthChange} />
+          </div>
+          <div className={inputGroupClass}>
+            <label className={labelClass}>Profund. (cm)</label>
+            <NumberInput value={tankDepth} min={10} max={1000} onChange={onTankDepthChange} />
+          </div>
+        </div>
+      </div>
+
+      {/* Two Blocks Mode */}
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+        <div className="flex items-center gap-2.5 mb-3 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100/50">
+          <input
+            type="checkbox"
+            checked={twoBlocks}
+            onChange={(e) => onTwoBlocksChange(e.target.checked)}
+            id="two-blocks"
+            className="accent-blue-600 w-4 h-4 cursor-pointer rounded"
+          />
+          <label
+            htmlFor="two-blocks"
+            className="text-[10px] font-bold text-blue-700 cursor-pointer select-none uppercase tracking-widest flex-1"
+          >
+            Dois Blocos Ligados
+          </label>
+          <Layers className={`w-4 h-4 ${twoBlocks ? 'text-blue-500' : 'text-slate-300'}`} />
+        </div>
+
+        {twoBlocks && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Geometria Bloco 2</label>
+              <select className={selectClass} value={shape2} onChange={(e) => onShape2Change(e.target.value as ObjectShape)}>
+                <option value={ObjectShape.CUBE}>Cubo</option>
+                <option value={ObjectShape.SPHERE}>Esfera</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className={inputGroupClass}>
+                <label className={labelClass}>{shape2 === ObjectShape.CUBE ? 'Aresta 2 (cm)' : 'Raio 2 (cm)'}</label>
+                <NumberInput value={dim1_2} min={1} onChange={onDim1_2Change} />
+              </div>
+              <div className={inputGroupClass}>
+                <label className={labelClass}>Cabo (cm)</label>
+                <NumberInput value={cordLength} min={1} onChange={onCordLengthChange} />
+              </div>
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Material Bloco 2</label>
+              <select className={selectClass} value={selectedMaterial2} onChange={onMaterial2Change}>
+                {MATERIALS.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+                <option value="Custom">Personalizado...</option>
+              </select>
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Densidade 2 (kg/m³)</label>
+              <NumberInput value={density2} onChange={onDensity2Change} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

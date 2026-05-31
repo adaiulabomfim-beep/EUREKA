@@ -5,7 +5,7 @@ interface NumberInputProps {
   onChange: (val: number) => void;
   min?: number;
   max?: number;
-  step?: string;
+  step?: number | string;
   disabled?: boolean;
 }
 
@@ -20,14 +20,10 @@ export const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, min, 
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVal = e.target.value;
-    setLocalValue(newVal);
-    if (newVal === '') { onChange(0); return; }
-    const parsed = parseFloat(newVal);
-    if (!isNaN(parsed)) onChange(parsed);
+    setLocalValue(e.target.value);
   };
 
-  const handleBlur = () => {
+  const submitValue = () => {
       let parsed = parseFloat(localValue);
       if (isNaN(parsed)) parsed = 0;
       let clamped = parsed;
@@ -35,7 +31,16 @@ export const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, min, 
       if (max !== undefined && clamped > max) clamped = max;
       if (clamped !== parsed || localValue === '') {
           setLocalValue(clamped.toString());
-          onChange(clamped);
+      }
+      onChange(clamped);
+  };
+
+  const handleBlur = () => submitValue();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+          submitValue();
+          e.currentTarget.blur();
       }
   };
 
@@ -49,6 +54,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, min, 
       value={localValue}
       onChange={handleChange}
       onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
       disabled={disabled}
     />
   );

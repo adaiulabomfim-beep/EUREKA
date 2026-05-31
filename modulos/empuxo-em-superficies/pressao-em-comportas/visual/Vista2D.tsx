@@ -26,20 +26,20 @@ interface Vista2DProps {
   setIs3D: (v: boolean) => void;
   showVectors: boolean;
   setShowVectors: (v: boolean) => void;
+  wallDims: { height: number; thickness: number; width: number; };
 }
 
 export const Vista2D: React.FC<Vista2DProps> = (props) => {
   const SVG_W = 900;
   const SVG_H = 520;
   
-  // Dynamic scaling based on the maximum height
-  const maxH = Math.max(props.upstreamLevel, props.downstreamLevel, 1);
-  const wallHeightMeters = Math.max(maxH * 1.2, 5);
+  // Use the editable wall dimensions from props
+  const wallHeightMeters = props.wallDims.height;
   
   // Calculate scale matching motorCena3D.ts behavior (factor 0.6 for 2D)
   const SCALE = Math.min((SVG_H * 0.6) / wallHeightMeters, 150);
 
-  const wallBaseWidthMeters = 5;
+  const wallBaseWidthMeters = props.wallDims.thickness;
   const wallBaseWidth = wallBaseWidthMeters * SCALE;
   const wallHeight = wallHeightMeters * SCALE;
   
@@ -404,6 +404,40 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       );
     };
 
+    const drawLevelSymbol = (
+      key: string,
+      x: number,
+      y: number,
+      text: string,
+      flipX: boolean = false
+    ) => {
+      const dir = flipX ? -1 : 1;
+      return (
+        <g key={key} stroke="#475569" strokeWidth="1.2" opacity="0.9">
+          {/* Inverted triangle: left half empty, right half filled */}
+          <polygon points={`${x},${y} ${x-7},${y-14} ${x},${y-14}`} fill="none" />
+          <polygon points={`${x},${y} ${x},${y-14} ${x+7},${y-14}`} fill="#475569" />
+          
+          {/* Stem and flag */}
+          <polyline points={`${x},${y-14} ${x},${y-30} ${x + dir * 40},${y-30}`} fill="none" />
+          
+          {/* Text on top of flag */}
+          <text
+            x={x + dir * 20}
+            y={y - 34}
+            textAnchor="middle"
+            dominantBaseline="baseline"
+            fill="#334155"
+            fontSize="11"
+            fontWeight="bold"
+            stroke="none"
+          >
+            {text}
+          </text>
+        </g>
+      );
+    };
+
     // Altura da Parede (Structure Height)
     dims.push(
       drawDim(
@@ -432,13 +466,12 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     if (props.upstreamLevel > 0) {
       const yL = ORIGIN_Y - props.upstreamLevel * SCALE;
       dims.push(
-        drawDim(
-          'upstreamDim',
-          { x: ORIGIN_X - 10, y: ORIGIN_Y },
-          { x: ORIGIN_X - 10, y: yL },
-          `NA=${props.upstreamLevel.toFixed(1)}m`,
-          { x: -50, y: 0 },
-          { x: -5, y: 0 }
+        drawLevelSymbol(
+          'upstreamLevel',
+          ORIGIN_X - 25,
+          yL,
+          `NA=${props.upstreamLevel.toFixed(2)}`,
+          true // flipX so it points leftwards
         )
       );
     }
@@ -447,13 +480,12 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     if (props.downstreamLevel > 0) {
       const yL = ORIGIN_Y - props.downstreamLevel * SCALE;
       dims.push(
-        drawDim(
-          'downstreamDim',
-          { x: ORIGIN_X + wallBaseWidth + 10, y: ORIGIN_Y },
-          { x: ORIGIN_X + wallBaseWidth + 10, y: yL },
-          `NA=${props.downstreamLevel.toFixed(1)}m`,
-          { x: 50, y: 0 },
-          { x: 5, y: 0 }
+        drawLevelSymbol(
+          'downstreamLevel',
+          ORIGIN_X + wallBaseWidth + 25,
+          yL,
+          `NA=${props.downstreamLevel.toFixed(2)}`,
+          false
         )
       );
     }

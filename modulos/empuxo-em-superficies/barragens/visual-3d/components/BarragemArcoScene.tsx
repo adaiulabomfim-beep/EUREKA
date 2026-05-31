@@ -56,7 +56,7 @@ export const BarragemArcoScene: React.FC<any> = ({
 
   return (
     <group>
-      <GroundPlane damHeight={damHeight} damBaseWidth={damBaseWidth} channelWidth={channelWidth} />
+      <GroundPlane damHeight={damHeight} damBaseWidth={damBaseWidth} channelWidth={channelWidth} actualBaseWidth={actualBaseWidth} />
 
       {/* Arch Dam Solid */}
       <mesh geometry={damGeometry} castShadow receiveShadow>
@@ -68,7 +68,6 @@ export const BarragemArcoScene: React.FC<any> = ({
       {upstreamGeometry && (
         <mesh geometry={upstreamGeometry} receiveShadow>
           <AnimatedWaterMaterial />
-          <Edges color="#2652a3" threshold={15} opacity={0.4} transparent />
         </mesh>
       )}
 
@@ -76,7 +75,6 @@ export const BarragemArcoScene: React.FC<any> = ({
       {downstreamGeometry && (
         <mesh geometry={downstreamGeometry} receiveShadow>
           <AnimatedWaterMaterial />
-          <Edges color="#2652a3" threshold={15} opacity={0.4} transparent />
         </mesh>
       )}
 
@@ -91,20 +89,9 @@ export const BarragemArcoScene: React.FC<any> = ({
                 actualBaseWidth={actualBaseWidth}
                 offsetX={damBaseWidth / 2}
                 isUpstream={true}
-                color="#1e3a8a"
+                color="#1e3a8a" // Dark blue as requested
                 channelWidth={channelWidth}
-              />
-              <EmpuxoVector3D
-                force={up.FR}
-                y_cp={up.y_cp}
-                s_cp={up.s_cp}
-                inclinationAngle={inclinationAngle}
-                damHeight={damHeight}
-                actualBaseWidth={actualBaseWidth}
-                offsetX={damBaseWidth / 2}
-                isUpstream={true}
-                label="Montante"
-                color="#3b82f6" // blue
+                archRadius={archRadius} // Follow the arch dam curvature!
               />
             </>
           )}
@@ -116,20 +103,11 @@ export const BarragemArcoScene: React.FC<any> = ({
                 actualBaseWidth={actualBaseWidth}
                 offsetX={damBaseWidth / 2}
                 isUpstream={false}
-                color="#0c4a6e"
+                color="#0f172a" // Even darker blue/slate for downstream
                 channelWidth={channelWidth}
-              />
-              <EmpuxoVector3D
-                force={down.FR}
-                y_cp={down.y_cp}
-                s_cp={down.s_cp}
-                inclinationAngle={inclinationAngle}
+                archRadius={archRadius} // Follow the arch dam curvature!
                 damHeight={damHeight}
-                actualBaseWidth={actualBaseWidth}
-                offsetX={damBaseWidth / 2}
-                isUpstream={false}
-                label="Jusante"
-                color="#0ea5e9" // sky-500
+                damCrestWidth={damCrestWidth}
               />
             </>
           )}
@@ -145,7 +123,6 @@ export const BarragemArcoScene: React.FC<any> = ({
               isUpstream={force > 0}
               label={force > 0 ? "Resultante (Net)" : "Resultante (Jusante)"}
               color={force > 0 ? "#ef4444" : "#f59e0b"}
-              zOffset={4}
             />
           )}
         </>

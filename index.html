@@ -25,6 +25,11 @@
         transition-duration: 150ms;
       }
 
+      /* Disable CSS transitions on SVG internals so SMIL animations loop seamlessly */
+      svg *, pattern, animateTransform {
+        transition: none !important;
+      }
+
       /* Custom slider styling */
       input[type=range] {
         -webkit-appearance: none; 

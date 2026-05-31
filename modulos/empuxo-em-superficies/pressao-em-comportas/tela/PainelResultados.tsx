@@ -22,7 +22,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
     <div className="lg:col-span-3 flex flex-col gap-4 h-full">
       <ResultsPanel
         footerButton={{
-          label: showDetails ? 'Ocultar Memória' : 'Memória de Cálculo',
+          label: showDetails ? 'Ocultar Memorial' : 'Memorial',
           onClick: () => setShowDetails(!showDetails),
           icon: Calculator,
           disabled: !analyzedResults,

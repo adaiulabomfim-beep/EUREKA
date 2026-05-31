@@ -84,9 +84,9 @@ export const criarBaseTerra = (
     ...criarPrisma(
       earthProfileFull,
       zWidth,
-      "#a16207",
+      "#977347",
       1,
-      "#713f12",
+      "#4a2a0e",
       1.2,
       "DAM",
       undefined,
@@ -449,19 +449,7 @@ export const poligonoAgua2D = (
           },
         ];
 
-  faces.push(
-    criarFace(
-      ripplePoly,
-      "none",
-      1,
-      "none",
-      0,
-      { x: 0, y: 0, z: 1 },
-      damFaceSide === "UPSTREAM" ? "WATER_UP" : "WATER_DOWN",
-      "url(#ripplePattern)",
-      1,
-    ),
-  );
+  // Omit the ripplePattern face to keep the 2D water clean and prevent visual artifacts.
 
   return faces;
 };

@@ -16,6 +16,8 @@ interface PainelControlesProps {
   presets: { [key: string]: ConfiguracaoSimulacaoComporta & { title: string, subtitle: string } };
   handleHeightChange: (val: number) => void;
   handleShapeChange: (newShape: FormaComporta) => void;
+  wallDims: { height: number; thickness: number; width: number; };
+  setWallDims: React.Dispatch<React.SetStateAction<{ height: number; thickness: number; width: number; }>>;
 }
 
 export const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon, title }) => (
@@ -47,6 +49,20 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
     });
   };
 
+  const SHAPE_LABELS: Record<string, string> = {
+    RETANGULAR: 'Retangular',
+    CIRCULAR: 'Circular',
+    SEMI_CIRCULAR: 'Semi-Circular',
+  };
+
+  const upstreamLevel = config.fluidoMontante.nivel;
+  const downstreamLevel = config.fluidoJusante.ativo ? config.fluidoJusante.nivel : 0;
+  const gateHeight = config.comporta.altura;
+  const gateDepthFromCrest = config.comporta.profundidadeTopo;
+  
+  const gateTopY = upstreamLevel - gateDepthFromCrest;
+  const gateBottomY = Math.max(0, gateTopY - gateHeight);
+  
   return (
     <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
       
@@ -79,85 +95,84 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
       <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
           <SectionHeader icon={<Waves className="w-4 h-4" />} title="Líquidos e Níveis" />
           
-          <div className="space-y-6">
-              {/* MONTANTE */}
-              <div>
-                  <div className="flex items-center gap-1.5 mb-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Montante</h4>
-                  </div>
-                  
-                  <label className={labelClass}>Tipo de Fluido</label>
-                  <select 
-                    value={config.fluidoMontante.chave}
-                    onChange={(e) => handleFluidChange(true, e.target.value)}
-                    className={selectClass}
+          <div className="space-y-4">
+              <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 rounded-xl border border-slate-200/60 hover:bg-slate-50 transition-colors">
+                  <input
+                      type="checkbox"
+                      checked={config.fluidoJusante.ativo}
+                      onChange={(e) => props.setHasDownstream(e.target.checked)}
+                      id="jusante-toggle"
+                      className="accent-blue-600 w-4 h-4 cursor-pointer rounded"
+                  />
+                  <label
+                      htmlFor="jusante-toggle"
+                      className="text-[10px] font-bold text-slate-700 cursor-pointer select-none uppercase tracking-widest flex-1"
                   >
-                    {Object.entries(FLUIDOS_PREDEFINIDOS).map(([key, f]) => (
-                      <option key={key} value={key}>{f.nome}</option>
-                    ))}
-                  </select>
+                      Jusante (Saída)
+                  </label>
+                  {config.fluidoJusante.ativo && <Waves className="w-4 h-4 text-cyan-500" />}
+              </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                      <div>
-                          <label className={labelClass}>Nível (m)</label>
-                          <NumberInput value={config.fluidoMontante.nivel} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({
-                              ...prev, 
-                              fluidoMontante: {...prev.fluidoMontante, nivel: val},
-                              comporta: {...prev.comporta, profundidadeTopo: Math.min(prev.comporta.profundidadeTopo, val)}
-                          }))} />
-                      </div>
-                      <div>
-                          <label className={labelClass}>ρ (kg/m³)</label>
-                          <NumberInput value={config.fluidoMontante.densidade} min={1} max={20000} step={10} onChange={(val) => setConfig(prev => ({
-                              ...prev, 
-                              fluidoMontante: {...prev.fluidoMontante, densidade: val, chave: 'personalizado'}
-                          }))} />
+              <div className="space-y-3 relative">
+                  <div className="flex flex-col gap-1.5">
+                      <label className={labelClass}>Montante (M)</label>
+                      <select 
+                          value={config.fluidoMontante.chave}
+                          onChange={(e) => handleFluidChange(true, e.target.value)}
+                          className={selectClass}
+                      >
+                          {Object.entries(FLUIDOS_PREDEFINIDOS).map(([key, f]) => (
+                              <option key={key} value={key}>{f.nome}</option>
+                          ))}
+                      </select>
+
+                      <div className="flex gap-3 mt-2">
+                          <div className="flex-1">
+                              <label className="text-[10px] font-medium text-slate-400 mb-1 block">Densidade (kg/m³)</label>
+                              <NumberInput value={config.fluidoMontante.densidade} min={1} max={20000} step={10} onChange={(val) => setConfig(prev => ({
+                                  ...prev, 
+                                  fluidoMontante: {...prev.fluidoMontante, densidade: val, chave: 'personalizado'}
+                              }))} />
+                          </div>
+                          <div className="w-24">
+                              <label className="text-[10px] font-medium text-slate-400 mb-1 block">Nível (m)</label>
+                              <NumberInput value={config.fluidoMontante.nivel} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({
+                                  ...prev, 
+                                  fluidoMontante: {...prev.fluidoMontante, nivel: val},
+                                  comporta: {...prev.comporta, profundidadeTopo: Math.min(prev.comporta.profundidadeTopo, val)}
+                              }))} />
+                          </div>
                       </div>
                   </div>
               </div>
-              
-              {/* JUSANTE */}
-              <div className="pt-4 border-t border-blue-50">
-                  <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
-                          <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Jusante</h4>
-                      </div>
-                      <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">Ativar</span>
-                          <input type="checkbox" checked={config.fluidoJusante.ativo} onChange={(e) => props.setHasDownstream(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" />
-                      </div>
-                  </div>
 
-                  {config.fluidoJusante.ativo && (
-                      <div className="animate-in fade-in slide-in-from-top-2 space-y-3">
-                          <div>
-                              <label className={labelClass}>Tipo de Fluido</label>
-                              <select 
-                                value={config.fluidoJusante.chave}
-                                onChange={(e) => handleFluidChange(false, e.target.value)}
-                                className={selectClass}
-                              >
-                                {Object.entries(FLUIDOS_PREDEFINIDOS).map(([key, f]) => (
+              {config.fluidoJusante.ativo && (
+                  <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100">
+                      <div className="flex flex-col gap-1.5">
+                          <label className={labelClass}>Jusante (Saída)</label>
+                          <select 
+                              value={config.fluidoJusante.chave}
+                              onChange={(e) => handleFluidChange(false, e.target.value)}
+                              className={selectClass}
+                          >
+                              {Object.entries(FLUIDOS_PREDEFINIDOS).map(([key, f]) => (
                                   <option key={key} value={key}>{f.nome}</option>
-                                ))}
-                              </select>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                  <label className={labelClass}>Nível (m)</label>
-                                  <NumberInput value={config.fluidoJusante.nivel} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, nivel: val}}))} />
-                              </div>
-                              <div>
-                                  <label className={labelClass}>ρ (kg/m³)</label>
+                              ))}
+                          </select>
+
+                          <div className="flex gap-3 mt-2">
+                              <div className="flex-1">
+                                  <label className="text-[10px] font-medium text-slate-400 mb-1 block">Densidade (kg/m³)</label>
                                   <NumberInput value={config.fluidoJusante.densidade} min={1} max={20000} step={10} onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, densidade: val, chave: 'personalizado'}}))} />
                               </div>
+                              <div className="w-24">
+                                  <label className="text-[10px] font-medium text-slate-400 mb-1 block">Nível (m)</label>
+                                  <NumberInput value={config.fluidoJusante.nivel} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, nivel: val}}))} />
+                              </div>
                           </div>
                       </div>
-                  )}
-              </div>
+                  </div>
+              )}
           </div>
       </div>
 
@@ -307,6 +322,31 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                </div>
            )}
        </div>
+
+      {/* ── Estrutura da Parede de Concreto ── */}
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 mb-8">
+        <SectionHeader 
+          icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>} 
+          title="Estrutura da Parede" 
+        />
+
+        <div className="space-y-4">
+          <div className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/50 space-y-3">
+            <div>
+              <label className={labelClass}>Altura do Muro (m)</label>
+              <NumberInput value={props.wallDims.height} min={1} max={100} step={0.1} onChange={(v) => props.setWallDims(prev => ({ ...prev, height: v }))} />
+            </div>
+            <div>
+              <label className={labelClass}>Espessura do Muro (m)</label>
+              <NumberInput value={props.wallDims.thickness} min={0.1} max={50} step={0.1} onChange={(v) => props.setWallDims(prev => ({ ...prev, thickness: v }))} />
+            </div>
+            <div>
+              <label className={labelClass}>Largura do Canal (m)</label>
+              <NumberInput value={props.wallDims.width} min={1} max={100} step={0.1} onChange={(v) => props.setWallDims(prev => ({ ...prev, width: v }))} />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

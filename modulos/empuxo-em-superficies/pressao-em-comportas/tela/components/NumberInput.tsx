@@ -1,18 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-export const NumberInput = ({ label, value, onChange, min, max, step }: any) => {
+interface NumberInputProps {
+  value: number;
+  onChange: (val: number) => void;
+  min?: number;
+  max?: number;
+  step?: number | string;
+  disabled?: boolean;
+}
+
+export const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, min, max, step = "0.1", disabled }) => {
+  const [localValue, setLocalValue] = useState<string>(value.toString());
+
+  useEffect(() => {
+    const parsed = parseFloat(localValue);
+    if (!isNaN(parsed) && parsed === value) return;
+    if (localValue === '' && value === 0) return;
+    setLocalValue(value.toString());
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+  };
+
+  const submitValue = () => {
+      let parsed = parseFloat(localValue);
+      if (isNaN(parsed)) parsed = 0;
+      let clamped = parsed;
+      if (min !== undefined && clamped < min) clamped = min;
+      if (max !== undefined && clamped > max) clamped = max;
+      if (clamped !== parsed || localValue === '') {
+          setLocalValue(clamped.toString());
+      }
+      onChange(clamped);
+  };
+
+  const handleBlur = () => submitValue();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+          submitValue();
+          e.currentTarget.blur();
+      }
+  };
+
   return (
-    <div className="mb-4">
-      <label className="block text-xs font-bold text-slate-500 uppercase">{label}</label>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        min={min}
-        max={max}
-        step={step}
-        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
-      />
-    </div>
+    <input
+      type="number"
+      step={step}
+      min={min}
+      max={max}
+      className="w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-white/70 text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm disabled:bg-slate-100 disabled:text-slate-400"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      disabled={disabled}
+    />
   );
 };

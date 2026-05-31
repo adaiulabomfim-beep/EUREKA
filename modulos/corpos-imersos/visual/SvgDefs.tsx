@@ -5,16 +5,32 @@ interface SvgDefsProps {
   colorB?: string;
 }
 
-export const SvgDefs = ({ colorA = '#3b82f6', colorB = '#2563eb' }: SvgDefsProps) => (
+/**
+ * Darkens a hex color by a given amount (0-1).
+ */
+const darkenHex = (hex: string, amount: number): string => {
+  const h = hex.replace('#', '');
+  const num = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  const r = Math.max(0, Math.round(((num >> 16) & 0xff) * (1 - amount)));
+  const g = Math.max(0, Math.round(((num >> 8) & 0xff) * (1 - amount)));
+  const b = Math.max(0, Math.round((num & 0xff) * (1 - amount)));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+};
+
+export const SvgDefs = ({ colorA = '#3b82f6', colorB = '#2563eb' }: SvgDefsProps) => {
+  const colorADark = darkenHex(colorA, 0.25);
+  const colorBDark = darkenHex(colorB, 0.25);
+
+  return (
   <defs>
     <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45" />
-      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.85" />
+      <stop offset="0%" stopColor={colorA} stopOpacity="0.45" />
+      <stop offset="100%" stopColor={colorADark} stopOpacity="0.85" />
     </linearGradient>
 
     <linearGradient id="fluidDepthB" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.55" />
-      <stop offset="100%" stopColor="#1d4ed8" stopOpacity="0.95" />
+      <stop offset="0%" stopColor={colorB} stopOpacity="0.55" />
+      <stop offset="100%" stopColor={colorBDark} stopOpacity="0.95" />
     </linearGradient>
 
     <linearGradient id="goldGradient2D" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -83,24 +99,31 @@ export const SvgDefs = ({ colorA = '#3b82f6', colorB = '#2563eb' }: SvgDefsProps
       <animateTransform
         attributeName="patternTransform"
         type="translate"
-        from="0 0"
-        to="120 20"
-        dur="8s"
+        values="0 0;120 0"
+        dur="12s"
+        calcMode="linear"
         repeatCount="indefinite"
       />
       <path
-        d="M0,20 Q30,10 60,20 T120,20"
+        d="M0,20 C20,12 40,12 60,20 C80,28 100,28 120,20"
         fill="none"
         stroke="white"
         strokeWidth="1"
-        opacity="0.4"
+        opacity="0.35"
       />
       <path
-        d="M-60,0 Q-30,-10 0,0 T60,0"
+        d="M0,8 C20,2 40,2 60,8 C80,14 100,14 120,8"
         fill="none"
         stroke="white"
         strokeWidth="0.5"
         opacity="0.2"
+      />
+      <path
+        d="M0,32 C20,27 40,27 60,32 C80,37 100,37 120,32"
+        fill="none"
+        stroke="white"
+        strokeWidth="0.5"
+        opacity="0.15"
       />
     </pattern>
 
@@ -114,8 +137,9 @@ export const SvgDefs = ({ colorA = '#3b82f6', colorB = '#2563eb' }: SvgDefsProps
       <stop offset="100%" stopColor="white" stopOpacity="0" />
     </radialGradient>
     <linearGradient id="surfaceGradientA" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.55" />
-      <stop offset="100%" stopColor={colorA} stopOpacity="0.8" />
+      <stop offset="0%" stopColor={colorA} stopOpacity="0.55" />
+      <stop offset="100%" stopColor={colorADark} stopOpacity="0.8" />
     </linearGradient>
   </defs>
-);
+  );
+};

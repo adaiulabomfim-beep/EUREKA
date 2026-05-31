@@ -37,7 +37,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       ...criarPrisma(
         profile,
         CHANNEL_WIDTH,
-        '#A67B5B',
+        '#AF9981',
         1,
         '#6F4F28',
         1.2,
@@ -282,6 +282,36 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       );
     }
 
+    const drawLevelSymbol = (
+      key: string,
+      xWorld: number,
+      yWorld: number,
+      text: string,
+      flipX: boolean = false
+    ) => {
+      const p = project({ x: xWorld, y: yWorld, z: 0 });
+      const dir = flipX ? -1 : 1;
+      return (
+        <g key={key} stroke="#475569" strokeWidth="1.2" opacity="0.9">
+          <polygon points={`${p.x},${p.y} ${p.x-7},${p.y-14} ${p.x},${p.y-14}`} fill="none" />
+          <polygon points={`${p.x},${p.y} ${p.x},${p.y-14} ${p.x+7},${p.y-14}`} fill="#475569" />
+          <polyline points={`${p.x},${p.y-14} ${p.x},${p.y-30} ${p.x + dir * 40},${p.y-30}`} fill="none" />
+          <text
+            x={p.x + dir * 20}
+            y={p.y - 34}
+            textAnchor="middle"
+            dominantBaseline="baseline"
+            fill="#334155"
+            fontSize="11"
+            fontWeight="bold"
+            stroke="none"
+          >
+            {text}
+          </text>
+        </g>
+      );
+    };
+
     const drawDim = (
       key: string,
       p1World: { x: number; y: number },
@@ -302,9 +332,9 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       const textH = 16;
 
       return (
-        <g key={key} stroke="#64748b" strokeWidth="1" fill="none" opacity="0.9">
-          <line x1={p1.x} y1={p1.y} x2={p1Off.x} y2={p1Off.y} strokeDasharray="2 2" opacity="0.3" />
-          <line x1={p2.x} y1={p2.y} x2={p2Off.x} y2={p2Off.y} strokeDasharray="2 2" opacity="0.3" />
+        <g key={key} stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.9">
+          <line x1={p1.x} y1={p1.y} x2={p1Off.x} y2={p1Off.y} strokeDasharray="3 3" opacity="0.45" />
+          <line x1={p2.x} y1={p2.y} x2={p2Off.x} y2={p2Off.y} strokeDasharray="3 3" opacity="0.45" />
           
           <line 
             x1={p1Off.x} y1={p1Off.y} 
@@ -319,9 +349,8 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
             width={textW}
             height={textH}
             fill="white"
-            rx="4"
+            rx="3"
             stroke="none"
-            opacity="0.9"
           />
           
           <text
@@ -330,8 +359,8 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
             textAnchor="middle"
             dominantBaseline="central"
             fill="#475569"
-            fontSize="10"
-            fontWeight="bold"
+            fontSize="12"
+            fontWeight="700"
             stroke="none"
           >
             {text}
@@ -380,30 +409,28 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
 
     // Nível de Água a Montante
     if (upstreamLevel > 0) {
-      const xBase = toWorldX(getDamXAtY(0, 'UPSTREAM'));
+      const xBase = toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM')) - 1; // offset slightly outside
       dims.push(
-        drawDim(
+        drawLevelSymbol(
           'upstreamLevel',
-          { x: xBase, y: 0 },
-          { x: xBase, y: upstreamLevel },
-          `NA=${upstreamLevel.toFixed(1)}m`,
-          { x: -60, y: 0 },
-          { x: -35, y: 0 }
+          xBase,
+          upstreamLevel,
+          `NA=${upstreamLevel.toFixed(2)}`,
+          true
         )
       );
     }
 
     // Nível de Água a Jusante
     if (downstreamLevel > 0) {
-      const xBase = toWorldX(getDamXAtY(0, 'DOWNSTREAM'));
+      const xBase = toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM')) + 1; // offset slightly outside
       dims.push(
-        drawDim(
+        drawLevelSymbol(
           'downstreamLevel',
-          { x: xBase, y: 0 },
-          { x: xBase, y: downstreamLevel },
-          `NA=${downstreamLevel.toFixed(1)}m`,
-          { x: 60, y: 0 },
-          { x: 35, y: 0 }
+          xBase,
+          downstreamLevel,
+          `NA=${downstreamLevel.toFixed(2)}`,
+          false
         )
       );
     }
@@ -449,14 +476,14 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       const pText = project({ ...pTextWorld, z: 0 });
       
       dims.push(
-        <g key="angle" stroke="#475569" strokeWidth="1.5" fill="none" opacity="0.8">
+        <g key="angle" stroke="#334155" strokeWidth="1.5" fill="none" opacity="1">
           <path d={pathData} />
           <text
             x={pText.x}
             y={pText.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="#334155"
+            fill="#1e293b"
             fontSize="12"
             fontWeight="bold"
             stroke="none"

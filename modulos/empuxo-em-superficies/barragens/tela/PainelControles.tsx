@@ -1,5 +1,5 @@
 import React from 'react';
-import { Construction, Layers, BookOpen } from 'lucide-react';
+import { Construction, Layers, BookOpen, Waves } from 'lucide-react';
 import { TipoBarragem } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
 import { DamPreset } from '../dominio/presets';
@@ -147,24 +147,38 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
       <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 flex-1">
           <SectionHeader icon={<Layers className="w-4 h-4" />} title="Níveis D'água" />
           <div className="space-y-4">
-              <div>
-                <label className={labelClass}>Montante (m)</label>
-                <NumberInput min={0} max={maxWaterLevel} value={upstreamLevel} onChange={setUpstreamLevel} />
+              <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 rounded-xl border border-slate-200/60 hover:bg-slate-50 transition-colors">
+                  <input
+                      type="checkbox"
+                      checked={hasDownstream}
+                      onChange={(e) => setHasDownstream(e.target.checked)}
+                      id="jusante-toggle"
+                      className="accent-blue-600 w-4 h-4 cursor-pointer rounded"
+                  />
+                  <label
+                      htmlFor="jusante-toggle"
+                      className="text-[10px] font-bold text-slate-700 cursor-pointer select-none uppercase tracking-widest flex-1"
+                  >
+                      Jusante (Saída)
+                  </label>
+                  {hasDownstream && <Waves className="w-4 h-4 text-cyan-500" />}
               </div>
-              
-              <div className="pt-3 border-t border-blue-50">
-                <div className="flex items-center justify-between cursor-pointer mb-3 hover:opacity-80" onClick={() => setHasDownstream(!hasDownstream)}>
-                    <label className={`${labelClass} cursor-pointer mb-0`}>Jusante (Saída)</label>
-                    <input type="checkbox" checked={hasDownstream} onChange={(e) => setHasDownstream(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" onClick={(e) => e.stopPropagation()} />
-                </div>
-                
-                {hasDownstream && (
-                    <div className="animate-in slide-in-from-top-1 fade-in">
-                        <label className={labelClass}>Nível Jusante (m)</label>
-                        <NumberInput min={0} max={maxWaterLevel} value={downstreamLevel} onChange={setDownstreamLevel} />
-                    </div>
-                )}
+
+              <div className="space-y-3 relative">
+                  <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Montante (m)</label>
+                      <NumberInput min={0} max={maxWaterLevel} value={upstreamLevel} onChange={setUpstreamLevel} />
+                  </div>
               </div>
+
+              {hasDownstream && (
+                  <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100">
+                      <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jusante (m)</label>
+                          <NumberInput min={0} max={maxWaterLevel} value={downstreamLevel} onChange={setDownstreamLevel} />
+                      </div>
+                  </div>
+              )}
           </div>
       </div>
     </div>

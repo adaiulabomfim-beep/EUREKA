@@ -13,7 +13,17 @@ export interface ResultsCardProps {
   badge?: string;
   secondaryValue?: string;
   highlight?: boolean;
+  highlightTheme?: string;
 }
+
+const highlightThemes: Record<string, { border: string; bg: string; iconBg: string; iconText: string; titleText: string; valueText: string; secondaryText: string }> = {
+  green:  { border: 'border-emerald-200', bg: 'bg-emerald-50/60',  iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', titleText: 'text-emerald-500/80', valueText: 'text-emerald-700', secondaryText: 'text-emerald-500' },
+  red:    { border: 'border-rose-200',    bg: 'bg-rose-50/60',     iconBg: 'bg-rose-100',    iconText: 'text-rose-600',    titleText: 'text-rose-500/80',    valueText: 'text-rose-700',    secondaryText: 'text-rose-500' },
+  amber:  { border: 'border-amber-200',   bg: 'bg-amber-50/60',    iconBg: 'bg-amber-100',   iconText: 'text-amber-600',   titleText: 'text-amber-500/80',   valueText: 'text-amber-700',   secondaryText: 'text-amber-500' },
+  blue:   { border: 'border-blue-200',    bg: 'bg-blue-50/60',     iconBg: 'bg-blue-100',    iconText: 'text-blue-600',    titleText: 'text-blue-500/80',    valueText: 'text-blue-700',    secondaryText: 'text-blue-500' },
+  purple: { border: 'border-purple-100',  bg: 'bg-purple-50/50',   iconBg: 'bg-purple-100',  iconText: 'text-purple-600',  titleText: 'text-purple-500/80',  valueText: 'text-purple-600',  secondaryText: 'text-purple-500' },
+  slate:  { border: 'border-slate-200',   bg: 'bg-slate-50/60',    iconBg: 'bg-slate-100',   iconText: 'text-slate-500',   titleText: 'text-slate-400/80',   valueText: 'text-slate-600',   secondaryText: 'text-slate-400' },
+};
 
 export const ResultsCard: React.FC<ResultsCardProps> = ({
   title,
@@ -25,6 +35,7 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
   badge,
   secondaryValue,
   highlight = false,
+  highlightTheme = 'purple',
 }) => {
 
   const themeStyles = {
@@ -41,21 +52,22 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
 
   // CARD HIGHLIGHT (Estado do objeto)
   if (highlight) {
+    const ht = highlightThemes[highlightTheme] || highlightThemes.purple;
     return (
-      <div className="rounded-xl border border-purple-100 bg-purple-50/50 py-3 px-3 flex flex-col items-center justify-center shadow-sm">
+      <div className={`rounded-xl border ${ht.border} ${ht.bg} py-3 px-3 flex flex-col items-center justify-center shadow-sm transition-colors duration-500`}>
         {LeftIcon && (
-          <div className="w-10 h-10 rounded-full bg-purple-100 mb-2 flex items-center justify-center">
-            <LeftIcon className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
+          <div className={`w-10 h-10 rounded-full ${ht.iconBg} mb-2 flex items-center justify-center transition-colors duration-500`}>
+            <LeftIcon className={`w-5 h-5 ${ht.iconText}`} strokeWidth={2.5} />
           </div>
         )}
-        <div className="text-[10px] font-bold uppercase tracking-widest text-purple-500/80">
+        <div className={`text-[10px] font-bold uppercase tracking-widest ${ht.titleText} transition-colors duration-500`}>
           {title}
         </div>
-        <div className="text-[16px] font-black text-purple-600 uppercase tracking-wide mt-0.5">
+        <div className={`text-[16px] font-black uppercase tracking-wide mt-0.5 ${ht.valueText} transition-colors duration-500`}>
           {value}
         </div>
         {secondaryValue && (
-          <div className="text-[10px] mt-1 text-purple-500 font-bold">
+          <div className={`text-[10px] mt-1 font-bold ${ht.secondaryText} transition-colors duration-500`}>
             {secondaryValue}
           </div>
         )}

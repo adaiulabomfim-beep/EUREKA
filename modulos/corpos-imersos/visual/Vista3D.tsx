@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Cuboid, MousePointer2, Maximize, RotateCcw, Box as BoxIcon } from 'lucide-react';
+import { Cuboid, MousePointer2, Maximize, RotateCcw } from 'lucide-react';
 import { ObjectShape } from '../dominio/tipos';
 import { SvgDefs } from './SvgDefs';
 import { getMaterialPattern } from './visualUtils';
@@ -353,25 +353,8 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     );
   };
 
-  const FluidSurfaceBack = () => {
-    const depth = visualTankDepth / 2;
-    const zCenter = -visualTankDepth / 4;
-    const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, zCenter, depth);
-    return (
-      <g>
-        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#fluidDepthA)', 1)}
-        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#ripplePattern)', 1)}
-        <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p2.x} y2={ptsADynamic.p2.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-        <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p5.x} y2={ptsADynamic.p5.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-        <line x1={ptsADynamic.p2.x} y1={ptsADynamic.p2.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-      </g>
-    );
-  };
-
-  const FluidSurfaceFront = () => {
-    const depth = visualTankDepth / 2;
-    const zCenter = visualTankDepth / 4;
-    const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, zCenter, depth);
+  const FluidSurface = () => {
+    const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, 0, visualTankDepth);
     return (
       <g>
         {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#fluidDepthA)', 1)}
@@ -600,27 +583,15 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   };
 
   const SceneLayers = () => {
-    if (isObjectAboveWater) {
-      return (
-        <>
-          {renderEnvironmentFaces(false)}
-          <FluidSurfaceBack />
-          <Object3D />
-          <FluidSurfaceFront />
-          {renderEnvironmentFaces(true)}
-        </>
-      );
-    } else {
-      return (
-        <>
-          {renderEnvironmentFaces(false)}
-          <Object3D />
-          <FluidSurfaceBack />
-          <FluidSurfaceFront />
-          {renderEnvironmentFaces(true)}
-        </>
-      );
-    }
+    return (
+      <>
+        {renderEnvironmentFaces(false)}
+        {!isObjectAboveWater && <Object3D />}
+        <FluidSurface />
+        {isObjectAboveWater && <Object3D />}
+        {renderEnvironmentFaces(true)}
+      </>
+    );
   };
 
   return (
@@ -649,19 +620,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         />
       </div>
 
-      {onToggleCenterOfBuoyancy && (
-        <div className="absolute top-4 right-4 flex gap-2 z-30" onMouseDown={(e) => e.stopPropagation()}>
-          <button
-            onClick={onToggleCenterOfBuoyancy}
-            className={`bg-white/85 p-2 rounded-full shadow-md border border-blue-100/70 backdrop-blur ${
-              showCenterOfBuoyancy ? 'text-blue-600' : 'text-slate-400'
-            }`}
-            title="Mostrar Centro de Carena"
-          >
-            <BoxIcon className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+
 
       <svg
         width="100%"

@@ -124,20 +124,41 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
       <circle cx="28" cy="25" r="0.5" fill="#525252" opacity="0.3" />
     </pattern>
 
-    {/* Terra / Enrocamento */}
+    {/* Terra / Enrocamento - Architectural Earth Hatch */}
     <pattern
       id="earthPattern"
-      width="24"
-      height="24"
+      width="16"
+      height="16"
       patternUnits="userSpaceOnUse"
-      patternTransform={`rotate(12) ${trans}`}
+      patternTransform={trans}
     >
-      <rect width="24" height="24" fill="none" />
-      {/* Padrão Técnico de Terra (Grupos de linhas a 45 graus) */}
-      <g stroke="#000000" strokeWidth="0.8" opacity="0.15">
-        <line x1="0" y1="24" x2="24" y2="0" stroke="inherit" />
-        <line x1="4" y1="24" x2="24" y2="4" stroke="inherit" />
-        <line x1="0" y1="20" x2="20" y2="0" stroke="inherit" />
+      <rect width="16" height="16" fill="none" />
+      <g stroke="#000000" strokeWidth="0.3" opacity="0.45">
+        {/* Continuous Grid Lines */}
+        <line x1="0" y1="0" x2="16" y2="0" />
+        <line x1="0" y1="8" x2="16" y2="8" />
+        <line x1="0" y1="0" x2="0" y2="16" />
+        <line x1="8" y1="0" x2="8" y2="16" />
+
+        {/* Top-Left: Vertical Inner Lines */}
+        <line x1="2" y1="0" x2="2" y2="8" />
+        <line x1="4" y1="0" x2="4" y2="8" />
+        <line x1="6" y1="0" x2="6" y2="8" />
+
+        {/* Top-Right: Horizontal Inner Lines */}
+        <line x1="8" y1="2" x2="16" y2="2" />
+        <line x1="8" y1="4" x2="16" y2="4" />
+        <line x1="8" y1="6" x2="16" y2="6" />
+
+        {/* Bottom-Left: Horizontal Inner Lines */}
+        <line x1="0" y1="10" x2="8" y2="10" />
+        <line x1="0" y1="12" x2="8" y2="12" />
+        <line x1="0" y1="14" x2="8" y2="14" />
+
+        {/* Bottom-Right: Vertical Inner Lines */}
+        <line x1="10" y1="8" x2="10" y2="16" />
+        <line x1="12" y1="8" x2="12" y2="16" />
+        <line x1="14" y1="8" x2="14" y2="16" />
       </g>
     </pattern>
 

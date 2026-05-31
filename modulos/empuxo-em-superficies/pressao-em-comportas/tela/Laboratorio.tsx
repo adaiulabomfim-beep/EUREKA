@@ -47,6 +47,9 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [analyzedResults, setAnalyzedResults] = useState<any | null>(null);
+  
+  // Local state for the concrete wall dimensions
+  const [wallDims, setWallDims] = useState({ height: 15.6, thickness: 4.2, width: 14.0 });
 
   const { fluidoMontante, fluidoJusante, comporta } = config;
   const { nivel: upstreamLevel, densidade: density, gravidade: gravity, chave: upstreamFluidKey } = fluidoMontante;
@@ -69,7 +72,11 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   
   const setHasDownstream = (val: boolean) => setConfig(prev => ({ 
     ...prev, 
-    fluidoJusante: { ...prev.fluidoJusante, ativo: val } 
+    fluidoJusante: { 
+      ...prev.fluidoJusante, 
+      ativo: val,
+      nivel: (val && prev.fluidoJusante.nivel === 0) ? 5 : prev.fluidoJusante.nivel
+    } 
   }));
   
   // LOGIC
@@ -162,6 +169,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
             presets={PRESETS}
             handleHeightChange={handleHeightChange} 
             handleShapeChange={handleShapeChange} 
+            wallDims={wallDims}
+            setWallDims={setWallDims}
         />
 
         {/* --- CENTER: SCENE --- */}
@@ -173,6 +182,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
                 hasGate={hasGate} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}
                 gateInclination={gateInclination}
+                wallDims={wallDims}
                 force={analyzedResults ? analyzedResults.forceData.FR_net : 0} 
                 s_cp={analyzedResults ? analyzedResults.forceData.s_cp_net : 0}
                 hingePosition={hingePosition}

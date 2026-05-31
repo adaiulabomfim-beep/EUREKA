@@ -25,6 +25,7 @@ interface CenaProps {
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
+  wallDims: { height: number; thickness: number; width: number; };
 }
 
 export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {

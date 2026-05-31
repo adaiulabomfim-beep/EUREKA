@@ -26,11 +26,20 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
   onToggleCalculations,
   specialResult,
 }) => {
+  const getStatusHighlight = (status: string, simulating: boolean): string => {
+    if (!simulating) return 'slate';
+    if (status.includes('AFUNDADO')) return 'red';
+    if (status.includes('NEUTRO') || status.includes('SUSPENSO')) return 'amber';
+    if (status.includes('INTERFACE')) return 'blue';
+    if (status.includes('FLUTUANDO')) return 'green';
+    return 'purple';
+  };
+
   return (
     <div className="lg:col-span-3 flex flex-col gap-3 h-full">
       <ResultsPanel
         footerButton={{
-          label: showCalculations ? 'Ocultar Memorial' : 'Memorial de Cálculo',
+          label: showCalculations ? 'Ocultar Memorial' : 'Memorial',
           onClick: onToggleCalculations,
           icon: Calculator,
           disabled: !isSimulating,
@@ -67,6 +76,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           value={isSimulating ? physics.status : 'PRONTO'}
           highlight={true}
           leftIcon={CheckCircle2}
+          highlightTheme={getStatusHighlight(physics.status, isSimulating)}
           secondaryValue={isSimulating && physics.equivalentDensity ? `Densidade Eq.: ${physics.equivalentDensity.toFixed(1)} kg/m³` : undefined}
         />
 

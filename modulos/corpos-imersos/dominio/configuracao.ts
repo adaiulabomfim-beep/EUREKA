@@ -15,13 +15,13 @@ export const MATERIALS: Material[] = [
 ];
 
 export const FLUIDS: Fluid[] = [
-  { name: 'Ar', density: 1.225, color: '#f1f5f9' },
-  { name: 'Gasolina', density: 719, color: '#fef08a' },
-  { name: 'Álcool (Etanol)', density: 789, color: '#fed7aa' },
-  { name: 'Óleo de Soja', density: 920, color: '#fcd34d' },
+  { name: 'Ar', density: 1.225, color: '#c8d6e5' },
+  { name: 'Gasolina', density: 719, color: '#a3e635' },
+  { name: 'Álcool (Etanol)', density: 789, color: '#fb923c' },
+  { name: 'Óleo de Soja', density: 920, color: '#eab308' },
   { name: 'Água Doce', density: 1000, color: '#3b82f6' },
-  { name: 'Água do Mar', density: 1025, color: '#2563eb' },
-  { name: 'Glicerina', density: 1260, color: '#e2e8f0' },
-  { name: 'Mel', density: 1420, color: '#fbbf24' },
-  { name: 'Mercúrio', density: 13534, color: '#94a3b8' },
+  { name: 'Água do Mar', density: 1025, color: '#0891b2' },
+  { name: 'Glicerina', density: 1260, color: '#c084fc' },
+  { name: 'Mel', density: 1420, color: '#d97706' },
+  { name: 'Mercúrio', density: 13534, color: '#78716c' },
 ];

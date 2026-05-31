@@ -4,6 +4,7 @@ import {
   BookOpen,
   RotateCcw,
   ArrowLeftRight,
+  Gauge,
 } from 'lucide-react';
 import { MATERIALS, FLUIDS } from '../dominio/configuracao';
 import { ObjectShape } from '../dominio/tipos';
@@ -56,6 +57,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [is3D, setIs3D] = useState<boolean>(false);
   const [showFBD, setShowFBD] = useState<boolean>(true);
   const [showCalculations, setShowCalculations] = useState<boolean>(false);
+  const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
   const [showCenterOfBuoyancy, setShowCenterOfBuoyancy] = useState<boolean>(true);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [currentEnunciado, setCurrentEnunciado] = useState<string | null>(null);
@@ -111,6 +113,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const posRef = useRef<number>(0);
   const velRef = useRef<number>(0);
   const reqRef = useRef<number>(undefined);
+  const speedRef = useRef<number>(speedMultiplier);
+  speedRef.current = speedMultiplier;
   const lastTimeRef = useRef<number>(0);
 
   // Initial physics for animation
@@ -138,7 +142,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     lastTimeRef.current = performance.now();
     
     const animate = (time: number) => {
-        const dt = Math.min((time - lastTimeRef.current) / 1000, 0.05); 
+        const spd = speedRef.current;
+        const dt = Math.min((time - lastTimeRef.current) / 1000, 0.05) * spd; 
         lastTimeRef.current = time;
 
         const k = 100; // Spring constant
@@ -672,6 +677,28 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
               <ArrowLeftRight className="w-3.5 h-3.5" />
               VETORES
             </button>
+          </div>
+
+          {/* Speed Control */}
+          <div className="absolute top-6 right-6 flex z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1 items-center gap-1">
+            <Gauge className="w-3.5 h-3.5 text-slate-400 ml-2" />
+            {[
+              { label: '0.5×', value: 0.5 },
+              { label: '1×', value: 1 },
+              { label: '2×', value: 2 },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSpeedMultiplier(opt.value)}
+                className={`px-3 py-1.5 rounded-full font-bold transition-all text-xs ${
+                  speedMultiplier === opt.value
+                    ? 'bg-blue-100/80 text-blue-700 shadow-inner'
+                    : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
 
           {/* Main Action Button */}
