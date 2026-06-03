@@ -247,6 +247,13 @@ const App: React.FC = () => {
               </div>
             </main>
 
+            {/* Global Footer */}
+            <footer className="w-full py-2 text-center mt-auto opacity-70 shrink-0">
+              <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] font-bold text-slate-400">
+                DESENVOLVIDO POR <span className="text-slate-500">ADAIULA FERRAZ</span>
+              </p>
+            </footer>
+
             {/* AI ChatBot Overlay */}
             <ChatBot simulationContext={simulationContext} />
           </motion.div>
