@@ -184,7 +184,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
         <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
             <CenaPressaoComporta
-                upstreamLevel={upstreamLevel} downstreamLevel={downstreamLevel}
+                upstreamLevel={upstreamLevel} downstreamLevel={hasDownstream ? downstreamLevel : 0}
                 upstreamFluidKey={upstreamFluidKey} downstreamFluidKey={downstreamFluidKey}
                 hasGate={hasGate} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}

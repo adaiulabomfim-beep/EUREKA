@@ -255,7 +255,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     if (gateInclination !== 90) {
       const angleRad = (gateInclination * Math.PI) / 180;
       const yx = 1 / Math.tan(angleRad);
-      const shearMatrix = new THREE.Matrix4().makeShear(yx, 0, 0, 0, 0, 0);
+      const shearMatrix = new THREE.Matrix4().makeShear(0, 0, yx, 0, 0, 0);
       geom.applyMatrix4(shearMatrix);
     }
     geom.translate(-reservoirLength / 2 - halfWT, 0, 0);
@@ -269,7 +269,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     if (gateInclination !== 90) {
       const angleRad = (gateInclination * Math.PI) / 180;
       const yx = 1 / Math.tan(angleRad);
-      const shearMatrix = new THREE.Matrix4().makeShear(yx, 0, 0, 0, 0, 0);
+      const shearMatrix = new THREE.Matrix4().makeShear(0, 0, yx, 0, 0, 0);
       geom.applyMatrix4(shearMatrix);
     }
     geom.translate(reservoirLength / 2 + halfWT, 0, 0);
