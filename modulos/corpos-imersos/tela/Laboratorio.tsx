@@ -237,7 +237,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate, onDat
     densidadeFluido: rhoA,
     empuxo: physics.buoyancyForce,
     peso: physics.objectWeight,
-    volumeDeslocado: physics.vol_deslocado / 1e6,
+    volumeDeslocado: physics.vol_deslocado,
     alturaSubmersa: physics.h_sub_actual / 100
   }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics]);
 

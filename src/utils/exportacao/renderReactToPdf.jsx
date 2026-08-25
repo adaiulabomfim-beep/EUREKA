@@ -36,14 +36,40 @@ export const renderReactToPdf = async (Component, props, filename = 'documento.p
       logging: false,
     });
 
-    const imgData = canvas.toDataURL('image/png', 1.0);
+    const pageHeightPx = 1123;
+    const scale = 2;
+    const canvasPageHeight = pageHeightPx * scale;
+    const canvasPageWidth = canvas.width;
+    
+    const totalPages = Math.max(1, Math.round((canvas.height / scale) / pageHeightPx));
     const pdf = new jsPDF('p', 'mm', 'a4');
     
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
     
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-
+    for (let i = 0; i < totalPages; i++) {
+      if (i > 0) {
+        pdf.addPage();
+      }
+      
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvasPageWidth;
+      pageCanvas.height = canvasPageHeight;
+      const ctx = pageCanvas.getContext('2d');
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvasPageWidth, canvasPageHeight);
+      
+      ctx.drawImage(
+        canvas,
+        0, i * canvasPageHeight, canvasPageWidth, canvasPageHeight,
+        0, 0, canvasPageWidth, canvasPageHeight
+      );
+      
+      const pageImgData = pageCanvas.toDataURL('image/png', 1.0);
+      pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    }
+ 
     forcarDownloadPDF(pdf, filename);
   } catch (err) {
     console.error("Erro ao gerar PDF:", err);
