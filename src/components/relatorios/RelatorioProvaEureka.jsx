@@ -28,10 +28,7 @@ const SectionTitle = ({ icon: Icon, children, number }) => (
     {Icon && (
       <Icon size={16} strokeWidth={2.5} className="shrink-0 text-[#3478f6]" />
     )}
-    <h3 
-      className="m-0 p-0 text-[13px] font-black uppercase tracking-[0.5px] text-[#23477f]"
-      style={{ lineHeight: '1', transform: 'translateY(-3.5px)' }}
-    >
+    <h3 className="m-0 p-0 text-[13px] font-black uppercase tracking-[0.5px] text-[#23477f]">
       {number ? `${number}. ` : ''}
       {children}
     </h3>
@@ -389,13 +386,13 @@ export const RelatorioProvaEureka = ({
             </div>
 
             <div className="flex w-[255px] flex-col gap-[10px] text-[10px] font-bold leading-snug text-[#4a638b]">
-              <div className="flex items-start gap-[7px]">
-                <CalendarDays size={13} className="mt-[1px] shrink-0 text-[#3478f6]" />
-                <span className="leading-none pt-[1px]">Data da Simulação: {dataText}</span>
+              <div className="flex items-center gap-[7px]">
+                <CalendarDays size={13} className="shrink-0 text-[#3478f6]" />
+                <span className="leading-tight">Data da Simulação: {dataText}</span>
               </div>
 
               <div className="flex items-start gap-[7px]">
-                <FileText size={13} className="mt-[1px] shrink-0 text-[#3478f6]" />
+                <FileText size={13} className="mt-[2.5px] shrink-0 text-[#3478f6]" />
                 <span className="leading-[1.35]">
                   {isGabarito ? 'Material exclusivo do professor' : 'Atividade gerada automaticamente'}
                   <br />pelo sistema <strong className="text-[#3478f6]">EUREKA</strong>
@@ -759,10 +756,7 @@ const CustomInfoTitle = ({ label, icon: Icon, number }) => (
     {Icon && (
       <Icon size={16} strokeWidth={2.5} className="shrink-0 text-[#3478f6]" />
     )}
-    <h3 
-      className="m-0 p-0 text-[13px] font-black uppercase tracking-[0.5px] text-[#23477f]"
-      style={{ lineHeight: '1', transform: 'translateY(-1.5px)' }}
-    >
+    <h3 className="m-0 p-0 text-[13px] font-black uppercase tracking-[0.5px] text-[#23477f]">
       {number ? `${number}. ` : ''}
       {label}
     </h3>
