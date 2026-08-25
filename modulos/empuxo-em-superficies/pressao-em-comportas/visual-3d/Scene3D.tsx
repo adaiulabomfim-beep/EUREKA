@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { Edges } from '@react-three/drei';
+import { Edges, Html } from '@react-three/drei';
 import { FormaComporta } from '../dominio/tipos';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -11,6 +11,8 @@ import { BarragemCanvas } from '../../barragens/visual-3d/components/BarragemCan
 import { HatchMaterial } from '../../barragens/visual-3d/core/materials';
 import { AnimatedWaterMaterial } from '../../barragens/visual-3d/components/AnimatedWater';
 import { Vista3DUI } from '../../barragens/visual-3d/components/Vista3DUI';
+import { PressureDistribution3D } from '../../barragens/visual-3d/components/PressureDistribution3D';
+import { EmpuxoVector3D } from '../../barragens/visual-3d/components/EmpuxoVector3D';
 
 // ═══════════════════════════════════════════════════════════════════
 // WORLD COORDINATE SYSTEM:
@@ -31,6 +33,7 @@ function buildWall(
   gateWidth: number,
   gateHeight: number,
   gateBottomY: number,
+  gateInclination: number
 ): THREE.BufferGeometry {
   const hW = channelWidth / 2;
 
@@ -87,8 +90,15 @@ function buildWall(
     bevelEnabled: false,
   });
 
-  // Center thickness along local Z, then rotate so local Z → world X
   geometry.translate(0, 0, -wallThickness / 2);
+  
+  if (gateInclination !== 90) {
+    const angleRad = (gateInclination * Math.PI) / 180;
+    const zy = 1 / Math.tan(angleRad);
+    const shearMatrix = new THREE.Matrix4().makeShear(0, 0, 0, 0, 0, zy);
+    geometry.applyMatrix4(shearMatrix);
+  }
+
   geometry.rotateY(Math.PI / 2);
 
   return geometry;
@@ -103,12 +113,14 @@ function buildGatePlate(
   gateWidth: number,
   gateHeight: number,
   gateBottomY: number,
+  gateInclination: number,
+  wallThickness: number,
   margin: number = 0.5, // extra size on each side
 ): THREE.BufferGeometry {
   const halfGW = gateWidth / 2 + margin;
   const gateTopY = gateBottomY + gateHeight + margin;
   const adjBottomY = Math.max(0, gateBottomY - margin);
-  const plateThickness = 0.4; // Thicker plate for better visibility
+  const plateThickness = wallThickness * 0.4; // Thinner than the wall
 
   const shape = new THREE.Shape();
 
@@ -148,8 +160,15 @@ function buildGatePlate(
     bevelEnabled: false,
   });
 
-  // Same rotation as wall: center and rotate so face points along X
   geometry.translate(0, 0, -plateThickness / 2);
+
+  if (gateInclination !== 90) {
+    const angleRad = (gateInclination * Math.PI) / 180;
+    const zy = 1 / Math.tan(angleRad);
+    const shearMatrix = new THREE.Matrix4().makeShear(0, 0, 0, 0, 0, zy);
+    geometry.applyMatrix4(shearMatrix);
+  }
+
   geometry.rotateY(Math.PI / 2);
 
   return geometry;
@@ -191,6 +210,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     gateWidth,
     gateHeight,
     gateDepthFromCrest,
+    gateInclination,
     hasGate,
     isAnalyzed,
     is3D,
@@ -200,6 +220,8 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     onCalculate,
     onReset,
     wallDims,
+    force,
+    s_cp,
   } = props;
 
   const maxH = Math.max(upstreamLevel, downstreamLevel, gateHeight) || 10;
@@ -215,13 +237,13 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
 
   // Geometries
   const wallGeometry = useMemo(() =>
-    buildWall(wallHeight, wallThickness, channelWidth, gateShape, gateWidth, gateHeight, gateBottomY),
-    [wallHeight, wallThickness, channelWidth, gateShape, gateWidth, gateHeight, gateBottomY]
+    buildWall(wallHeight, wallThickness, channelWidth, gateShape, gateWidth, gateHeight, gateBottomY, gateInclination),
+    [wallHeight, wallThickness, channelWidth, gateShape, gateWidth, gateHeight, gateBottomY, gateInclination]
   );
 
   const gateGeometry = useMemo(() =>
-    buildGatePlate(gateShape, gateWidth, gateHeight, gateBottomY),
-    [gateShape, gateWidth, gateHeight, gateBottomY]
+    buildGatePlate(gateShape, gateWidth, gateHeight, gateBottomY, gateInclination, wallThickness),
+    [gateShape, gateWidth, gateHeight, gateBottomY, gateInclination, wallThickness]
   );
 
   const halfWT = wallThickness / 2;
@@ -258,11 +280,11 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
             <Edges color="#6b7280" threshold={15} opacity={0.4} transparent />
           </mesh>
 
-          {/* ── Gate Plate (sits on upstream face of wall, protruding 10cm into water) ── */}
+          {/* ── Gate Plate (sits inside the wall, thinner than the wall) ── */}
           {hasGate && (
             <mesh
               geometry={gateGeometry}
-              position={[-halfWT + 0.1, 0, 0]}
+              position={[0, 0, 0]}
               castShadow
               receiveShadow
             >
@@ -303,6 +325,53 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
               <boxGeometry args={[reservoirLength, downstreamLevel, channelWidth]} />
               <AnimatedWaterMaterial />
             </mesh>
+          )}
+
+          {/* ── Analysis Overlays ── */}
+          {isAnalyzed && showVectors && hasGate && (
+            <>
+              {upstreamLevel > 0 && gateTopY > 0 && (
+                <PressureDistribution3D
+                  level={upstreamLevel}
+                  inclinationAngle={gateInclination}
+                  actualBaseWidth={wallThickness}
+                  offsetX={halfWT}
+                  isUpstream={true}
+                  color="#38bdf8"
+                  channelWidth={gateWidth}
+                  damHeight={wallHeight}
+                  startY={gateBottomY}
+                  endY={gateTopY}
+                />
+              )}
+              {downstreamLevel > 0 && gateBottomY < downstreamLevel && (
+                <PressureDistribution3D
+                  level={downstreamLevel}
+                  inclinationAngle={gateInclination}
+                  actualBaseWidth={wallThickness}
+                  offsetX={halfWT}
+                  isUpstream={false}
+                  color="#38bdf8"
+                  channelWidth={gateWidth}
+                  damHeight={wallHeight}
+                  damCrestWidth={wallThickness}
+                />
+              )}
+              {force > 0 && (
+                <EmpuxoVector3D
+                  force={force}
+                  y_cp={gateTopY - s_cp}
+                  s_cp={s_cp}
+                  inclinationAngle={gateInclination}
+                  damHeight={wallHeight}
+                  actualBaseWidth={wallThickness}
+                  offsetX={halfWT}
+                  isUpstream={true}
+                  label="FR"
+                  color="#ef4444"
+                />
+              )}
+            </>
           )}
         </BarragemCanvas>
       </div>

@@ -64,6 +64,17 @@ export const DefinicoesSVG: React.FC<DefinicoesSVGProps> = ({
       <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
     </marker>
 
+    <marker
+      id="arrow-small"
+      markerWidth="6"
+      markerHeight="4"
+      refX="6"
+      refY="2"
+      orient="auto"
+    >
+      <path d="M0,0 L6,2 L0,4 Z" fill="context-stroke" />
+    </marker>
+
     {/* Vidro */}
     <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stopColor="white" stopOpacity="0.4" />

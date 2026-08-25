@@ -17,9 +17,9 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   // STATE
   const [config, setConfig] = useState<ConfiguracaoSimulacaoComporta>({
     fluidoMontante: {
-      chave: 'agua',
-      nivel: 12,
-      densidade: 1000,
+      chave: 'custom',
+      nivel: 5,
+      densidade: 1200,
       gravidade: 9.81,
     },
     fluidoJusante: {
@@ -32,10 +32,10 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     comporta: {
       ativa: true,
       forma: FormaComporta.RETANGULAR,
-      largura: 2,
-      altura: 3,
-      profundidadeTopo: 4,
-      angulo: 90,
+      largura: 1.8,
+      altura: 2.0,
+      profundidadeTopo: 1.5,
+      angulo: 45,
       posicaoDobradica: PosicaoDobradica.NONE,
       temTirante: false,
       posicaoTiranteRelativa: 1,
@@ -49,7 +49,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   const [analyzedResults, setAnalyzedResults] = useState<any | null>(null);
   
   // Local state for the concrete wall dimensions
-  const [wallDims, setWallDims] = useState({ height: 15.6, thickness: 4.2, width: 14.0 });
+  const [wallDims, setWallDims] = useState({ height: 15.6, thickness: 0.5, width: 14.0 });
 
   const { fluidoMontante, fluidoJusante, comporta } = config;
   const { nivel: upstreamLevel, densidade: density, gravidade: gravity, chave: upstreamFluidKey } = fluidoMontante;

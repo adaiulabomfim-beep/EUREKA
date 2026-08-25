@@ -61,8 +61,8 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
   const visualLength = Math.max(6, Math.min(15, Math.log10(absForce) * 1.8));
   
   const headLength = 1.4;
-  const headRadius = 0.40; // reduced from 0.75 for better aesthetics
-  const shaftRadius = 0.16; // reduced from 0.30 for better aesthetics
+  const headRadius = 0.20; // reduced from 0.40 for better aesthetics
+  const shaftRadius = 0.08; // reduced from 0.16 for better aesthetics
   const shaftLength = Math.max(0.5, visualLength - headLength);
   
   // Arrow goes from water INTO the dam face:
@@ -124,9 +124,9 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
 
       {/* Label */}
       {label && (
-        <Html position={arrowOrigin.clone().add(new THREE.Vector3(0, 0.8, 0))} center style={{ pointerEvents: 'none' }} occlude>
+        <Html position={arrowOrigin.clone().add(new THREE.Vector3(0, 0.8, 0))} center style={{ pointerEvents: 'none' }}>
            <div className="bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded shadow-lg border border-slate-700 font-mono whitespace-nowrap z-50">
-            {label}: {(absForce / 1000).toFixed(1)} kN
+            {label} = {(absForce / 1000).toFixed(2)} kN/m
            </div>
         </Html>
       )}

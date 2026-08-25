@@ -47,60 +47,28 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   const ORIGIN_X = SVG_W * 0.5 - wallBaseWidth / 2; // Center the wall precisely
   const ORIGIN_Y = SVG_H * 0.82; 
   
-  const wallInclination = 90;
+  const wallInclination = props.gateInclination;
   const wallInclinationRad = (wallInclination * Math.PI) / 180;
-  const dxTop = 0;
 
   const getWallX = (y: number) => {
-    return ORIGIN_X;
+    return ORIGIN_X + (ORIGIN_Y - y) / Math.tan(wallInclinationRad);
   };
 
   const gateWidth = props.gateWidth * SCALE;
   const gateHeight = props.gateHeight * SCALE;
   const gateTopY = ORIGIN_Y - (props.upstreamLevel - props.gateDepthFromCrest) * SCALE;
   const gateTopX = getWallX(gateTopY);
-  const gateAngleRad = (props.gateInclination * Math.PI) / 180;
-  const gateBottomX = gateTopX + Math.cos(gateAngleRad) * gateHeight;
-  const gateBottomY = gateTopY + Math.sin(gateAngleRad) * gateHeight;
-
-  // The wall is rendered as a single block in 2D to show the structure surrounding the hole.
-  // Dashed lines indicate the top and bottom of the opening.
-  const wallBlock = {
-    id: 'wall-solid',
-    kind: 'DAM',
-    pts: [
-      { x: ORIGIN_X, y: ORIGIN_Y },
-      { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
-      { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y - wallHeight },
-      { x: ORIGIN_X + dxTop, y: ORIGIN_Y - wallHeight },
-    ],
-    fill: 'url(#concretePattern)',
-    stroke: '#6b7280',
-    strokeWidth: 1.2,
-    opacity: 1,
-  };
-
-  const holeTopLine = {
-    id: 'hole-top-line',
-    pts: [
-      { x: ORIGIN_X, y: gateTopY },
-      { x: ORIGIN_X + wallBaseWidth, y: gateTopY },
-    ],
-    stroke: '#4b5563',
-    strokeWidth: 1.5,
-    strokeDasharray: '6 4',
-  };
-
-  const holeBottomLine = {
-    id: 'hole-bottom-line',
-    pts: [
-      { x: ORIGIN_X, y: gateBottomY },
-      { x: ORIGIN_X + wallBaseWidth, y: gateBottomY },
-    ],
-    stroke: '#4b5563',
-    strokeWidth: 1.5,
-    strokeDasharray: '6 4',
-  };
+  
+  // The gate length along the slope is gateHeight
+  const gateBottomY = gateTopY + Math.sin(wallInclinationRad) * props.gateHeight * SCALE;
+  const gateBottomX = getWallX(gateBottomY);
+  
+  // Calculate normal vector for the gate (pointing right and down into the wall)
+  const vx = gateBottomX - gateTopX; // negative
+  const vy = gateBottomY - gateTopY; // positive
+  const vLen = Math.sqrt(vx*vx + vy*vy);
+  const nx = vy / vLen;
+  const ny = -vx / vLen;
 
   const renderedFaces: any[] = [
     {
@@ -117,25 +85,92 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       strokeWidth: 1.2,
       hatchPattern: 'url(#earthPattern)',
       opacity: 1,
-    },
-    wallBlock,
-    holeTopLine,
-    holeBottomLine,
-    {
-      id: 'water-up',
-      kind: 'WATER_UP',
-      pts: [
-        { x: ORIGIN_X - 30 * SCALE, y: ORIGIN_Y },
-        { x: ORIGIN_X, y: ORIGIN_Y },
-        { x: getWallX(ORIGIN_Y - props.upstreamLevel * SCALE), y: ORIGIN_Y - props.upstreamLevel * SCALE },
-        { x: ORIGIN_X - 30 * SCALE, y: ORIGIN_Y - props.upstreamLevel * SCALE },
-      ],
-      fill: 'url(#fluidDepthA)',
-      stroke: 'none',
-      strokeWidth: 0,
-      opacity: 1,
     }
   ];
+
+  if (props.hasGate) {
+    // Bottom wall part
+    renderedFaces.push({
+      id: 'wall-bottom',
+      kind: 'DAM',
+      pts: [
+        { x: ORIGIN_X, y: ORIGIN_Y },
+        { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
+        { x: gateBottomX + wallBaseWidth, y: gateBottomY },
+        { x: gateBottomX, y: gateBottomY },
+      ],
+      fill: 'url(#concretePattern)',
+      stroke: '#6b7280',
+      strokeWidth: 1.2,
+      opacity: 1,
+    });
+    // Top wall part
+    renderedFaces.push({
+      id: 'wall-top',
+      kind: 'DAM',
+      pts: [
+        { x: gateTopX, y: gateTopY },
+        { x: gateTopX + wallBaseWidth, y: gateTopY },
+        { x: getWallX(ORIGIN_Y - wallHeight) + wallBaseWidth, y: ORIGIN_Y - wallHeight },
+        { x: getWallX(ORIGIN_Y - wallHeight), y: ORIGIN_Y - wallHeight },
+      ],
+      fill: 'url(#concretePattern)',
+      stroke: '#6b7280',
+      strokeWidth: 1.2,
+      opacity: 1,
+    });
+    // Dashed lines
+    renderedFaces.push({
+      id: 'hole-top-line',
+      pts: [
+        { x: gateTopX, y: gateTopY },
+        { x: gateTopX + wallBaseWidth, y: gateTopY },
+      ],
+      stroke: '#4b5563',
+      strokeWidth: 1.5,
+      strokeDasharray: '6 4',
+    });
+    renderedFaces.push({
+      id: 'hole-bottom-line',
+      pts: [
+        { x: gateBottomX, y: gateBottomY },
+        { x: gateBottomX + wallBaseWidth, y: gateBottomY },
+      ],
+      stroke: '#4b5563',
+      strokeWidth: 1.5,
+      strokeDasharray: '6 4',
+    });
+  } else {
+    renderedFaces.push({
+      id: 'wall-solid',
+      kind: 'DAM',
+      pts: [
+        { x: ORIGIN_X, y: ORIGIN_Y },
+        { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
+        { x: getWallX(ORIGIN_Y - wallHeight) + wallBaseWidth, y: ORIGIN_Y - wallHeight },
+        { x: getWallX(ORIGIN_Y - wallHeight), y: ORIGIN_Y - wallHeight },
+      ],
+      fill: 'url(#concretePattern)',
+      stroke: '#6b7280',
+      strokeWidth: 1.2,
+      opacity: 1,
+    });
+  }
+
+  renderedFaces.push({
+    id: 'water-up',
+    kind: 'WATER_UP',
+    pts: [
+      { x: ORIGIN_X - 30 * SCALE, y: ORIGIN_Y },
+      { x: ORIGIN_X, y: ORIGIN_Y },
+      { x: getWallX(ORIGIN_Y - props.upstreamLevel * SCALE), y: ORIGIN_Y - props.upstreamLevel * SCALE },
+      { x: ORIGIN_X - 30 * SCALE, y: ORIGIN_Y - props.upstreamLevel * SCALE },
+    ],
+    fill: 'url(#fluidDepthA)',
+    stroke: 'none',
+    strokeWidth: 0,
+    opacity: 1,
+  });
 
 
   if (props.downstreamLevel > 0) {
@@ -146,7 +181,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
         { x: ORIGIN_X + wallBaseWidth + 30 * SCALE, y: ORIGIN_Y },
         { x: ORIGIN_X + wallBaseWidth + 30 * SCALE, y: ORIGIN_Y - props.downstreamLevel * SCALE },
-        { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y - props.downstreamLevel * SCALE }, 
+        { x: getWallX(ORIGIN_Y - props.downstreamLevel * SCALE) + wallBaseWidth, y: ORIGIN_Y - props.downstreamLevel * SCALE }, 
       ],
       fill: 'url(#fluidDepthB)',
       stroke: 'none',
@@ -218,13 +253,17 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   }
 
   if (props.hasGate) {
+    const wallThicknessPerpendicular = wallBaseWidth * Math.sin(wallInclinationRad);
+    const gateThickness = wallThicknessPerpendicular * 0.4; // 40% of wall thickness
+    const gateOffset = (wallThicknessPerpendicular - gateThickness) / 2;
+
     renderedFaces.push({
       id: 'gate',
       pts: [
-        { x: gateTopX, y: gateTopY },
-        { x: gateBottomX, y: gateBottomY },
-        { x: gateBottomX - Math.sin(gateAngleRad) * 5, y: gateBottomY - Math.cos(gateAngleRad) * 5 },
-        { x: gateTopX - Math.sin(gateAngleRad) * 5, y: gateTopY - Math.cos(gateAngleRad) * 5 },
+        { x: gateTopX + nx * gateOffset, y: gateTopY + ny * gateOffset },
+        { x: gateBottomX + nx * gateOffset, y: gateBottomY + ny * gateOffset },
+        { x: gateBottomX + nx * (gateOffset + gateThickness), y: gateBottomY + ny * (gateOffset + gateThickness) },
+        { x: gateTopX + nx * (gateOffset + gateThickness), y: gateTopY + ny * (gateOffset + gateThickness) },
       ],
       fill: 'url(#metalLinear)',
       stroke: '#1e293b',
@@ -242,8 +281,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     }
 
     if (props.hasTieRod) {
-      const tx = gateTopX + Math.cos(gateAngleRad) * gateHeight * props.tieRodPosRel;
-      const ty = gateTopY + Math.sin(gateAngleRad) * gateHeight * props.tieRodPosRel;
+      const tx = gateTopX + vx * props.tieRodPosRel;
+      const ty = gateTopY + vy * props.tieRodPosRel;
       
       const tieRad = (props.tieRodAngle * Math.PI) / 180;
       const tieLen = 80;
@@ -265,21 +304,18 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       for (let i = 0; i <= numVectors; i++) {
           const t = i / numVectors;
           const s = t * gateHeight;
-          const y = gateTopY + Math.sin(gateAngleRad) * s;
-          const x = gateTopX + Math.cos(gateAngleRad) * s;
+          const y = gateTopY + Math.sin(wallInclinationRad) * s;
+          const x = getWallX(y);
           
           const depth = (ORIGIN_Y - y) / SCALE;
           if (depth > 0) {
               const pressure = gamma * depth;
               const vectorLength = (pressure / (gamma * props.upstreamLevel)) * 60; // Scale vector length
               
-              const nx = -Math.sin(gateAngleRad);
-              const ny = Math.cos(gateAngleRad);
-              
               vectors.push({
-                start: { x: x + nx * vectorLength, y: y + ny * vectorLength },
+                start: { x: x - nx * vectorLength, y: y - ny * vectorLength },
                 end: { x: x, y: y },
-                color: '#ef4444',
+                color: '#38bdf8',
                 strokeWidth: 2,
                 opacity: 0.7,
                 isResultant: false
@@ -287,11 +323,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           }
       }
 
-      const cpY = gateTopY + Math.sin(gateAngleRad) * props.s_cp * SCALE;
-      const cpX = gateTopX + Math.cos(gateAngleRad) * props.s_cp * SCALE;
-      
-      const nx = Math.sin(gateAngleRad);
-      const ny = -Math.cos(gateAngleRad);
+      const cpY = gateTopY + Math.sin(wallInclinationRad) * props.s_cp * SCALE;
+      const cpX = getWallX(cpY);
       
       vectors.push({
         start: { x: cpX - nx * 80, y: cpY - ny * 80 },
@@ -306,13 +339,17 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   } else {
     // Rendereiza comporta levantada
     const liftY = gateHeight * 1.1;
+    const wallThicknessPerpendicular = wallBaseWidth * Math.sin(wallInclinationRad);
+    const gateThickness = wallThicknessPerpendicular * 0.4;
+    const gateOffset = (wallThicknessPerpendicular - gateThickness) / 2;
+    
     renderedFaces.push({
       id: 'gate-open',
       pts: [
-        { x: gateTopX, y: gateTopY - liftY },
-        { x: gateBottomX, y: gateBottomY - liftY },
-        { x: gateBottomX - Math.sin(gateAngleRad) * 5, y: gateBottomY - Math.cos(gateAngleRad) * 5 - liftY },
-        { x: gateTopX - Math.sin(gateAngleRad) * 5, y: gateTopY - Math.cos(gateAngleRad) * 5 - liftY },
+        { x: gateTopX + nx * gateOffset, y: gateTopY - liftY + ny * gateOffset },
+        { x: gateBottomX + nx * gateOffset, y: gateBottomY - liftY + ny * gateOffset },
+        { x: gateBottomX + nx * (gateOffset + gateThickness), y: gateBottomY - liftY + ny * (gateOffset + gateThickness) },
+        { x: gateTopX + nx * (gateOffset + gateThickness), y: gateTopY - liftY + ny * (gateOffset + gateThickness) },
       ],
       fill: 'url(#metalLinear)',
       stroke: '#1e293b',
@@ -426,7 +463,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             x={x + dir * 20}
             y={y - 34}
             textAnchor="middle"
-            dominantBaseline="baseline"
+            dominantBaseline="alphabetic"
             fill="#334155"
             fontSize="11"
             fontWeight="bold"
@@ -443,7 +480,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       drawDim(
         'wallHeight',
         { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y },
-        { x: ORIGIN_X + wallBaseWidth, y: ORIGIN_Y - wallHeight },
+        { x: getWallX(ORIGIN_Y - wallHeight) + wallBaseWidth, y: ORIGIN_Y - wallHeight },
         `${(wallHeight / SCALE).toFixed(1)}m`,
         { x: 40, y: 0 },
         { x: 0, y: 0 }

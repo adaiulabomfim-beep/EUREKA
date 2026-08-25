@@ -662,7 +662,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
           
           {/* --- CONTROLS OVERLAY --- */}
           {/* Top Control Bar */}
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 flex z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1">
+          <div className="absolute top-6 left-6 flex z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1">
             <button 
               onClick={() => setIs3D(!is3D)} 
               className={`px-4 py-1.5 rounded-full font-bold transition-all text-xs flex items-center gap-2 ${is3D ? 'bg-blue-100/80 text-blue-700 shadow-inner' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}

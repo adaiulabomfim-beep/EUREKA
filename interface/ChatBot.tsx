@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { MessageCircle, X, Send, Image as ImageIcon, Loader2, Bot, User, Trash2, Microscope } from 'lucide-react';
 
 interface ChatMessage {
@@ -70,8 +69,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
       const contents = messages.map(msg => {
         const parts: any[] = [{ text: msg.text }];
         if (msg.image) {
@@ -105,26 +102,32 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
       
       contents.push({ role: 'user', parts: currentParts });
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
-        config: {
-            systemInstruction: "Você é um assistente tutor especialista em Mecânica dos Fluidos, especificamente Hidrostática e Empuxo. Você está integrado em uma aplicação web educacional. O usuário pode enviar dados de uma simulação (Contexto do Laboratório). Use esses dados numéricos precisos para explicar o que está acontecendo fisicamente. Explique conceitos como se fosse um professor universitário didático. IMPORTANTE: NÃO use formatação LaTeX (como $...$, \\text{}, ou ^ para expoentes). Escreva as unidades de medida em texto simples e limpo (exemplo: kg/m³, N, m², Pa). Não use símbolos que poluam a leitura.",
+      const res = await fetch('http://localhost:3001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        contents: contents
+        body: JSON.stringify({ contents })
       });
 
-      const responseText = response.text || "Desculpe, não consegui gerar uma resposta.";
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro na requisição para o backend');
+      }
+
+      const responseText = data.text || "Desculpe, não consegui gerar uma resposta.";
 
       setMessages(prev => [...prev, {
         role: 'model',
         text: responseText
       }]);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao enviar mensagem:", error);
       setMessages(prev => [...prev, {
         role: 'model',
-        text: "Desculpe, ocorreu um erro ao conectar com o servidor. Verifique sua chave API ou tente novamente."
+        text: error.message || "Desculpe, ocorreu um erro ao conectar com o servidor. Verifique sua chave API ou tente novamente."
       }]);
     } finally {
       setIsLoading(false);

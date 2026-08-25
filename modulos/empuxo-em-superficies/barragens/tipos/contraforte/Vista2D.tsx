@@ -356,7 +356,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
             x={p.x + dir * 20}
             y={p.y - 34}
             textAnchor="middle"
-            dominantBaseline="baseline"
+            dominantBaseline="alphabetic"
             fill="#334155"
             fontSize="11"
             fontWeight="bold"

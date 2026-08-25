@@ -15,6 +15,8 @@ interface PressureDistributionProps {
   archRadius?: number; // Optional arch radius for curved dams
   damHeight?: number;
   damCrestWidth?: number;
+  startY?: number;
+  endY?: number;
 }
 
 export const PressureDistribution3D: React.FC<PressureDistributionProps> = ({
@@ -29,9 +31,16 @@ export const PressureDistribution3D: React.FC<PressureDistributionProps> = ({
   arrowCount = 14, // balanced vertical count
   archRadius,
   damHeight,
-  damCrestWidth
+  damCrestWidth,
+  startY,
+  endY
 }) => {
   if (level <= 0) return null;
+
+  const actualStartY = startY !== undefined ? startY : 0;
+  const actualEndY = endY !== undefined ? endY : level;
+  const rangeY = actualEndY - actualStartY;
+  if (rangeY <= 0) return null;
 
   const angleRad = (inclinationAngle * Math.PI) / 180;
   
@@ -99,7 +108,7 @@ export const PressureDistribution3D: React.FC<PressureDistributionProps> = ({
     }
 
     for (let i = 1; i <= arrowCount; i++) {
-      const y = (level / arrowCount) * i - (level / arrowCount / 2); 
+      const y = actualStartY + (rangeY / arrowCount) * i - (rangeY / arrowCount / 2); 
       
       const depth = level - y;
       const lengthRatio = depth / level;
@@ -157,8 +166,8 @@ export const PressureDistribution3D: React.FC<PressureDistributionProps> = ({
       
       // Elegant, thinner arrow geometry with good proportions
       const headLength = Math.max(0.3, Math.min(0.9, arrowLength * 0.25));
-      const headRadius = 0.20; 
-      const shaftRadius = 0.08; 
+      const headRadius = 0.12; 
+      const shaftRadius = 0.04; 
       const shaftLength = arrowLength - headLength;
       
       if (shaftLength <= 0) continue;
