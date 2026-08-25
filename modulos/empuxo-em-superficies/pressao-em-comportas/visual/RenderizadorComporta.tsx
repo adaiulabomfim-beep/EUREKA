@@ -20,6 +20,7 @@ interface RenderizadorComportaProps {
   hasTieRod: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
+  gateAbertura?: number;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;

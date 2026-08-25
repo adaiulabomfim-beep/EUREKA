@@ -174,7 +174,55 @@ function buildGatePlate(
   return geometry;
 }
 
+function buildGateRibsGeometries(
+  gateShape: FormaComporta,
+  gateWidth: number,
+  gateHeight: number,
+  gateBottomY: number,
+  gateInclination: number,
+  wallThickness: number,
+  margin: number = 0.5
+): THREE.BufferGeometry[] {
+  const halfGW = gateWidth / 2 + margin;
+  const gateTopY = gateBottomY + gateHeight + margin;
+  const adjBottomY = Math.max(0, gateBottomY - margin);
+  const plateThickness = wallThickness * 0.4;
+  const ribDepth = plateThickness * 1.3; // Sticks out a bit
 
+  const geometries: THREE.BufferGeometry[] = [];
+
+  const addRib = (w: number, h: number, x: number, y: number) => {
+    const geom = new THREE.BoxGeometry(w, h, ribDepth);
+    geom.translate(x, y, -plateThickness / 2); // Center Z slightly backwards like the plate
+    geometries.push(geom);
+  };
+
+  // Border frame
+  addRib(gateWidth + margin * 2, 0.2, 0, adjBottomY); // bottom
+  addRib(gateWidth + margin * 2, 0.2, 0, gateTopY); // top
+  addRib(0.2, gateHeight + margin * 2, -halfGW, (gateTopY + adjBottomY) / 2); // left
+  addRib(0.2, gateHeight + margin * 2, halfGW, (gateTopY + adjBottomY) / 2); // right
+
+  // Cross ribs
+  addRib(gateWidth + margin * 2, 0.15, 0, gateBottomY + gateHeight * 0.33);
+  addRib(gateWidth + margin * 2, 0.15, 0, gateBottomY + gateHeight * 0.66);
+  addRib(0.15, gateHeight + margin * 2, 0, (gateTopY + adjBottomY) / 2); // center vertical
+
+  const angleRad = (gateInclination * Math.PI) / 180;
+  const shearMatrix = new THREE.Matrix4();
+  if (gateInclination !== 90) {
+    const yz = 1 / Math.tan(angleRad);
+    shearMatrix.makeShear(0, 0, 0, yz, 0, 0);
+  }
+  const rotMatrix = new THREE.Matrix4().makeRotationY(Math.PI / 2);
+
+  geometries.forEach(g => {
+    if (gateInclination !== 90) g.applyMatrix4(shearMatrix);
+    g.applyMatrix4(rotMatrix);
+  });
+
+  return geometries;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Scene3D Component
@@ -191,6 +239,7 @@ interface Scene3DProps {
   gateInclination: number;
   force: number;
   s_cp: number;
+  gateAbertura?: number;
   isAnalyzed: boolean;
   is3D: boolean;
   setIs3D: (v: boolean) => void;
@@ -222,6 +271,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     wallDims,
     force,
     s_cp,
+    gateAbertura = 0,
   } = props;
 
   const maxH = Math.max(upstreamLevel, downstreamLevel, gateHeight) || 10;
@@ -243,6 +293,11 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
 
   const gateGeometry = useMemo(() =>
     buildGatePlate(gateShape, gateWidth, gateHeight, gateBottomY, gateInclination, wallThickness),
+    [gateShape, gateWidth, gateHeight, gateBottomY, gateInclination, wallThickness]
+  );
+
+  const gateRibsGeometries = useMemo(() =>
+    buildGateRibsGeometries(gateShape, gateWidth, gateHeight, gateBottomY, gateInclination, wallThickness),
     [gateShape, gateWidth, gateHeight, gateBottomY, gateInclination, wallThickness]
   );
 
@@ -275,6 +330,22 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     geom.translate(reservoirLength / 2 + halfWT, 0, 0);
     return geom;
   }, [downstreamLevel, reservoirLength, channelWidth, gateInclination, halfWT]);
+
+  const angleRad = (gateInclination * Math.PI) / 180;
+  const slideDist = (gateAbertura / 100) * gateHeight;
+  const slideDy = slideDist * Math.sin(angleRad);
+  const slideDx = gateInclination === 90 ? 0 : slideDy / Math.tan(angleRad);
+
+  const flowGeometry = useMemo(() => {
+    if (gateAbertura <= 0 || upstreamLevel <= 0) return null;
+    const geom = new THREE.BoxGeometry(wallThickness, slideDy, gateWidth);
+    geom.translate(0, gateBottomY + slideDy / 2, 0);
+    if (gateInclination !== 90) {
+      const yx = 1 / Math.tan(angleRad);
+      geom.applyMatrix4(new THREE.Matrix4().makeShear(0, 0, yx, 0, 0, 0));
+    }
+    return geom;
+  }, [gateAbertura, upstreamLevel, wallThickness, gateWidth, gateBottomY, gateInclination, angleRad, slideDy]);
 
   return (
     <div className="w-full h-full relative" style={{ minHeight: 600 }}>
@@ -310,18 +381,33 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
 
           {/* ── Gate Plate (sits inside the wall, thinner than the wall) ── */}
           {hasGate && (
-            <mesh
-              geometry={gateGeometry}
-              position={[0, 0, 0]}
-              castShadow
-              receiveShadow
-            >
-              <meshStandardMaterial
-                color="#94a3b8"
-                roughness={0.3}
-                metalness={0.8}
-              />
-              <Edges color="#1e293b" threshold={15} opacity={0.6} transparent />
+            <group position={[slideDx, slideDy, 0]}>
+              <mesh
+                geometry={gateGeometry}
+                castShadow
+                receiveShadow
+              >
+                <meshStandardMaterial
+                  color="#94a3b8"
+                  roughness={0.3}
+                  metalness={0.8}
+                />
+                <Edges color="#1e293b" threshold={15} opacity={0.6} transparent />
+              </mesh>
+              
+              {gateRibsGeometries.map((geom, idx) => (
+                <mesh key={idx} geometry={geom} castShadow receiveShadow>
+                  <meshStandardMaterial color="#64748b" roughness={0.5} metalness={0.9} />
+                  <Edges color="#0f172a" threshold={15} opacity={0.8} transparent />
+                </mesh>
+              ))}
+            </group>
+          )}
+
+          {/* ── Water Flow (through the gap) ── */}
+          {flowGeometry && (
+            <mesh geometry={flowGeometry} receiveShadow>
+              <AnimatedWaterMaterial />
             </mesh>
           )}
 

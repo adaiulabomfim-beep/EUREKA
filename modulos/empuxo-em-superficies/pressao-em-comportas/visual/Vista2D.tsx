@@ -19,6 +19,7 @@ interface Vista2DProps {
   hasTieRod: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
+  gateAbertura?: number;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
@@ -257,13 +258,38 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     const gateThickness = wallThicknessPerpendicular * 0.4; // 40% of wall thickness
     const gateOffset = (wallThicknessPerpendicular - gateThickness) / 2;
 
+    const aberturaPerc = props.gateAbertura || 0;
+    const slideDist = (aberturaPerc / 100) * props.gateHeight * SCALE;
+    const slideDy = slideDist * Math.sin(wallInclinationRad);
+    
+    const gateOpenedTopY = gateTopY - slideDy;
+    const gateOpenedTopX = getWallX(gateOpenedTopY);
+    const gateOpenedBottomY = gateBottomY - slideDy;
+    const gateOpenedBottomX = getWallX(gateOpenedBottomY);
+
+    // Vão da água quando aberta
+    if (aberturaPerc > 0 && props.upstreamLevel > 0) {
+      renderedFaces.push({
+        id: 'water-flow',
+        pts: [
+          { x: gateBottomX, y: gateBottomY },
+          { x: gateOpenedBottomX, y: gateOpenedBottomY },
+          { x: gateOpenedBottomX + wallBaseWidth, y: gateOpenedBottomY },
+          { x: gateBottomX + wallBaseWidth, y: gateBottomY },
+        ],
+        fill: 'url(#fluidDepthA)',
+        stroke: 'none',
+        opacity: 0.8,
+      });
+    }
+
     renderedFaces.push({
       id: 'gate',
       pts: [
-        { x: gateTopX + nx * gateOffset, y: gateTopY + ny * gateOffset },
-        { x: gateBottomX + nx * gateOffset, y: gateBottomY + ny * gateOffset },
-        { x: gateBottomX + nx * (gateOffset + gateThickness), y: gateBottomY + ny * (gateOffset + gateThickness) },
-        { x: gateTopX + nx * (gateOffset + gateThickness), y: gateTopY + ny * (gateOffset + gateThickness) },
+        { x: gateOpenedTopX + nx * gateOffset, y: gateOpenedTopY + ny * gateOffset },
+        { x: gateOpenedBottomX + nx * gateOffset, y: gateOpenedBottomY + ny * gateOffset },
+        { x: gateOpenedBottomX + nx * (gateOffset + gateThickness), y: gateOpenedBottomY + ny * (gateOffset + gateThickness) },
+        { x: gateOpenedTopX + nx * (gateOffset + gateThickness), y: gateOpenedTopY + ny * (gateOffset + gateThickness) },
       ],
       fill: 'url(#metalLinear)',
       stroke: '#1e293b',
@@ -272,8 +298,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     });
 
     if (props.hingePosition !== PosicaoDobradica.NONE) {
-      const hx = props.hingePosition === PosicaoDobradica.TOP ? gateTopX : gateBottomX;
-      const hy = props.hingePosition === PosicaoDobradica.TOP ? gateTopY : gateBottomY;
+      const hx = props.hingePosition === PosicaoDobradica.TOP ? gateOpenedTopX : gateOpenedBottomX;
+      const hy = props.hingePosition === PosicaoDobradica.TOP ? gateOpenedTopY : gateOpenedBottomY;
       
       overlayElements.push(
         <circle key="hinge" cx={hx} cy={hy} r={6} fill="#f59e0b" stroke="#b45309" strokeWidth={2} />
@@ -281,18 +307,19 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     }
 
     if (props.hasTieRod) {
-      const tx = gateTopX + vx * props.tieRodPosRel;
-      const ty = gateTopY + vy * props.tieRodPosRel;
+      const tx = gateOpenedTopX + vx * props.tieRodPosRel;
+      const ty = gateOpenedTopY + vy * props.tieRodPosRel;
       
-      const tieRad = (props.tieRodAngle * Math.PI) / 180;
-      const tieLen = 80;
-      const endX = tx + Math.cos(tieRad) * tieLen;
-      const endY = ty - Math.sin(tieRad) * tieLen;
+      const trAngleRad = (props.tieRodAngle * Math.PI) / 180;
+      const tieRodLen = 50; 
+      const ex = tx + Math.cos(trAngleRad) * tieRodLen;
+      const ey = ty - Math.sin(trAngleRad) * tieRodLen;
       
       overlayElements.push(
         <g key="tierod">
-          <line x1={tx} y1={ty} x2={endX} y2={endY} stroke="#64748b" strokeWidth={3} strokeDasharray="4 2" />
-          <rect x={endX - 4} y={endY - 4} width={8} height={8} fill="#475569" />
+          <line x1={tx} y1={ty} x2={ex} y2={ey} stroke="#475569" strokeWidth={3} />
+          <circle cx={tx} cy={ty} r={4} fill="#94a3b8" />
+          <circle cx={ex} cy={ey} r={3} fill="#475569" />
         </g>
       );
     }

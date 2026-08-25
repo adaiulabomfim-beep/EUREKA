@@ -43,6 +43,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
       anguloTirante: 0,
       pesoProprio: 500,
       pesoProprioAtivo: false,
+      abertura: 0,
     }
   });
 
@@ -68,7 +69,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
       posicaoTiranteRelativa: tieRodPosRel, 
       anguloTirante: tieRodAngle, 
       pesoProprio: gateWeight, 
-      pesoProprioAtivo: gateWeightEnabled 
+      pesoProprioAtivo: gateWeightEnabled,
+      abertura: gateAbertura = 0
   } = comporta;
   
   const setHasDownstream = (val: boolean) => setConfig(prev => ({ 
@@ -198,7 +200,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
                 tieRodAngle={tieRodAngle}
                 gateWeight={gateWeight}
                 gateWeightEnabled={gateWeightEnabled}
-                isAnalyzed={!!analyzedResults}
+                gateAbertura={gateAbertura}
+                isAnalyzed={!!analyzedResults && gateAbertura === 0}
                 onCalculate={handleCalculate}
                 onReset={() => setAnalyzedResults(null)}
             />

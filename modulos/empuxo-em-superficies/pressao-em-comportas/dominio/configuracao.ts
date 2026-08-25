@@ -23,6 +23,7 @@ export interface ConfiguracaoSimulacaoComporta {
     anguloTirante: number;
     pesoProprio: number;
     pesoProprioAtivo: boolean;
+    abertura?: number; // 0 a 100%
   };
 }
 

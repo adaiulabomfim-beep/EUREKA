@@ -264,6 +264,11 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       <NumberInput value={config.comporta.angulo || 90} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, angulo: val}}))} min={1} max={90} step={1} />
                   </div>
 
+                  <div>
+                      <label className={labelClass}>Abertura (%)</label>
+                      <NumberInput value={config.comporta.abertura || 0} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, abertura: val}}))} min={0} max={100} step={1} />
+                  </div>
+
                   <div className="pt-4 border-t border-blue-50">
                       <div className="flex items-center gap-2 mb-4">
                           <div className="p-1 bg-blue-50 text-blue-600 rounded"><Anchor className="w-3 h-3" /></div>

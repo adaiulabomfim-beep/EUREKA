@@ -22,6 +22,7 @@ interface CenaProps {
   tieRodAngle: number;
   gateWeight: number;
   gateWeightEnabled: boolean;
+  gateAbertura?: number;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
