@@ -196,8 +196,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   // Ripple Waves Overlay (Same as Barragens)
   if (props.upstreamLevel > 0) {
     const xLeft = ORIGIN_X - 30 * SCALE;
-    const xRight = ORIGIN_X;
     const yTop = ORIGIN_Y - props.upstreamLevel * SCALE;
+    const xRight = getWallX(yTop);
     const rippleHeight = Math.min(30, props.upstreamLevel * SCALE);
     
     overlayElements.push(
@@ -224,9 +224,9 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   }
 
   if (props.downstreamLevel > 0) {
-    const xLeft = ORIGIN_X + wallBaseWidth;
-    const xRight = ORIGIN_X + wallBaseWidth + 30 * SCALE;
     const yTop = ORIGIN_Y - props.downstreamLevel * SCALE;
+    const xLeft = getWallX(yTop) + wallBaseWidth;
+    const xRight = ORIGIN_X + wallBaseWidth + 30 * SCALE;
     const rippleHeight = Math.min(30, props.downstreamLevel * SCALE);
     
     overlayElements.push(

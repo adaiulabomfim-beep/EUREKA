@@ -94,8 +94,8 @@ function buildWall(
   
   if (gateInclination !== 90) {
     const angleRad = (gateInclination * Math.PI) / 180;
-    const zy = 1 / Math.tan(angleRad);
-    const shearMatrix = new THREE.Matrix4().makeShear(0, 0, 0, 0, 0, zy);
+    const yz = 1 / Math.tan(angleRad);
+    const shearMatrix = new THREE.Matrix4().makeShear(0, 0, 0, yz, 0, 0);
     geometry.applyMatrix4(shearMatrix);
   }
 
@@ -164,8 +164,8 @@ function buildGatePlate(
 
   if (gateInclination !== 90) {
     const angleRad = (gateInclination * Math.PI) / 180;
-    const zy = 1 / Math.tan(angleRad);
-    const shearMatrix = new THREE.Matrix4().makeShear(0, 0, 0, 0, 0, zy);
+    const yz = 1 / Math.tan(angleRad);
+    const shearMatrix = new THREE.Matrix4().makeShear(0, 0, 0, yz, 0, 0);
     geometry.applyMatrix4(shearMatrix);
   }
 
