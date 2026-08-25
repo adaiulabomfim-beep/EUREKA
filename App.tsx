@@ -14,6 +14,8 @@ const App: React.FC = () => {
   const [hasStarted, setHasStarted] = useState<boolean>(false);
   const [currentMode, setCurrentMode] = useState<SimulationMode>(SimulationMode.IMMERSED_BODIES);
   const [simulationContext, setSimulationContext] = useState<string>('');
+  const [simulationData, setSimulationData] = useState<any>(null);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
 
   return (
     <>
@@ -133,85 +135,72 @@ const App: React.FC = () => {
                   <div className="relative flex z-50">
                     <button
                       title="Opções de Exportação"
-                      onClick={() => {
-                        const el = document.getElementById('export-dropdown');
-                        if (el) {
-                          const isVisible = el.style.display === 'block';
-                          el.style.display = isVisible ? 'none' : 'block';
-                          if (!isVisible) {
-                            // Close on outside click
-                            const closeHandler = (e: MouseEvent) => {
-                              if (!(e.target as Element)?.closest?.('#export-dropdown') && !(e.target as Element)?.closest?.('[title="Opções de Exportação"]')) {
-                                el.style.display = 'none';
-                                document.removeEventListener('click', closeHandler);
-                              }
-                            };
-                            setTimeout(() => document.addEventListener('click', closeHandler), 0);
-                          }
-                        }
-                      }}
+                      onClick={() => setIsExportMenuOpen(prev => !prev)}
                       className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm ml-2 gap-2 font-bold text-xs uppercase"
                     >
                       <FileText className="w-4 h-4" /> Exportar Relatório
                     </button>
-                    <div id="export-dropdown" style={{ display: 'none' }} className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden">
-                      {(() => {
-                        const validateAndGetSimulacao = () => {
-                          const container = document.getElementById("areaSimulacao");
-                          if (!container || !container.dataset.simulacao) {
-                            alert("Ative a aba de uma simulação antes de exportar.");
-                            return null;
-                          }
-                          const data = JSON.parse(container.dataset.simulacao);
-                          // Validação rigorosa
-                          if (data.empuxo === 0 && data.peso === 0 && data.volumeDeslocado === 0 && data.tipo === 'corpos-imersos') {
-                            alert("Execute uma simulação válida ativamente ajustando um parâmetro, antes de exportar! Valores atuais não podem ser nulos.");
-                            return null;
-                          }
-                          return data;
-                        };
+                    {isExportMenuOpen && (
+                      <>
+                        {/* Backdrop to close the menu on click outside */}
+                        <div className="fixed inset-0 z-40" onClick={() => setIsExportMenuOpen(false)} />
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
+                          {(() => {
+                            const validateAndGetSimulacao = () => {
+                              if (!simulationData) {
+                                alert("Ative a aba de uma simulação antes de exportar.");
+                                return null;
+                              }
+                              // Validação rigorosa
+                              if (simulationData.empuxo === 0 && simulationData.peso === 0 && simulationData.volumeDeslocado === 0 && simulationData.tipo === 'corpos-imersos') {
+                                alert("Execute uma simulação válida ativamente ajustando um parâmetro, antes de exportar! Valores atuais não podem ser nulos.");
+                                return null;
+                              }
+                              return simulationData;
+                            };
 
-                        const closeMenu = () => {
-                          const el = document.getElementById('export-dropdown');
-                          if (el) el.style.display = 'none';
-                        };
+                            const closeMenu = () => {
+                              setIsExportMenuOpen(false);
+                            };
 
-                        return (
-                          <>
-                            <button 
-                              onClick={() => {
-                                closeMenu();
-                                const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFEstudoVisual(data));
-                              }}
-                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
-                            >
-                              PDF Relatório Visual
-                            </button>
-                            <button 
-                              onClick={() => {
-                                closeMenu();
-                                const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProvaVisual(data));
-                              }}
-                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
-                            >
-                              PDF de Prova (Lista/Exercício)
-                            </button>
-                            <button 
-                              onClick={() => {
-                                closeMenu();
-                                const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabaritoVisual(data));
-                              }}
-                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700"
-                            >
-                              Gerar Gabarito (Com Result)
-                            </button>
-                          </>
-                        );
-                      })()}
-                    </div>
+                            return (
+                              <>
+                                <button 
+                                  onClick={() => {
+                                    closeMenu();
+                                    const data = validateAndGetSimulacao();
+                                    if (data) import('./src/utils/exportacao').then(m => m.gerarPDFEstudoVisual(data));
+                                  }}
+                                  className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
+                                >
+                                  PDF Relatório Visual
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    closeMenu();
+                                    const data = validateAndGetSimulacao();
+                                    if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProvaVisual(data));
+                                  }}
+                                  className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
+                                >
+                                  PDF de Prova (Lista/Exercício)
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    closeMenu();
+                                    const data = validateAndGetSimulacao();
+                                    if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabaritoVisual(data));
+                                  }}
+                                  className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700"
+                                >
+                                  Gerar Gabarito (Com Result)
+                                </button>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -240,9 +229,9 @@ const App: React.FC = () => {
                   </p>
                 </div>
 
-                {currentMode === SimulationMode.IMMERSED_BODIES && <ImmersedBodiesLab onContextUpdate={setSimulationContext} />}
-                {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} />}
-                {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} />}
+                {currentMode === SimulationMode.IMMERSED_BODIES && <ImmersedBodiesLab onContextUpdate={setSimulationContext} onDataUpdate={setSimulationData} />}
+                {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} onDataUpdate={setSimulationData} />}
+                {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} onDataUpdate={setSimulationData} />}
                 {currentMode === SimulationMode.THEORY && <TheoryReference />}
               </div>
             </main>

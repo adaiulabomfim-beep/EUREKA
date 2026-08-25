@@ -11,9 +11,10 @@ import { PainelControles } from './PainelControles';
 
 interface GatePressureLabProps {
     onContextUpdate?: (ctx: string) => void;
+    onDataUpdate?: (data: any) => void;
 }
 
-export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate }) => {
+export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, onDataUpdate }) => {
   // STATE
   const [config, setConfig] = useState<ConfiguracaoSimulacaoComporta>({
     fluidoMontante: {
@@ -135,7 +136,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       });
   };
 
-  const exportData = {
+  const exportData = useMemo(() => ({
     tipo: 'comportas',
     geometria: `Comporta ${gateShape}`,
     dimensoes: {
@@ -150,7 +151,13 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     alturaSubmersa: upstreamLevel,
     isAnalyzed: !!analyzedResults,
     analyzedResults: analyzedResults
-  };
+  }), [gateShape, gateHeight, gateWidth, gateInclination, analyzedResults, gateWeightEnabled, gateWeight, upstreamLevel]);
+
+  useEffect(() => {
+    if (onDataUpdate) {
+      onDataUpdate(exportData);
+    }
+  }, [exportData, onDataUpdate]);
 
   return (
     <div className="flex flex-col gap-6">

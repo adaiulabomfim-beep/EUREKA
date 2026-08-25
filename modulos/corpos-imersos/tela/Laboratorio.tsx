@@ -18,9 +18,10 @@ import { getFluidColor } from '../visual/visualUtils';
 
 interface BodyFallLabProps {
   onContextUpdate?: (ctx: string) => void;
+  onDataUpdate?: (data: any) => void;
 }
 
-export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => {
+export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate, onDataUpdate }) => {
   // --- STATE: INPUTS ---
   const [selectedMaterial, setSelectedMaterial] = useState<string>('Concreto');
   const [customObjDensity, setCustomObjDensity] = useState<number>(2400);
@@ -239,6 +240,12 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     volumeDeslocado: physics.vol_deslocado / 1e6,
     alturaSubmersa: physics.h_sub_actual / 100
   }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics]);
+
+  useEffect(() => {
+    if (onDataUpdate) {
+      onDataUpdate(exportData);
+    }
+  }, [exportData, onDataUpdate]);
 
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
 

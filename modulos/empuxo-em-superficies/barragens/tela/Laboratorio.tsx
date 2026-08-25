@@ -10,9 +10,10 @@ import { DAM_PRESETS } from '../dominio/presets';
 
 interface DamLabProps {
     onContextUpdate?: (ctx: string) => void;
+    onDataUpdate?: (data: any) => void;
 }
 
-export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
+export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate, onDataUpdate }) => {
   // STATE
   const [damType, setDamType] = useState<TipoBarragem>(TipoBarragem.GRAVIDADE);
   const [damHeight, setDamHeight] = useState<number>(15);
@@ -104,7 +105,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
       }
   }, [contextString, onContextUpdate]);
 
-  const exportData = {
+  const exportData = useMemo(() => ({
     tipo: 'barragens',
     geometria: `Barragem ${damType}`,
     dimensoes: {
@@ -118,7 +119,13 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     alturaSubmersa: effectiveUpstreamLevel,
     isAnalyzed: !!analyzedResults,
     analyzedResults: analyzedResults
-  };
+  }), [damType, damHeight, effectiveBaseWidth, damCrestWidth, analyzedResults, effectiveUpstreamLevel]);
+
+  useEffect(() => {
+    if (onDataUpdate) {
+      onDataUpdate(exportData);
+    }
+  }, [exportData, onDataUpdate]);
 
   return (
     <div className="flex flex-col gap-6">
