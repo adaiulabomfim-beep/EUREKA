@@ -55,7 +55,7 @@ export const LogoEureka: React.FC<LogoEurekaProps> = ({
 
   return (
     <svg
-      viewBox="0 0 245 58"
+      viewBox="0 0 265 58"
       className={`${sizeClasses} ${className} block`}
       style={{ overflow: 'visible' }}
       xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +100,7 @@ export const LogoEureka: React.FC<LogoEurekaProps> = ({
 
       {/* Barra da Exclamação */}
       <rect
-        x="232"
+        x="250"
         y="8"
         width="10"
         height="31"
@@ -112,7 +112,7 @@ export const LogoEureka: React.FC<LogoEurekaProps> = ({
       <DropElement {...dropAnimationProps}>
         <path
           d="M 7 0 L 14 0 L 14 7 A 7 7 0 1 1 7 0 Z"
-          transform="translate(230, 43) rotate(45, 7, 7)"
+          transform="translate(248, 43) rotate(45, 7, 7)"
           fill={dropColor}
           filter={
             isColored ? `url(#${dropShadowId})` : isWhite ? `url(#${whiteDropShadowId})` : undefined
