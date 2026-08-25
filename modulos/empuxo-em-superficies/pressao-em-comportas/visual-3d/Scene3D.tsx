@@ -248,6 +248,34 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
 
   const halfWT = wallThickness / 2;
 
+  const upstreamWaterGeom = useMemo(() => {
+    if (upstreamLevel <= 0) return null;
+    const geom = new THREE.BoxGeometry(reservoirLength, upstreamLevel, channelWidth);
+    geom.translate(0, upstreamLevel / 2, 0);
+    if (gateInclination !== 90) {
+      const angleRad = (gateInclination * Math.PI) / 180;
+      const yx = 1 / Math.tan(angleRad);
+      const shearMatrix = new THREE.Matrix4().makeShear(yx, 0, 0, 0, 0, 0);
+      geom.applyMatrix4(shearMatrix);
+    }
+    geom.translate(-reservoirLength / 2 - halfWT, 0, 0);
+    return geom;
+  }, [upstreamLevel, reservoirLength, channelWidth, gateInclination, halfWT]);
+
+  const downstreamWaterGeom = useMemo(() => {
+    if (downstreamLevel <= 0) return null;
+    const geom = new THREE.BoxGeometry(reservoirLength, downstreamLevel, channelWidth);
+    geom.translate(0, downstreamLevel / 2, 0);
+    if (gateInclination !== 90) {
+      const angleRad = (gateInclination * Math.PI) / 180;
+      const yx = 1 / Math.tan(angleRad);
+      const shearMatrix = new THREE.Matrix4().makeShear(yx, 0, 0, 0, 0, 0);
+      geom.applyMatrix4(shearMatrix);
+    }
+    geom.translate(reservoirLength / 2 + halfWT, 0, 0);
+    return geom;
+  }, [downstreamLevel, reservoirLength, channelWidth, gateInclination, halfWT]);
+
   return (
     <div className="w-full h-full relative" style={{ minHeight: 600 }}>
       <Vista3DUI
@@ -298,31 +326,15 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           )}
 
           {/* ── Upstream Water (−X side) ── */}
-          {upstreamLevel > 0 && (
-            <mesh
-              position={[
-                -(halfWT + reservoirLength / 2),
-                upstreamLevel / 2,
-                0,
-              ]}
-              receiveShadow
-            >
-              <boxGeometry args={[reservoirLength, upstreamLevel, channelWidth]} />
+          {upstreamWaterGeom && (
+            <mesh geometry={upstreamWaterGeom} position={[0, 0, 0]} receiveShadow>
               <AnimatedWaterMaterial />
             </mesh>
           )}
 
           {/* ── Downstream Water (+X side) ── */}
-          {downstreamLevel > 0 && (
-            <mesh
-              position={[
-                halfWT + reservoirLength / 2,
-                downstreamLevel / 2,
-                0,
-              ]}
-              receiveShadow
-            >
-              <boxGeometry args={[reservoirLength, downstreamLevel, channelWidth]} />
+          {downstreamWaterGeom && (
+            <mesh geometry={downstreamWaterGeom} position={[0, 0, 0]} receiveShadow>
               <AnimatedWaterMaterial />
             </mesh>
           )}
