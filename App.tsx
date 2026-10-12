@@ -74,10 +74,8 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Bloco da direita: Seletor de Tema + Identificação Acadêmica */}
-                <div className="flex items-center gap-4">
-                  <SeletorTema />
-
+                {/* Bloco da direita: Identificação Acadêmica */}
+                <div className="flex items-center">
                   <div className="hidden md:flex flex-col items-end gap-1 text-right">
                     <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/90">
                       PROF. DAVI SANTIAGO AQUINO
@@ -159,7 +157,9 @@ const App: React.FC = () => {
                   </button>
                 </nav>
                   
-                  <div className="relative flex items-center gap-2 z-50">
+                  <div className="relative flex items-center gap-2 z-50 flex-shrink-0">
+                    <SeletorTema />
+
                     <button
                       title="Histórico de Cenários e Comparador"
                       onClick={() => setIsHistoryOpen(true)}

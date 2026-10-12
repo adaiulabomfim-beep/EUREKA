@@ -18,12 +18,12 @@ export const SeletorTema: React.FC<SeletorTemaProps> = ({ className = '', showLa
       title={isDark ? 'Alternar para Modo Claro' : 'Alternar para Modo Escuro'}
       aria-label={isDark ? 'Alternar para Modo Claro' : 'Alternar para Modo Escuro'}
       className={`
-        relative flex items-center justify-center gap-2 px-3 py-2 rounded-full
-        transition-all duration-300 active:scale-95 shadow-sm
+        relative flex items-center justify-center gap-2 h-10 w-10 rounded-full
+        transition-all duration-300 active:scale-95 shadow-sm flex-shrink-0
         ${
           isDark
             ? 'bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-slate-700 shadow-slate-900/50'
-            : 'bg-white/90 hover:bg-white text-blue-600 border border-blue-200/80 shadow-blue-500/10'
+            : 'bg-blue-50/90 hover:bg-blue-100 text-blue-600 border border-blue-200/90 shadow-sm'
         }
         ${className}
       `}
