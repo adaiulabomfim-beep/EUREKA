@@ -42,7 +42,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
 
   const toWorldX = useCallback((x: number) => x, []);
 
-  const { worldGeometry, fitPoints } = useMemo(() => {
+  const { worldGeometry, bounds3D } = useMemo(() => {
     const geometry: any[] = [];
 
     // --- LÓGICA DE INCLINAÇÃO ---
@@ -70,11 +70,12 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
     const rightWallZOffset = -leftWallZOffset;
     
     // 1. FUNDAÇÃO (Chão de Terra) — mesmo estilo visual do módulo Barragens
-    const earthDepth = maxH * 0.2;
+    const earthDepth = maxH * 0.25;
+    const downstreamGroundLen = props.downstreamLevel > 0 ? reservoirLength : Math.max(maxH * 0.8, wallThickness * 1.5);
     const floorProfile = [
       { x: -reservoirLength, y: floorY },
-      { x: getBackX(floorY) + reservoirLength, y: floorY },
-      { x: getBackX(floorY) + reservoirLength, y: floorY - earthDepth },
+      { x: getBackX(floorY) + downstreamGroundLen, y: floorY },
+      { x: getBackX(floorY) + downstreamGroundLen, y: floorY - earthDepth },
       { x: -reservoirLength, y: floorY - earthDepth }
     ];
     geometry.push(...criarPrisma(
@@ -255,33 +256,22 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
 
     return {
       worldGeometry: geometry,
-      fitPoints: [
-        { x: -reservoirLength, y: floorY },
-        { x: getBackX(wallHeight), y: wallHeight },
-        { x: getFaceX(props.upstreamLevel), y: props.upstreamLevel }
-      ]
+      bounds3D: {
+        minX: -reservoirLength,
+        maxX: Math.max(getBackX(wallHeight), getBackX(floorY) + downstreamGroundLen),
+        minY: floorY - earthDepth,
+        maxY: Math.max(wallHeight, props.upstreamLevel),
+        minZ: -reservoirWidth / 2,
+        maxZ: reservoirWidth / 2,
+      },
     };
   }, [props, toWorldX, maxH]);
 
   const autoFitParams = useMemo(() => {
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-    
-    let minZ = -maxH * 2; 
-    let maxZ = maxH * 2;
+    return bounds3D;
+  }, [bounds3D]);
 
-    fitPoints.forEach(p => {
-      const x = toWorldX(p.x);
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, p.y);
-      maxY = Math.max(maxY, p.y);
-    });
-
-    return { minX, maxX, minY, maxY, minZ, maxZ };
-  }, [fitPoints, toWorldX, maxH]);
-
-  const { renderedFaces, handlers, resetView, project, pan } = useSceneEngine(
+  const { renderedFaces, handlers, resetView, project } = useSceneEngine(
     true,
     worldGeometry,
     SVG_W,
@@ -310,7 +300,7 @@ export const Vista3D: React.FC<Vista3DProps> = (props) => {
       SVG_H={SVG_H}
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
-      pan={pan}
+      pan={{ x: 0, y: 0 }}
       upstreamFluidKey={props.upstreamFluidKey}
       downstreamFluidKey={props.downstreamFluidKey}
     />

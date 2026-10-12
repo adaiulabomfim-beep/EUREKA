@@ -85,7 +85,21 @@ class CanvasErrorBoundary extends Component<{ children: ReactNode, onFallback?: 
 }
 
 // 4. MAIN WRAPPER
-export const BarragemCanvas: React.FC<{ children: ReactNode, targetY?: number, onFallback?: () => void }> = ({ children, targetY = 10, onFallback }) => {
+export const BarragemCanvas: React.FC<{
+  children: ReactNode;
+  targetY?: number;
+  onFallback?: () => void;
+  cameraPosition?: [number, number, number];
+  fov?: number;
+  target?: [number, number, number];
+}> = ({
+  children,
+  targetY = 10,
+  onFallback,
+  cameraPosition = [-38, 32, 60],
+  fov = 32,
+  target,
+}) => {
   const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -111,11 +125,13 @@ export const BarragemCanvas: React.FC<{ children: ReactNode, targetY?: number, o
     );
   }
 
+  const controlsTarget: [number, number, number] = target || [0, targetY, 0];
+
   return (
     <div className="w-full h-full relative" style={{ minHeight: 520, background: '#f8fafc', borderRadius: '0.5rem', overflow: 'hidden' }}>
       <CanvasErrorBoundary key={retryKey} onFallback={onFallback} onRetry={handleRetry}>
         <Canvas 
-          camera={{ position: [-38, 32, 60], fov: 32 }} 
+          camera={{ position: cameraPosition, fov }} 
           shadows
           gl={{ 
             toneMapping: THREE.NoToneMapping,
@@ -135,7 +151,7 @@ export const BarragemCanvas: React.FC<{ children: ReactNode, targetY?: number, o
           <Environment preset="city" environmentIntensity={0.3} />
           {children}
           
-          <OrbitControls makeDefault target={[0, targetY, 0]} maxPolarAngle={Math.PI / 2 - 0.05} />
+          <OrbitControls makeDefault target={controlsTarget} maxPolarAngle={Math.PI / 2 - 0.05} />
         </Canvas>
       </CanvasErrorBoundary>
     </div>

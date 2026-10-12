@@ -149,11 +149,11 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   // --- RESPONSIVE SCREEN COORDINATES & SCALING ---
   const H_span = (Y_top + H) * sinTheta + 1.25;
   const maxMeters = Math.max(props.upstreamLevel, H_span, 3.0);
-  const SCALE = Math.min((SVG_H * 0.58) / Math.max(2.4, H_span), 102);
+  const SCALE = Math.min((SVG_H * 0.68) / Math.max(2.3, H_span), 118);
 
   // Position of water surface line and slope intersection
-  const waterSurfaceY = 135;
-  const surfX = Math.min(435, SVG_W * 0.58);
+  const waterSurfaceY = 125;
+  const surfX = Math.min(460, SVG_W * 0.60);
   const P_surf = { x: surfX, y: waterSurfaceY };
 
   // Helper for points on the inclined plane at distance Y along incline from water surface
@@ -184,15 +184,16 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   // --- SVG GEOMETRIC MESH / POLYGONS ---
   const renderedFaces: any[] = [];
 
-  // 1. Foundation Bed (Earth / Concrete bottom)
+  // 1. Foundation Bed (Earth / Concrete bottom) — colado nos limites inferior e esquerdo da janela
+  const soilBottomY = SVG_H;
   renderedFaces.push({
     id: 'canal-bed-base',
     kind: 'DAM',
     pts: [
-      { x: 20, y: P_bed_inc.y + 24 },
-      { x: P_bed_inc.x + n_out.x * wallThick + 40, y: P_bed_inc.y + 24 },
-      { x: P_bed_inc.x + n_out.x * wallThick + 40, y: P_bed_inc.y + 55 },
-      { x: 20, y: P_bed_inc.y + 55 },
+      { x: 0, y: P_bed_inc.y + 24 },
+      { x: P_bed_inc.x + n_out.x * wallThick + 50, y: P_bed_inc.y + 24 },
+      { x: P_bed_inc.x + n_out.x * wallThick + 50, y: soilBottomY },
+      { x: 0, y: soilBottomY },
     ],
     fill: '#a16207',
     stroke: '#713f12',
@@ -237,19 +238,20 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     opacity: 1,
   });
 
-  // 4. Reservoir Water Body (Montante / Upstream side on left)
+  // 4. Reservoir Water Body (Montante / Upstream side on left) — colado no limite esquerdo da janela
   renderedFaces.push({
     id: 'water-upstream-body',
     kind: 'WATER_UP',
     pts: [
-      { x: 30, y: waterSurfaceY },
+      { x: 0, y: waterSurfaceY },
       P_surf,
       P_top,
       props.hasGate ? P_bot : P_top,
       P_bed_inc,
       P_bed_left,
       { x: P_bed_left.x - 30, y: P_bed_inc.y },
-      { x: 30, y: P_bed_inc.y },
+      { x: 0, y: P_bed_inc.y },
+      { x: 0, y: P_bed_inc.y + 24 },
     ],
     fill: 'url(#fluidDepthA)',
     stroke: 'none',
@@ -265,8 +267,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       kind: 'WATER_DOWN',
       pts: [
         { x: P_bot.x + n_out.x * wallThick, y: P_bot.y + n_out.y * wallThick },
-        { x: SVG_W - 40, y: downDepthY },
-        { x: SVG_W - 40, y: P_bed_inc.y + 24 },
+        { x: SVG_W, y: downDepthY },
+        { x: SVG_W, y: P_bed_inc.y + 24 },
         { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + 24 },
       ],
       fill: 'url(#fluidDepthB)',
@@ -348,24 +350,24 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     <g key="upstream-surface-waves" pointerEvents="none">
       {/* Ondas fluidas móveis cobrindo a camada superficial */}
       <rect
-        x={30}
+        x={0}
         y={waterSurfaceY - 12}
-        width={surfX - 30}
+        width={surfX}
         height={24}
         fill="url(#waveSurfacePattern)"
       />
       {/* Reflexos de luz e caústicas em deslocamento constante */}
       <rect
-        x={30}
+        x={0}
         y={waterSurfaceY - 4}
-        width={surfX - 30}
+        width={surfX}
         height={32}
         fill="url(#ripplePattern)"
         opacity={0.65}
       />
       {/* Linha cintilante da crista da onda */}
       <line
-        x1={30}
+        x1={0}
         y1={waterSurfaceY}
         x2={surfX}
         y2={waterSurfaceY}
@@ -374,7 +376,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         opacity={0.85}
       />
       <line
-        x1={30}
+        x1={0}
         y1={waterSurfaceY + 1.2}
         x2={surfX}
         y2={waterSurfaceY + 1.2}
@@ -418,14 +420,14 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         <rect
           x={downStartX}
           y={downDepthY - 10}
-          width={SVG_W - downStartX - 40}
+          width={SVG_W - downStartX}
           height={20}
           fill="url(#waveSurfacePattern)"
         />
         <line
           x1={downStartX}
           y1={downDepthY}
-          x2={SVG_W - 40}
+          x2={SVG_W}
           y2={downDepthY}
           stroke="#ffffff"
           strokeWidth={1.8}

@@ -74,6 +74,8 @@ export const useSceneEngine = (
 
   const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
+  const [zoomFactor, setZoomFactor] = useState(1);
+
   const { autoScale, autoPan, center } = useMemo(() => {
     const { minX, maxX, minY, maxY, minZ, maxZ } = autoFitParams;
 
@@ -81,30 +83,68 @@ export const useSceneEngine = (
     const centerY = (minY + maxY) / 2;
     const centerZ = (minZ + maxZ) / 2;
 
-    const w = Math.max(1, maxX - minX);
-    const h = Math.max(1, maxY - minY);
-    const d = Math.max(1, maxZ - minZ);
+    // Rotação padrão inicial (15 deg X, 25 deg Y)
+    const radX = (15 * Math.PI) / 180;
+    const radY = (25 * Math.PI) / 180;
 
-    const effectiveWidth = is3D ? w + d * 0.5 : w;
-    const effectiveHeight = is3D ? h + d * 0.2 : h;
+    const rotDefault = (v: Point3D) => {
+      const x1 = v.x * Math.cos(radY) - v.z * Math.sin(radY);
+      const z1 = v.x * Math.sin(radY) + v.z * Math.cos(radY);
+      const y2 = v.y * Math.cos(radX) - z1 * Math.sin(radX);
+      const z2 = v.y * Math.sin(radX) + z1 * Math.cos(radX);
+      return { x: x1, y: y2, z: z2 };
+    };
 
-    const factor = is3D ? 0.65 : 0.7;
-    const scaleX = (SVG_W * factor) / effectiveWidth;
-    const scaleY = (SVG_H * factor) / effectiveHeight;
+    const corners: Point3D[] = [
+      { x: minX - centerX, y: minY - centerY, z: minZ - centerZ },
+      { x: minX - centerX, y: minY - centerY, z: maxZ - centerZ },
+      { x: minX - centerX, y: maxY - centerY, z: minZ - centerZ },
+      { x: minX - centerX, y: maxY - centerY, z: maxZ - centerZ },
+      { x: maxX - centerX, y: minY - centerY, z: minZ - centerZ },
+      { x: maxX - centerX, y: minY - centerY, z: maxZ - centerZ },
+      { x: maxX - centerX, y: maxY - centerY, z: minZ - centerZ },
+      { x: maxX - centerX, y: maxY - centerY, z: maxZ - centerZ },
+    ];
 
-    const scale = Math.min(scaleX, scaleY, 150);
+    let minRotX = Infinity, maxRotX = -Infinity;
+    let minRotY = Infinity, maxRotY = -Infinity;
 
-    const panX = is3D ? 0 : 0;
-    const panY = is3D ? 20 : 0;
+    corners.forEach((c) => {
+      const r = rotDefault(c);
+      minRotX = Math.min(minRotX, r.x);
+      maxRotX = Math.max(maxRotX, r.x);
+      minRotY = Math.min(minRotY, r.y);
+      maxRotY = Math.max(maxRotY, r.y);
+    });
+
+    const rotW = Math.max(0.1, maxRotX - minRotX);
+    const rotH = Math.max(0.1, maxRotY - minRotY);
+
+    // Margens ajustadas: colado na borda esquerda da água e no solo na base da janela
+    const padLeft = 4;
+    const padBottom = 4;
+    const padTop = 64;
+    const padRight = 36;
+
+    const availW = SVG_W - padLeft - padRight;
+    const availH = SVG_H - padTop - padBottom;
+
+    const scale = Math.min(availW / rotW, availH / rotH);
+
+    const cx = SVG_W / 2;
+    const cy = SVG_H / 2;
+
+    const panX = padLeft - cx - minRotX * scale;
+    const panY = SVG_H - padBottom - cy + minRotY * scale;
 
     return {
       autoScale: scale,
       autoPan: { x: panX, y: panY },
       center: { x: centerX, y: centerY, z: centerZ },
     };
-  }, [autoFitParams, SVG_W, SVG_H, is3D]);
+  }, [autoFitParams, SVG_W, SVG_H]);
 
-  const SCALE = autoScale;
+  const SCALE = autoScale * zoomFactor;
   const finalPan = { x: pan.x + autoPan.x, y: pan.y + autoPan.y };
 
   const rotate = useCallback(
@@ -218,6 +258,7 @@ export const useSceneEngine = (
         x: startPanX + (0 - startPanX) * ease,
         y: startPanY + (0 - startPanY) * ease,
       });
+      setZoomFactor(1);
 
       if (progress < 1) {
         cameraAnimRef.current = requestAnimationFrame(step);
@@ -229,6 +270,12 @@ export const useSceneEngine = (
 
     cameraAnimRef.current = requestAnimationFrame(step);
   }, [rotX, rotY, pan.x, pan.y, is3D]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.08 : 0.92;
+    setZoomFactor((prev) => Math.max(0.4, Math.min(3.0, +(prev * factor).toFixed(3))));
+  }, []);
 
   const resetView = useCallback(() => {
     animateCameraReset();
@@ -383,6 +430,7 @@ export const useSceneEngine = (
       onMouseMove: handleMouseMove,
       onMouseUp: handleMouseUp,
       onMouseLeave: handleMouseUp,
+      onWheel: handleWheel,
       onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
     },
     resetView,

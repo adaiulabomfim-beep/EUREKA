@@ -403,7 +403,16 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
 
       {/* Canvas Three.js com Câmera Órbita e Luzes */}
       <div className="w-full h-full" style={{ minHeight: 600 }}>
-        <BarragemCanvas targetY={Math.max(1.5, Y_CG_pos)}>
+        <BarragemCanvas
+          targetY={Math.max(1.5, Y_CG_pos)}
+          cameraPosition={[
+            -reservoirLength * 0.95,
+            wallHeight * 0.85,
+            channelWidth * 1.75,
+          ]}
+          fov={34}
+          target={[-reservoirLength * 0.3, wallHeight * 0.3, 0]}
+        >
           {/* ── Solo de Fundação ── */}
           <mesh position={[0, -groundThick / 2, 0]} receiveShadow>
             <boxGeometry
