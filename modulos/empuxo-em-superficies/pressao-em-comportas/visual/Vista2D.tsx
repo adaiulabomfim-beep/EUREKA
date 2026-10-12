@@ -202,29 +202,13 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     opacity: 1,
   });
 
-  // 2. Upper Masonry Wall (from crest down to top of gate)
+  // 2. Continuous Masonry Wall (Estrutura de alvenaria em toda a extensão do paramento)
   renderedFaces.push({
-    id: 'wall-upper-masonry',
+    id: 'wall-full-masonry',
     kind: 'DAM',
     pts: [
       P_crest,
       { x: P_crest.x + n_out.x * wallThick, y: P_crest.y + n_out.y * wallThick },
-      { x: P_top.x + n_out.x * wallThick, y: P_top.y + n_out.y * wallThick },
-      P_top,
-    ],
-    fill: 'url(#brickPattern)',
-    stroke: '#475569',
-    strokeWidth: 1.2,
-    opacity: 1,
-  });
-
-  // 3. Lower Masonry Wall & Stepped Base (from bottom of gate to canal bed)
-  renderedFaces.push({
-    id: 'wall-lower-masonry',
-    kind: 'DAM',
-    pts: [
-      P_bot,
-      { x: P_bot.x + n_out.x * wallThick, y: P_bot.y + n_out.y * wallThick },
       { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + n_out.y * wallThick },
       { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + 24 },
       { x: P_bed_left.x - 30, y: P_bed_inc.y + 24 },
@@ -345,44 +329,27 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   // --- OVERLAY ELEMENTS (ONDAS DINÂMICAS, FLUXO, DOBRADIÇA, TIRANTES) ---
   const overlayElements: React.ReactNode[] = [];
 
-  // 1. Água Montante: Ondas de superfície dinâmicas, reflexos de luz e bolhas de ar
+  // 1. Água Montante: Linha de superfície d'água perfeitamente alinhada na cota NA
   overlayElements.push(
     <g key="upstream-surface-waves" pointerEvents="none">
-      {/* Ondas fluidas móveis cobrindo a camada superficial */}
-      <rect
-        x={0}
-        y={waterSurfaceY - 12}
-        width={surfX}
-        height={24}
-        fill="url(#waveSurfacePattern)"
-      />
-      {/* Reflexos de luz e caústicas em deslocamento constante */}
-      <rect
-        x={0}
-        y={waterSurfaceY - 4}
-        width={surfX}
-        height={32}
-        fill="url(#ripplePattern)"
-        opacity={0.65}
-      />
-      {/* Linha cintilante da crista da onda */}
+      {/* Linha técnica nítida da superfície livre da água (alinhada exatamente ao nível NA) */}
       <line
         x1={0}
         y1={waterSurfaceY}
         x2={surfX}
         y2={waterSurfaceY}
-        stroke="#ffffff"
-        strokeWidth={2}
-        opacity={0.85}
+        stroke="#0284c7"
+        strokeWidth={2.4}
+        opacity={0.95}
       />
       <line
         x1={0}
-        y1={waterSurfaceY + 1.2}
+        y1={waterSurfaceY - 0.8}
         x2={surfX}
-        y2={waterSurfaceY + 1.2}
-        stroke="#38bdf8"
-        strokeWidth={1.5}
-        opacity={0.9}
+        y2={waterSurfaceY - 0.8}
+        stroke="#ffffff"
+        strokeWidth={1.2}
+        opacity={0.85}
       />
       {/* Bolhas ambientais flutuantes no reservatório de montante */}
       {[
@@ -417,21 +384,23 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     const downStartX = P_bot.x + n_out.x * wallThick;
     overlayElements.push(
       <g key="downstream-surface-waves" pointerEvents="none">
-        <rect
-          x={downStartX}
-          y={downDepthY - 10}
-          width={SVG_W - downStartX}
-          height={20}
-          fill="url(#waveSurfacePattern)"
-        />
         <line
           x1={downStartX}
           y1={downDepthY}
           x2={SVG_W}
           y2={downDepthY}
+          stroke="#0284c7"
+          strokeWidth={2.4}
+          opacity={0.95}
+        />
+        <line
+          x1={downStartX}
+          y1={downDepthY - 0.8}
+          x2={SVG_W}
+          y2={downDepthY - 0.8}
           stroke="#ffffff"
-          strokeWidth={1.8}
-          opacity={0.8}
+          strokeWidth={1.2}
+          opacity={0.85}
         />
       </g>
     );
