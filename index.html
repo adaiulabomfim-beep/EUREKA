@@ -5,17 +5,67 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Simulador de Fenômenos de Transporte</title>
+    <script>
+      // Inicialização imediata de tema para evitar flashes indesejados
+      (function() {
+        try {
+          const salvo = localStorage.getItem('eureka_theme_mode');
+          const prefereEscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (salvo === 'dark' || (!salvo && prefereEscuro)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      };
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-body: #f1f5f9; /* Slate-100 */
+        --bg-surface: #ffffff;
+        --bg-surface-translucent: rgba(255, 255, 255, 0.85);
+        --bg-card: #ffffff;
+        --border-color: #e2e8f0;
+        --border-color-subtle: #f1f5f9;
+        --text-primary: #0f172a; /* Slate-900 */
+        --text-secondary: #475569; /* Slate-600 */
+        --text-muted: #94a3b8; /* Slate-400 */
+        --accent-blue: #2563eb;
+        --accent-cyan: #06b6d4;
+        --header-bg: linear-gradient(to right, #2563eb, #06b6d4, #3b82f6);
+      }
+
+      html.dark {
+        --bg-body: #0b0f19; /* Deep Slate/Navy 950 */
+        --bg-surface: #0f172a; /* Slate-900 */
+        --bg-surface-translucent: rgba(15, 23, 42, 0.88);
+        --bg-card: #111827; /* Gray-900 */
+        --border-color: #1e293b; /* Slate-800 */
+        --border-color-subtle: #334155; /* Slate-700 */
+        --text-primary: #f8fafc; /* Slate-50 */
+        --text-secondary: #94a3b8; /* Slate-400 */
+        --text-muted: #64748b; /* Slate-500 */
+        --accent-blue: #3b82f6;
+        --accent-cyan: #22d3ee;
+        --header-bg: linear-gradient(to right, #0f172a, #0c4a6e, #0f172a);
+      }
+
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #f1f5f9; /* Slate-100 */
-        color: #0f172a; /* Slate-900 */
+        background-color: var(--bg-body);
+        color: var(--text-primary);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        transition: background-color 0.3s ease, color 0.3s ease;
       }
       
       /* Smooth transitions */

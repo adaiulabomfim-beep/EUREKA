@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
+import { FormaComporta, PosicaoDobradica, SistemaUnidades, ModoPosicionamentoComporta } from '../dominio/tipos';
 import { RenderizadorComporta } from './RenderizadorComporta';
 
 interface CenaProps {
@@ -8,7 +8,6 @@ interface CenaProps {
   upstreamFluidKey: string;
   downstreamFluidKey: string;
   hasGate: boolean;
-  // ... rest of the props
   gateShape: FormaComporta;
   gateWidth: number;
   gateHeight: number;
@@ -22,11 +21,13 @@ interface CenaProps {
   tieRodAngle: number;
   gateWeight: number;
   gateWeightEnabled: boolean;
-  gateAbertura?: number;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
-  wallDims: { height: number; thickness: number; width: number; };
+  wallDims: { height: number; thickness: number; width: number };
+  sistemaUnidades?: SistemaUnidades;
+  modoPosicionamento?: ModoPosicionamentoComporta;
+  y_cg_direto?: number;
 }
 
 export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {

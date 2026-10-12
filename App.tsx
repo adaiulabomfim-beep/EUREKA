@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain, FileText, Compass, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ImmersedBodiesLab } from './modulos/corpos-imersos';
 import { DamLab } from './modulos/empuxo-em-superficies/barragens';
@@ -8,14 +8,39 @@ import { TheoryReference } from './interface/ReferenciaTeorica';
 import { ChatBot } from './interface/ChatBot';
 import { PaginaInicial } from './interface/PaginaInicial';
 import { SimulationMode } from './types';
+import { iniciarTourGuiado } from './interface/TutorOnboarding';
+import { PainelHistorico } from './interface/PainelHistorico';
+import { obterHistorico, EVENTO_HISTORICO_ATUALIZADO } from './interface/historicoGerenciador';
+import { SeletorTema } from './interface/SeletorTema';
 // Remove the unused import
 
 const App: React.FC = () => {
   const [hasStarted, setHasStarted] = useState<boolean>(false);
   const [currentMode, setCurrentMode] = useState<SimulationMode>(SimulationMode.IMMERSED_BODIES);
   const [simulationContext, setSimulationContext] = useState<string>('');
-  const [simulationData, setSimulationData] = useState<any>(null);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [numHistorico, setNumHistorico] = useState<number>(0);
+
+  useEffect(() => {
+    setNumHistorico(obterHistorico().length);
+    const handleAtualizado = (e: any) => {
+      setNumHistorico(e.detail ? e.detail.length : obterHistorico().length);
+    };
+    window.addEventListener(EVENTO_HISTORICO_ATUALIZADO as any, handleAtualizado);
+    return () => {
+      window.removeEventListener(EVENTO_HISTORICO_ATUALIZADO as any, handleAtualizado);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (hasStarted) {
+      // Inicia automaticamente na primeira vez que o laboratório for carregado
+      const timer = setTimeout(() => {
+        iniciarTourGuiado(false);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [hasStarted]);
 
   return (
     <>
@@ -30,28 +55,30 @@ const App: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-slate-100 to-blue-50 font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900"
+            className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-slate-100 to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 font-sans text-slate-900 dark:text-slate-100 selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-200 transition-colors duration-300"
           >
             {/* Header */}
-            <header className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 text-white shadow-lg sticky top-0 z-50">
+            <header className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 text-white shadow-lg sticky top-0 z-50 border-b border-transparent dark:border-slate-800 transition-colors duration-300">
               <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
+                  <div className="bg-white/20 dark:bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
                     <Waves className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h1 className="text-xl font-black tracking-tight leading-none text-white drop-shadow-sm">
                       FENÔMENOS DE TRANSPORTE
                     </h1>
-                    <p className="text-white/80 text-[9px] uppercase tracking-[0.2em] font-bold mt-1">
+                    <p className="text-white/80 dark:text-slate-400 text-[9px] uppercase tracking-[0.2em] font-bold mt-1">
                       HIDROSTÁTICA E EMPUXO
                     </p>
                   </div>
                 </div>
 
-                {/* Bloco da direita (sem divisor sobrando) */}
-                <div className="hidden md:flex items-center gap-6 text-right">
-                  <div className="flex flex-col items-end gap-1">
+                {/* Bloco da direita: Seletor de Tema + Identificação Acadêmica */}
+                <div className="flex items-center gap-4">
+                  <SeletorTema />
+
+                  <div className="hidden md:flex flex-col items-end gap-1 text-right">
                     <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/90">
                       PROF. DAVI SANTIAGO AQUINO
                     </p>
@@ -67,18 +94,18 @@ const App: React.FC = () => {
             </header>
 
             {/* Navigation Tabs */}
-            <div className="bg-white/75 backdrop-blur-md border-b border-blue-100/70 shadow-sm z-40 sticky top-16">
+            <div className="bg-white/75 dark:bg-slate-900/85 backdrop-blur-md border-b border-blue-100/70 dark:border-slate-800 shadow-sm z-40 sticky top-16 transition-colors duration-300">
               <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-2">
-                  <nav className="flex space-x-2 overflow-x-auto custom-scrollbar pr-4" aria-label="Tabs">
+                  <nav id="tour-nav-modos" data-tour="nav-modos" className="flex space-x-2 overflow-x-auto custom-scrollbar pr-4" aria-label="Tabs">
                     <button
                       onClick={() => setCurrentMode(SimulationMode.IMMERSED_BODIES)}
                     className={`
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                       ${
                         currentMode === SimulationMode.IMMERSED_BODIES
-                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
-                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                          ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800/80'
+                          : 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent'
                       }
                     `}
                   >
@@ -92,8 +119,8 @@ const App: React.FC = () => {
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                       ${
                         currentMode === SimulationMode.DAM_HYDROLOGY
-                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
-                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                          ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800/80'
+                          : 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent'
                       }
                     `}
                   >
@@ -107,8 +134,8 @@ const App: React.FC = () => {
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                       ${
                         currentMode === SimulationMode.GATE_PRESSURE
-                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
-                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                          ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800/80'
+                          : 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent'
                       }
                     `}
                   >
@@ -122,8 +149,8 @@ const App: React.FC = () => {
                       flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                       ${
                         currentMode === SimulationMode.THEORY
-                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
-                          : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-transparent'
+                          ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800/80'
+                          : 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent'
                       }
                     `}
                   >
@@ -132,75 +159,112 @@ const App: React.FC = () => {
                   </button>
                 </nav>
                   
-                  <div className="relative flex z-50">
+                  <div className="relative flex items-center gap-2 z-50">
                     <button
-                      title="Opções de Exportação"
-                      onClick={() => setIsExportMenuOpen(prev => !prev)}
-                      className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm ml-2 gap-2 font-bold text-xs uppercase"
+                      title="Histórico de Cenários e Comparador"
+                      onClick={() => setIsHistoryOpen(true)}
+                      id="tour-btn-historico"
+                      className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-blue-50/90 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition-colors border border-blue-200/90 dark:border-blue-800/80 shadow-sm gap-2 font-bold text-xs uppercase active:scale-95"
                     >
-                      <FileText className="w-4 h-4" /> Exportar Relatório
+                      <History className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span>Histórico</span>
+                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">
+                        {numHistorico}
+                      </span>
                     </button>
-                    {isExportMenuOpen && (
-                      <>
-                        {/* Backdrop to close the menu on click outside */}
-                        <div className="fixed inset-0 z-40" onClick={() => setIsExportMenuOpen(false)} />
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
-                          {(() => {
-                            const validateAndGetSimulacao = () => {
-                              if (!simulationData) {
-                                alert("Ative a aba de uma simulação antes de exportar.");
-                                return null;
-                              }
-                              // Validação rigorosa
-                              if (simulationData.empuxo === 0 && simulationData.peso === 0 && simulationData.volumeDeslocado === 0 && simulationData.tipo === 'corpos-imersos') {
-                                alert("Execute uma simulação válida ativamente ajustando um parâmetro, antes de exportar! Valores atuais não podem ser nulos.");
-                                return null;
-                              }
-                              return simulationData;
-                            };
 
-                            const closeMenu = () => {
-                              setIsExportMenuOpen(false);
-                            };
+                    <button
+                      title="Reiniciar Tour Guiado do Laboratório"
+                      onClick={() => iniciarTourGuiado(true)}
+                      id="tour-btn-iniciar"
+                      className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 transition-colors border border-indigo-200/80 dark:border-indigo-800/80 shadow-sm gap-2 font-bold text-xs uppercase active:scale-95"
+                    >
+                      <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-spin-slow" /> Tour Guiado
+                    </button>
 
-                            return (
-                              <>
-                                <button 
-                                  onClick={() => {
-                                    closeMenu();
-                                    const data = validateAndGetSimulacao();
-                                    if (data) import('./src/utils/exportacao').then(m => m.gerarPDFEstudoVisual(data));
-                                  }}
-                                  className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
-                                >
-                                  PDF Relatório Visual
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    closeMenu();
-                                    const data = validateAndGetSimulacao();
-                                    if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProvaVisual(data));
-                                  }}
-                                  className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700 border-b border-slate-100"
-                                >
-                                  PDF de Prova (Lista/Exercício)
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    closeMenu();
-                                    const data = validateAndGetSimulacao();
-                                    if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabaritoVisual(data));
-                                  }}
-                                  className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 transition-colors text-slate-700"
-                                >
-                                  Gerar Gabarito (Com Result)
-                                </button>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </>
-                    )}
+                    <button
+                      id="tour-btn-exportar"
+                      data-tour="exportar"
+                      title="Opções de Exportação"
+                      onClick={() => {
+                        const el = document.getElementById('export-dropdown');
+                        if (el) {
+                          const isVisible = el.style.display === 'block';
+                          el.style.display = isVisible ? 'none' : 'block';
+                          if (!isVisible) {
+                            // Close on outside click
+                            const closeHandler = (e: MouseEvent) => {
+                              if (!(e.target as Element)?.closest?.('#export-dropdown') && !(e.target as Element)?.closest?.('[title="Opções de Exportação"]')) {
+                                el.style.display = 'none';
+                                document.removeEventListener('click', closeHandler);
+                              }
+                            };
+                            setTimeout(() => document.addEventListener('click', closeHandler), 0);
+                          }
+                        }
+                      }}
+                      className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-blue-50 dark:bg-slate-800/90 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors border border-blue-200 dark:border-slate-700 shadow-sm gap-2 font-bold text-xs uppercase"
+                    >
+                      <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Exportar Relatório
+                    </button>
+                    <div id="export-dropdown" style={{ display: 'none' }} className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl overflow-hidden z-50">
+                      {(() => {
+                        const validateAndGetSimulacao = () => {
+                          const container = document.getElementById("areaSimulacao");
+                          if (!container || !container.dataset.simulacao) {
+                            alert("Ative a aba de uma simulação antes de exportar.");
+                            return null;
+                          }
+                          const data = JSON.parse(container.dataset.simulacao);
+                          // Validação rigorosa
+                          if (data.empuxo === 0 && data.peso === 0 && data.volumeDeslocado === 0 && data.tipo === 'corpos-imersos') {
+                            alert("Execute uma simulação válida ativamente ajustando um parâmetro, antes de exportar! Valores atuais não podem ser nulos.");
+                            return null;
+                          }
+                          return data;
+                        };
+
+                        const closeMenu = () => {
+                          const el = document.getElementById('export-dropdown');
+                          if (el) el.style.display = 'none';
+                        };
+
+                        return (
+                          <>
+                            <button 
+                              onClick={() => {
+                                closeMenu();
+                                const data = validateAndGetSimulacao();
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFEstudoVisual(data));
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800"
+                            >
+                              PDF Relatório Visual
+                            </button>
+                            <button 
+                              onClick={() => {
+                                closeMenu();
+                                const data = validateAndGetSimulacao();
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProvaVisual(data));
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800"
+                            >
+                              PDF de Prova (Lista/Exercício)
+                            </button>
+                            <button 
+                              onClick={() => {
+                                closeMenu();
+                                const data = validateAndGetSimulacao();
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabaritoVisual(data));
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200"
+                            >
+                              Gerar Gabarito (Com Result)
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -212,13 +276,13 @@ const App: React.FC = () => {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Section Title */}
                 <div className="mb-6 flex flex-col gap-1">
-                  <h2 className="text-lg md:text-xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 uppercase drop-shadow-sm">
+                  <h2 className="text-lg md:text-xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-400 dark:to-cyan-400 uppercase drop-shadow-sm">
                     {currentMode === SimulationMode.IMMERSED_BODIES && 'Princípio de Arquimedes'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Geometria e Análise de Barragens'}
                     {currentMode === SimulationMode.GATE_PRESSURE && 'Forças Hidrostáticas em Superfícies'}
                     {currentMode === SimulationMode.THEORY && 'Fundamentos Teóricos'}
                   </h2>
-                  <p className="text-slate-500 text-sm font-medium tracking-wide">
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide">
                     {currentMode === SimulationMode.IMMERSED_BODIES &&
                       'Simule flutuação, equilíbrio e submersão.'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Análise do reservatório e geometria da barragem.'}
@@ -229,19 +293,40 @@ const App: React.FC = () => {
                   </p>
                 </div>
 
-                {currentMode === SimulationMode.IMMERSED_BODIES && <ImmersedBodiesLab onContextUpdate={setSimulationContext} onDataUpdate={setSimulationData} />}
-                {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} onDataUpdate={setSimulationData} />}
-                {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} onDataUpdate={setSimulationData} />}
+                {currentMode === SimulationMode.IMMERSED_BODIES && <ImmersedBodiesLab onContextUpdate={setSimulationContext} />}
+                {currentMode === SimulationMode.DAM_HYDROLOGY && <DamLab onContextUpdate={setSimulationContext} />}
+                {currentMode === SimulationMode.GATE_PRESSURE && <GatePressureLab onContextUpdate={setSimulationContext} />}
                 {currentMode === SimulationMode.THEORY && <TheoryReference />}
               </div>
             </main>
 
             {/* Global Footer */}
             <footer className="w-full py-2 text-center mt-auto opacity-70 shrink-0">
-              <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] font-bold text-slate-400">
-                DESENVOLVIDO POR <span className="text-slate-500">ADAIULA FERRAZ</span>
+              <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] font-bold text-slate-400 dark:text-slate-500">
+                DESENVOLVIDO POR <span className="text-slate-500 dark:text-slate-400">ADAIULA FERRAZ</span>
               </p>
             </footer>
+
+            {/* Quick Floating Tab for History on Right Side */}
+            <button
+              onClick={() => setIsHistoryOpen(true)}
+              title="Abrir Histórico de Simulações"
+              className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-white/95 dark:bg-slate-900/95 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-r-0 border-blue-200 dark:border-slate-800 rounded-l-2xl shadow-xl p-2.5 flex flex-col items-center gap-1.5 transition-all hover:scale-105 group active:scale-95"
+            >
+              <History className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:rotate-45 transition-transform duration-300" />
+              <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider [writing-mode:vertical-lr] rotate-180">
+                Histórico
+              </span>
+              <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center">
+                {numHistorico}
+              </span>
+            </button>
+
+            {/* Painel Lateral Retrátil de Histórico & Comparador */}
+            <PainelHistorico
+              isOpen={isHistoryOpen}
+              onClose={() => setIsHistoryOpen(false)}
+            />
 
             {/* AI ChatBot Overlay */}
             <ChatBot simulationContext={simulationContext} />

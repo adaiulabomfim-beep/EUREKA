@@ -64,22 +64,18 @@ export const DefinicoesSVG: React.FC<DefinicoesSVGProps> = ({
       <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
     </marker>
 
-    <marker
-      id="arrow-small"
-      markerWidth="6"
-      markerHeight="4"
-      refX="6"
-      refY="2"
-      orient="auto"
-    >
-      <path d="M0,0 L6,2 L0,4 Z" fill="context-stroke" />
-    </marker>
-
     {/* Vidro */}
     <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stopColor="white" stopOpacity="0.4" />
       <stop offset="50%" stopColor="white" stopOpacity="0.1" />
       <stop offset="100%" stopColor="white" stopOpacity="0.3" />
+    </linearGradient>
+
+    {/* Prisma / Diagrama Trapezoidal de Pressão Hidrostática */}
+    <linearGradient id="pressurePrismGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#0284c7" stopOpacity="0.25" />
+      <stop offset="50%" stopColor="#2563eb" stopOpacity="0.45" />
+      <stop offset="100%" stopColor="#1d4ed8" stopOpacity="0.75" />
     </linearGradient>
 
     {/* ===== GRADIENTES DE FLUIDO DINÂMICOS ===== */}
@@ -131,6 +127,36 @@ export const DefinicoesSVG: React.FC<DefinicoesSVGProps> = ({
         opacity="0.2"
       />
     </pattern>
+
+    {/* Ondas de superfície fluidas dinâmicas */}
+    <pattern id="waveSurfacePattern" width="80" height="20" patternUnits="userSpaceOnUse">
+      <animateTransform
+        attributeName="patternTransform"
+        type="translate"
+        from="0 0"
+        to="80 0"
+        dur="3.2s"
+        repeatCount="indefinite"
+      />
+      <path
+        d="M 0 10 Q 20 4, 40 10 T 80 10"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="2"
+        opacity="0.85"
+      />
+      <path
+        d="M 0 14 Q 20 8, 40 14 T 80 14"
+        fill="none"
+        stroke="#93c5fd"
+        strokeWidth="1.2"
+        opacity="0.5"
+      />
+    </pattern>
+
+    <filter id="glowResultant" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#ef4444" floodOpacity="0.5" />
+    </filter>
 
     {/* Concreto mais escuro */}
     <filter id="concreteNoise">
@@ -214,6 +240,57 @@ export const DefinicoesSVG: React.FC<DefinicoesSVGProps> = ({
         opacity="0.3"
       />
     </pattern>
+
+    {/* Padrão de Alvenaria / Parede Inclinada (estilo livro didático) */}
+    <pattern id="brickPattern" width="20" height="10" patternUnits="userSpaceOnUse">
+      <rect width="20" height="10" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.6" />
+      <line x1="0" y1="5" x2="20" y2="5" stroke="#94a3b8" strokeWidth="0.6" />
+      <line x1="10" y1="0" x2="10" y2="5" stroke="#94a3b8" strokeWidth="0.6" />
+      <line x1="0" y1="5" x2="0" y2="10" stroke="#94a3b8" strokeWidth="0.6" />
+      <line x1="20" y1="5" x2="20" y2="10" stroke="#94a3b8" strokeWidth="0.6" />
+    </pattern>
+
+    {/* Hachura da Comporta na Vista Frontal Rebatida (linhas finas a 45°) */}
+    <pattern id="gateHatchPattern" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#64748b" strokeWidth="0.9" opacity="0.55" />
+    </pattern>
+
+    {/* Seta grossa para vetor Empuxo E */}
+    <marker
+      id="arrow-thrust"
+      viewBox="0 0 12 12"
+      refX="10"
+      refY="6"
+      markerWidth="8"
+      markerHeight="8"
+      orient="auto"
+    >
+      <path d="M 0 2 L 10 6 L 0 10 z" fill="#0f172a" />
+    </marker>
+
+    {/* Seta técnica para cotas dimensionais */}
+    <marker
+      id="arrow-dim-start"
+      viewBox="0 0 10 10"
+      refX="2"
+      refY="5"
+      markerWidth="5"
+      markerHeight="5"
+      orient="auto"
+    >
+      <path d="M 10 2 L 0 5 L 10 8 z" fill="#334155" />
+    </marker>
+    <marker
+      id="arrow-dim-end"
+      viewBox="0 0 10 10"
+      refX="8"
+      refY="5"
+      markerWidth="5"
+      markerHeight="5"
+      orient="auto"
+    >
+      <path d="M 0 2 L 10 5 L 0 8 z" fill="#334155" />
+    </marker>
 
     <linearGradient id="metalLinear" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stopColor="#e2e8f0" />

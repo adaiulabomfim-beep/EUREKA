@@ -15,13 +15,13 @@ import { Vista2D } from '../visual/Vista2D';
 import { Vista3D } from '../visual/Vista3D';
 import { simularCorposImersos } from '../calculos/simulador';
 import { getFluidColor } from '../visual/visualUtils';
+import { salvarNoHistorico } from '../../../interface/historicoGerenciador';
 
 interface BodyFallLabProps {
   onContextUpdate?: (ctx: string) => void;
-  onDataUpdate?: (data: any) => void;
 }
 
-export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate, onDataUpdate }) => {
+export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => {
   // --- STATE: INPUTS ---
   const [selectedMaterial, setSelectedMaterial] = useState<string>('Concreto');
   const [customObjDensity, setCustomObjDensity] = useState<number>(2400);
@@ -237,15 +237,9 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate, onDat
     densidadeFluido: rhoA,
     empuxo: physics.buoyancyForce,
     peso: physics.objectWeight,
-    volumeDeslocado: physics.vol_deslocado,
+    volumeDeslocado: physics.vol_deslocado / 1e6,
     alturaSubmersa: physics.h_sub_actual / 100
   }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics]);
-
-  useEffect(() => {
-    if (onDataUpdate) {
-      onDataUpdate(exportData);
-    }
-  }, [exportData, onDataUpdate]);
 
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
 
@@ -486,7 +480,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate, onDat
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
-        <div className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto pr-1 custom-scrollbar">
+        <div id="tour-controles" data-tour="painel-controles" className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto pr-1 custom-scrollbar">
           {/* SIMULAÇÕES PRONTAS */}
           <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white">
             <div className="flex items-center gap-2 mb-3 text-sm font-bold tracking-wider opacity-90">
@@ -669,7 +663,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate, onDat
           
           {/* --- CONTROLS OVERLAY --- */}
           {/* Top Control Bar */}
-          <div className="absolute top-6 left-6 flex z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1">
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 flex z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1">
             <button 
               onClick={() => setIs3D(!is3D)} 
               className={`px-4 py-1.5 rounded-full font-bold transition-all text-xs flex items-center gap-2 ${is3D ? 'bg-blue-100/80 text-blue-700 shadow-inner' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}
@@ -709,9 +703,36 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate, onDat
           </div>
 
           {/* Main Action Button */}
-          <div className="absolute bottom-6 right-6 z-10">
+          <div id="tour-btn-acao" data-tour="botao-acao" className="absolute bottom-6 right-6 z-10">
             <button 
-              onClick={() => setIsSimulating(!isSimulating)} 
+              onClick={() => {
+                const proximo = !isSimulating;
+                setIsSimulating(proximo);
+                if (proximo && physics) {
+                  salvarNoHistorico({
+                    modulo: 'corpos-imersos',
+                    moduloNome: 'Corpos Imersos',
+                    titulo: `Corpo ${shape} (${selectedMaterial || 'Personalizado'})`,
+                    parametros: {
+                      'Forma': shape,
+                      'Dimensão 1 (cm)': dim1,
+                      ...(shape !== ObjectShape.CUBE && shape !== ObjectShape.SPHERE ? { 'Dimensão 2 (cm)': dim2 } : {}),
+                      'Densidade Objeto': `${customObjDensity} kg/m³`,
+                      'Fluido': selectedFluid,
+                      'Densidade Fluido': `${rhoA} kg/m³`,
+                    },
+                    resultados: {
+                      empuxo: physics.buoyancyForce,
+                      empuxoFormatado: physics.buoyancyForce >= 10000 ? `${(physics.buoyancyForce / 1000).toFixed(2)} kN` : `${physics.buoyancyForce.toFixed(1)} N`,
+                      peso: physics.objectWeight,
+                      pesoFormatado: physics.objectWeight >= 10000 ? `${(physics.objectWeight / 1000).toFixed(2)} kN` : `${physics.objectWeight.toFixed(1)} N`,
+                      volumeDeslocado: `${(physics.vol_deslocado / 1e3).toFixed(2)} L`,
+                      alturaSubmersa: `${physics.h_sub_actual.toFixed(1)} cm`,
+                      segurancaOuStatus: physics.buoyancyForce > physics.objectWeight ? 'Flutua (E > P)' : physics.buoyancyForce < physics.objectWeight ? 'Afunda (E < P)' : 'Equilíbrio Neutro',
+                    },
+                  });
+                }
+              }} 
               className={`
                 flex items-center gap-2 px-6 py-2.5 rounded-full font-black text-xs tracking-wide uppercase transition-all active:scale-95 shadow-lg
                 ${isSimulating 

@@ -23,7 +23,10 @@ const SectionTitle = ({ icon: Icon, children, number }) => (
     {Icon && (
       <Icon size={16} strokeWidth={2.5} className="shrink-0 text-[#3478f6]" />
     )}
-    <h3 className="m-0 p-0 text-[13px] font-black uppercase tracking-[0.5px] text-[#23477f]">
+    <h3 
+      className="m-0 p-0 text-[13px] font-black uppercase tracking-[0.5px] text-[#23477f]"
+      style={{ lineHeight: '1', transform: 'translateY(-3.5px)' }}
+    >
       {number ? `${number}. ` : ''}
       {children}
     </h3>

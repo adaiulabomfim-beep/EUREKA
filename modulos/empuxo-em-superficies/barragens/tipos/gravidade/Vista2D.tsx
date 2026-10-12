@@ -30,7 +30,6 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     s_cp,
     y_cp,
     up,
-    down,
     isAnalyzed,
     onCalculate,
     onReset,
@@ -51,7 +50,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     [damBaseWidth]
   );
 
-  const { worldGeometry, getDamXAtY, profile, hidrost, estab } = useMemo(() => {
+  const { worldGeometry, getDamXAtY, profile } = useMemo(() => {
     const { profile } = construirGeometria(
       damHeight,
       damBaseWidth,
@@ -114,7 +113,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       );
     }
 
-    const hidrost = calcularHidrostatica(
+    calcularHidrostatica(
       damHeight,
       inclinationAngle,
       upstreamLevel,
@@ -122,7 +121,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       1000 * 9.81
     );
 
-    const estab = calcularEstabilidade(
+    calcularEstabilidade(
       damHeight,
       damBaseWidth,
       damCrestWidth,
@@ -132,7 +131,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       y_cp
     );
 
-    return { worldGeometry, getDamXAtY, profile, hidrost, estab };
+    return { worldGeometry, getDamXAtY, profile };
   }, [
     damHeight,
     damBaseWidth,
@@ -278,7 +277,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
 
         const base = getDamXAtY(y, 'UPSTREAM');
         const x = toWorldX(base);
-        pushArrow(x, y, 0, nx, ny, Lw, '#38bdf8', false);
+        pushArrow(x, y, 0, nx, ny, Lw, '#2563eb', false);
       }
     }
 
@@ -292,7 +291,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
 
         const base = getDamXAtY(y, 'DOWNSTREAM');
         const x = toWorldX(base);
-        pushArrow(x, y, 0, nx, ny, Lw, '#38bdf8', false);
+        pushArrow(x, y, 0, nx, ny, Lw, '#3b82f6', false);
       }
     }
 
@@ -300,21 +299,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       const { nx, ny } = localNormal(y_cp, 'UPSTREAM');
       const base = getDamXAtY(y_cp, 'UPSTREAM');
       const x = toWorldX(base);
-      pushArrow(x, y_cp, 0, nx, ny, 120 / SCALE, '#ef4444', true, `FR = ${(force/1000).toFixed(2)} kN/m`);
-    }
-
-    if (down && down.FR !== 0 && down.y_cp > 0) {
-      const { nx, ny } = localNormal(down.y_cp, 'DOWNSTREAM');
-      const base = getDamXAtY(down.y_cp, 'DOWNSTREAM');
-      const x = toWorldX(base);
-      pushArrow(x, down.y_cp, 0, nx, ny, 120 / SCALE, '#f59e0b', true, `FR_jus = ${(down.FR/1000).toFixed(2)} kN/m`);
-    }
-
-    if (isAnalyzed && estab && estab.weight > 0) {
-      const cg_x_world = toWorldX(damBaseWidth / 2);
-      const cg_y = estab.y_cg || damHeight / 3;
-      const w_mag = 100 / SCALE;
-      pushArrow(cg_x_world, cg_y - w_mag, 0, 0, 1, w_mag, '#f59e0b', true, `W = ${(estab.weight/1000).toFixed(2)} kN/m`);
+      pushArrow(x, y_cp, 0, nx, ny, 120 / SCALE, '#2563eb', true, 'FR');
     }
 
     return vecs;
@@ -326,15 +311,11 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     force,
     y_cp,
     up,
-    down,
     damHeight,
-    damBaseWidth,
     getDamXAtY,
     toWorldX,
     project,
     SCALE,
-    hidrost,
-    estab,
   ]);
 
   const originProj = project({ x: 0, y: 0, z: 0 });
@@ -410,9 +391,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       p2World: { x: number; y: number },
       text: string,
       offsetPx: { x: number; y: number },
-      textOffsetPx: { x: number; y: number } = { x: 0, y: 0 },
-      color: string = '#475569',
-      bgColor: string = 'white'
+      textOffsetPx: { x: number; y: number } = { x: 0, y: 0 }
     ) => {
       const p1 = project({ x: p1World.x, y: p1World.y, z: 0 });
       const p2 = project({ x: p2World.x, y: p2World.y, z: 0 });
@@ -426,7 +405,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       const textH = 18;
 
       return (
-        <g key={key} stroke={color} strokeWidth="1.6" fill="none" opacity="0.9">
+        <g key={key} stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.9">
           <line
             x1={p1.x}
             y1={p1.y}
@@ -456,7 +435,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
             y={cy - textH / 2}
             width={textW}
             height={textH}
-            fill={bgColor}
+            fill="white"
             rx="3"
             stroke="none"
           />
@@ -465,7 +444,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
             y={cy}
             textAnchor="middle"
             dominantBaseline="central"
-            fill={color}
+            fill="#475569"
             fontSize="12"
             fontWeight="700"
             stroke="none"
@@ -579,22 +558,6 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
           `Yp=${y_cp.toFixed(2)}m`,
           { x: -118, y: 0 },
           { x: -40, y: 0 }
-        )
-      );
-    }
-
-    if (isAnalyzed && hidrost && hidrost.p_max_up > 0) {
-      const xBase = toWorldX(getDamXAtY(0, 'UPSTREAM'));
-      dims.push(
-        drawDim(
-          'pmax',
-          { x: xBase, y: 0 },
-          { x: xBase, y: 0 },
-          `P_max = ${(hidrost.p_max_up / 1000).toFixed(2)} kPa`,
-          { x: -30, y: 25 },
-          { x: 0, y: 0 },
-          '#ef4444',
-          '#fee2e2'
         )
       );
     }

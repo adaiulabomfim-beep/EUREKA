@@ -10,6 +10,16 @@ export enum PosicaoDobradica {
   BOTTOM = 'BOTTOM',
 }
 
+export enum ModoPosicionamentoComporta {
+  PADRAO_H_TOPO = 'PADRAO_H_TOPO',
+  Y_CG_DIRETO = 'Y_CG_DIRETO',
+}
+
+export enum SistemaUnidades {
+  SI = 'SI',                    // kN, kPa, N/m³
+  TECNICO_KGF = 'TECNICO_KGF',  // kgf, kgf/m², kgf/m³
+}
+
 // --- Biblioteca de Fluidos ---
 
 export interface FluidoInfo {

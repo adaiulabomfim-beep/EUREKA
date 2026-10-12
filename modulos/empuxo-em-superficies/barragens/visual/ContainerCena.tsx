@@ -107,7 +107,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
       </div>
 
       <div
-        className="absolute top-6 left-6 flex z-30 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1"
+        className="absolute top-6 left-1/2 -translate-x-1/2 flex z-30 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <button
@@ -149,6 +149,8 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
       </div>
 
       <div
+        id="tour-btn-acao"
+        data-tour="botao-acao"
         className="absolute bottom-20 right-6 z-30"
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -370,7 +372,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                   stroke={v.color ?? '#ef4444'}
                   strokeWidth={v.strokeWidth ?? 2}
                   opacity={v.opacity ?? 1}
-                  markerEnd={v.isResultant || v.val ? "url(#arrow)" : "url(#arrow-small)"}
+                  markerEnd="url(#arrow-red)"
                   vectorEffect="non-scaling-stroke"
                 />
 
@@ -386,21 +388,18 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                   />
                 )}
 
-                {v.val !== undefined && v.val !== null && v.val !== '' && (() => {
-                  const textStr = String(v.val);
-                  const bgWidth = Math.max(64, textStr.length * 6 + 16);
-                  return (
-                    <g transform={`translate(${labelX}, ${labelY})`}>
-                      <rect
-                        x={-bgWidth / 2}
-                        y={-11}
-                        width={bgWidth}
-                        height={22}
-                        rx={6}
-                        fill="#0f172a"
-                        opacity={0.8}
-                      />
-                      <text
+                {v.val !== undefined && v.val !== null && v.val !== '' && (
+                  <g transform={`translate(${labelX}, ${labelY})`}>
+                    <rect
+                      x={-32}
+                      y={-11}
+                      width={64}
+                      height={22}
+                      rx={6}
+                      fill="#0f172a"
+                      opacity={0.8}
+                    />
+                    <text
                       x={0}
                       y={0}
                       textAnchor="middle"
@@ -411,10 +410,9 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                       fontFamily="monospace"
                     >
                       {String(v.val)}
-                      </text>
-                    </g>
-                  );
-                })()}
+                    </text>
+                  </g>
+                )}
               </g>
             );
           })}

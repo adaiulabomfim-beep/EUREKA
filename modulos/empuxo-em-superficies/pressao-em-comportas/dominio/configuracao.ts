@@ -1,4 +1,4 @@
-import { FormaComporta, PosicaoDobradica } from './tipos';
+import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from './tipos';
 
 export interface ConfiguracaoFluido {
   chave: string;           // key em FLUIDOS_PREDEFINIDOS ('agua', 'glicerina', etc.)
@@ -8,6 +8,7 @@ export interface ConfiguracaoFluido {
 }
 
 export interface ConfiguracaoSimulacaoComporta {
+  sistemaUnidades?: SistemaUnidades;
   fluidoMontante: ConfiguracaoFluido;
   fluidoJusante: ConfiguracaoFluido & { ativo: boolean };
   comporta: {
@@ -15,7 +16,9 @@ export interface ConfiguracaoSimulacaoComporta {
     forma: FormaComporta;
     largura: number;
     altura: number;
-    profundidadeTopo: number;
+    profundidadeTopo: number; // h1: profundidade vertical do topo (m)
+    modoPosicionamento?: ModoPosicionamentoComporta;
+    y_cg_direto?: number;     // Y_CG direto da NA ao longo da superfície (m)
     angulo?: number;
     posicaoDobradica: PosicaoDobradica;
     temTirante: boolean;
@@ -23,7 +26,6 @@ export interface ConfiguracaoSimulacaoComporta {
     anguloTirante: number;
     pesoProprio: number;
     pesoProprioAtivo: boolean;
-    abertura?: number; // 0 a 100%
   };
 }
 

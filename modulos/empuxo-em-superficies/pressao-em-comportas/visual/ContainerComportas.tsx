@@ -6,6 +6,10 @@ import {
   Play,
   Box,
   ArrowLeftRight,
+  CircleDot,
+  Ruler,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { DefinicoesSVG } from './DefinicoesSVG';
 
@@ -44,6 +48,10 @@ interface ContainerComportasProps {
   setIs3D: (v: boolean) => void;
   showVectors: boolean;
   setShowVectors: (v: boolean) => void;
+  showFrontalView?: boolean;
+  setShowFrontalView?: (v: boolean) => void;
+  showExerciseDims?: boolean;
+  setShowExerciseDims?: (v: boolean) => void;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
@@ -56,6 +64,10 @@ interface ContainerComportasProps {
   ORIGIN_X: number;
   ORIGIN_Y: number;
   pan?: { x: number; y: number };
+  zoom?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  isResetting?: boolean;
   children?: React.ReactNode;
   upstreamFluidKey?: string;
   downstreamFluidKey?: string;
@@ -66,6 +78,10 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
   setIs3D,
   showVectors,
   setShowVectors,
+  showFrontalView,
+  setShowFrontalView,
+  showExerciseDims,
+  setShowExerciseDims,
   isAnalyzed,
   onCalculate,
   onReset,
@@ -77,7 +93,11 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
   SVG_H,
   ORIGIN_X,
   ORIGIN_Y,
-  pan,
+  pan = { x: 0, y: 0 },
+  zoom = 1,
+  onZoomIn,
+  onZoomOut,
+  isResetting = false,
   children,
   upstreamFluidKey = 'agua',
   downstreamFluidKey = 'agua',
@@ -114,7 +134,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
       </div>
 
       <div
-        className="absolute top-6 left-6 flex z-30 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1"
+        className="absolute top-6 left-1/2 -translate-x-1/2 flex z-30 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100/50 p-1"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <button
@@ -153,9 +173,49 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
           <ArrowLeftRight className="h-3.5 w-3.5" />
           VETORES
         </button>
+
+        {!is3D && setShowFrontalView && (
+          <button
+            type="button"
+            onClick={() => setShowFrontalView(!showFrontalView)}
+            className={`
+              flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all whitespace-nowrap
+              ${
+                showFrontalView
+                  ? 'bg-blue-100/80 text-blue-700 shadow-inner'
+                  : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
+              }
+            `}
+            title={showFrontalView ? 'Ocultar formato frontal da comporta' : 'Exibir formato da comporta frontal (rebatimento 2D)'}
+          >
+            <CircleDot className="h-3.5 w-3.5" />
+            VISTA FRONTAL
+          </button>
+        )}
+
+        {!is3D && setShowExerciseDims && (
+          <button
+            type="button"
+            onClick={() => setShowExerciseDims(!showExerciseDims)}
+            className={`
+              flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all whitespace-nowrap
+              ${
+                showExerciseDims
+                  ? 'bg-blue-100/80 text-blue-700 shadow-inner'
+                  : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
+              }
+            `}
+            title={showExerciseDims ? 'Ocultar cotas didáticas' : 'Exibir cotas do exercício (hCP, hCG, yCG, yCP)'}
+          >
+            <Ruler className="h-3.5 w-3.5" />
+            COTAS
+          </button>
+        )}
       </div>
 
       <div
+        id="tour-btn-acao"
+        data-tour="botao-acao"
         className="absolute bottom-20 right-6 z-30"
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -194,7 +254,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
         )}
       </div>
 
-      {is3D && (
+      {is3D ? (
         <>
           <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 select-none items-center gap-4 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity">
             <span className="flex items-center gap-1">
@@ -220,6 +280,21 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
             <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover:-rotate-180" />
           </button>
         </>
+      ) : (
+        /* Botão REINICIAR na posição exata conforme o layout de referência */
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            resetView();
+          }}
+          className="group absolute bottom-6 right-6 z-30 flex items-center gap-2 px-4 py-2.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-wider active:scale-95 transition-all select-none"
+          title="Reiniciar visualização e zoom padrão"
+          aria-label="Reiniciar visualização"
+        >
+          <RotateCcw className="h-4 w-4 text-slate-600 transition-transform duration-500 group-hover:-rotate-180" />
+          <span>REINICIAR</span>
+        </button>
       )}
 
       <svg
@@ -231,6 +306,15 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
       >
         <DefinicoesSVG pan={pan} chaveMontante={upstreamFluidKey} chaveJusante={downstreamFluidKey} />
 
+        {/* Camada interativa Pan & Zoom */}
+        <g
+          id="scene-pan-zoom-container"
+          transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
+          style={{
+            transformOrigin: `${SVG_W / 2}px ${SVG_H / 2}px`,
+            transition: isResetting ? 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+          }}
+        >
         <g opacity="0.12">
           <line
             x1={ORIGIN_X - 420}
@@ -364,7 +448,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                   stroke={v.color ?? '#ef4444'}
                   strokeWidth={v.strokeWidth ?? 2}
                   opacity={v.opacity ?? 1}
-                  markerEnd={v.isResultant || v.val ? "url(#arrow)" : "url(#arrow-small)"}
+                  markerEnd="url(#arrow-red)"
                   vectorEffect="non-scaling-stroke"
                 />
 
@@ -380,15 +464,12 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                   />
                 )}
 
-                {v.val !== undefined && v.val !== null && v.val !== '' && (() => {
-                  const valStr = String(v.val);
-                  const textW = valStr.length * 6.5 + 16;
-                  return (
+                {v.val !== undefined && v.val !== null && v.val !== '' && (
                   <g transform={`translate(${labelX}, ${labelY})`}>
                     <rect
-                      x={-textW / 2}
+                      x={-32}
                       y={-11}
-                      width={textW}
+                      width={64}
                       height={22}
                       rx={6}
                       fill="#0f172a"
@@ -404,16 +485,16 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                       fontWeight="bold"
                       fontFamily="monospace"
                     >
-                      {valStr}
+                      {String(v.val)}
                     </text>
                   </g>
-                  );
-                })()}
+                )}
               </g>
             );
           })}
 
         {children}
+        </g>
       </svg>
     </div>
   );

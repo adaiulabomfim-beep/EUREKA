@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Maximize, AlertCircle } from 'lucide-react';
-import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
+import { Maximize, AlertCircle, AlertTriangle } from 'lucide-react';
+import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from '../dominio/tipos';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
 import { simularComportas } from '../calculos/simulador';
 import { CenaPressaoComporta } from '../visual/CenaPressaoComporta';
@@ -8,50 +8,21 @@ import { PRESETS } from '../dominio/presets';
 import { PainelResultados } from './PainelResultados';
 import { Memorial } from './Memorial';
 import { PainelControles } from './PainelControles';
+import { salvarNoHistorico } from '../../../../interface/historicoGerenciador';
 
 interface GatePressureLabProps {
     onContextUpdate?: (ctx: string) => void;
-    onDataUpdate?: (data: any) => void;
 }
 
-export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, onDataUpdate }) => {
+export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate }) => {
   // STATE
-  const [config, setConfig] = useState<ConfiguracaoSimulacaoComporta>({
-    fluidoMontante: {
-      chave: 'custom',
-      nivel: 5,
-      densidade: 1200,
-      gravidade: 9.81,
-    },
-    fluidoJusante: {
-      chave: 'agua',
-      nivel: 0,
-      densidade: 1000,
-      gravidade: 9.81,
-      ativo: false,
-    },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.RETANGULAR,
-      largura: 1.8,
-      altura: 2.0,
-      profundidadeTopo: 1.5,
-      angulo: 45,
-      posicaoDobradica: PosicaoDobradica.NONE,
-      temTirante: false,
-      posicaoTiranteRelativa: 1,
-      anguloTirante: 0,
-      pesoProprio: 500,
-      pesoProprioAtivo: false,
-      abertura: 0,
-    }
-  });
+  const [config, setConfig] = useState<ConfiguracaoSimulacaoComporta>(PRESETS.exercicioCircular60);
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [analyzedResults, setAnalyzedResults] = useState<any | null>(null);
   
   // Local state for the concrete wall dimensions
-  const [wallDims, setWallDims] = useState({ height: 15.6, thickness: 0.5, width: 14.0 });
+  const [wallDims, setWallDims] = useState({ height: 15.6, thickness: 4.2, width: 14.0 });
 
   const { fluidoMontante, fluidoJusante, comporta } = config;
   const { nivel: upstreamLevel, densidade: density, gravidade: gravity, chave: upstreamFluidKey } = fluidoMontante;
@@ -69,8 +40,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
       posicaoTiranteRelativa: tieRodPosRel, 
       anguloTirante: tieRodAngle, 
       pesoProprio: gateWeight, 
-      pesoProprioAtivo: gateWeightEnabled,
-      abertura: gateAbertura = 0
+      pesoProprioAtivo: gateWeightEnabled 
   } = comporta;
   
   const setHasDownstream = (val: boolean) => setConfig(prev => ({ 
@@ -109,7 +79,32 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
   const liveResults = useMemo(() => simularComportas(config), [config]);
 
   useEffect(() => { setAnalyzedResults(null); }, [liveResults]);
-  const handleCalculate = () => { setAnalyzedResults(liveResults); };
+  const handleCalculate = () => {
+    setAnalyzedResults(liveResults);
+    if (liveResults) {
+      salvarNoHistorico({
+        modulo: 'comportas',
+        moduloNome: 'Comportas',
+        titulo: `Comporta ${gateShape} (${gateHeight}m × ${gateWidth}m)`,
+        parametros: {
+          'Forma': gateShape,
+          'Altura (m)': gateHeight,
+          'Largura (m)': gateWidth,
+          'Inclinação (°)': gateInclination,
+          'Nível Montante (m)': upstreamLevel,
+          ...(hasDownstream ? { 'Nível Jusante (m)': downstreamLevel } : {}),
+        },
+        resultados: {
+          empuxo: liveResults.forceData.FR_net,
+          empuxoFormatado: `${(Math.abs(liveResults.forceData.FR_net) / 1000).toFixed(2)} kN`,
+          peso: gateWeightEnabled ? gateWeight * 1000 : undefined,
+          pesoFormatado: gateWeightEnabled ? `${gateWeight.toFixed(2)} kN` : undefined,
+          centroPressao: `s_cp = ${(liveResults.forceData.s_cp_net).toFixed(2)} m`,
+          segurancaOuStatus: 'Análise Concluída',
+        },
+      });
+    }
+  };
 
   useEffect(() => {
       if (onContextUpdate) {
@@ -138,7 +133,30 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
       });
   };
 
-  const exportData = useMemo(() => ({
+  const validationAlerts: string[] = useMemo(() => {
+    const alerts: string[] = [];
+    const ang = gateInclination ?? 90;
+    if (ang <= 0) {
+      alerts.push('Ângulo de inclinação nulo ou negativo (θ ≤ 0°): risco de indeterminação física e divisão por zero (sen θ = 0).');
+    }
+    if (hasDownstream && downstreamLevel >= upstreamLevel) {
+      alerts.push('Nível de jusante maior ou igual ao de montante: fluxo de escoamento reverso ou equilíbrio inviável.');
+    }
+    const h_topo = config.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && config.comporta.y_cg_direto !== undefined
+      ? config.comporta.y_cg_direto * Math.sin((ang * Math.PI) / 180) - (gateHeight / 2) * Math.sin((ang * Math.PI) / 180)
+      : gateDepthFromCrest;
+
+    if (h_topo < 0) {
+      alerts.push('Profundidade do topo da comporta negativa: a crista da comporta está posicionada acima da linha d\'água (NA).');
+    }
+    const h_bot = h_topo + gateHeight * Math.sin((ang * Math.PI) / 180);
+    if (h_bot > upstreamLevel) {
+      alerts.push('Comporta excede a profundidade disponível: a base da comporta ultrapassa o fundo do reservatório.');
+    }
+    return alerts;
+  }, [gateInclination, hasDownstream, downstreamLevel, upstreamLevel, config.comporta, gateDepthFromCrest, gateHeight]);
+
+  const exportData = {
     tipo: 'comportas',
     geometria: `Comporta ${gateShape}`,
     dimensoes: {
@@ -153,13 +171,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
     alturaSubmersa: upstreamLevel,
     isAnalyzed: !!analyzedResults,
     analyzedResults: analyzedResults
-  }), [gateShape, gateHeight, gateWidth, gateInclination, analyzedResults, gateWeightEnabled, gateWeight, upstreamLevel]);
-
-  useEffect(() => {
-    if (onDataUpdate) {
-      onDataUpdate(exportData);
-    }
-  }, [exportData, onDataUpdate]);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -185,13 +197,29 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
         {/* --- CENTER: SCENE --- */}
         <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
+
+          {/* Banner de Validações e Alertas Visuais (Item 6) */}
+          {validationAlerts.length > 0 && (
+            <div className="absolute top-4 left-4 right-4 z-40 flex flex-col gap-1.5 pointer-events-auto animate-in fade-in slide-in-from-top-2">
+              {validationAlerts.map((alert, idx) => (
+                <div key={idx} className="flex items-center gap-2.5 px-4 py-2 bg-amber-500/95 backdrop-blur-md text-white text-[11px] font-bold rounded-xl shadow-lg border border-amber-400">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-white" />
+                  <span className="flex-1">{alert}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
             <CenaPressaoComporta
-                upstreamLevel={upstreamLevel} downstreamLevel={hasDownstream ? downstreamLevel : 0}
+                upstreamLevel={upstreamLevel} downstreamLevel={downstreamLevel}
                 upstreamFluidKey={upstreamFluidKey} downstreamFluidKey={downstreamFluidKey}
                 hasGate={hasGate} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}
                 gateInclination={gateInclination}
                 wallDims={wallDims}
+                sistemaUnidades={config.sistemaUnidades}
+                modoPosicionamento={config.comporta.modoPosicionamento}
+                y_cg_direto={config.comporta.y_cg_direto}
                 force={analyzedResults ? analyzedResults.forceData.FR_net : 0} 
                 s_cp={analyzedResults ? analyzedResults.forceData.s_cp_net : 0}
                 hingePosition={hingePosition}
@@ -200,12 +228,10 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
                 tieRodAngle={tieRodAngle}
                 gateWeight={gateWeight}
                 gateWeightEnabled={gateWeightEnabled}
-                gateAbertura={gateAbertura}
-                isAnalyzed={!!analyzedResults && gateAbertura === 0}
+                isAnalyzed={!!analyzedResults}
                 onCalculate={handleCalculate}
                 onReset={() => setAnalyzedResults(null)}
             />
-             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-200/50 to-transparent pointer-events-none"></div>
         </div>
 
         {/* --- RIGHT SIDEBAR: RESULTS --- */}
@@ -225,6 +251,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate, o
           onClose={() => setShowDetails(false)} 
           gateInclination={gateInclination}
           gateShape={gateShape}
+          config={config}
         />
       )}
     </div>

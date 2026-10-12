@@ -1,7 +1,7 @@
 import React from 'react';
 import { Vista2D } from './Vista2D';
 import { Scene3D } from '../visual-3d/Scene3D';
-import { FormaComporta, PosicaoDobradica } from '../dominio/tipos';
+import { FormaComporta, PosicaoDobradica, SistemaUnidades, ModoPosicionamentoComporta } from '../dominio/tipos';
 
 interface RenderizadorComportaProps {
   upstreamLevel: number;
@@ -20,7 +20,6 @@ interface RenderizadorComportaProps {
   hasTieRod: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
-  gateAbertura?: number;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
@@ -29,6 +28,9 @@ interface RenderizadorComportaProps {
   showVectors: boolean;
   setShowVectors: (v: boolean) => void;
   wallDims: { height: number; thickness: number; width: number; };
+  sistemaUnidades?: SistemaUnidades;
+  modoPosicionamento?: ModoPosicionamentoComporta;
+  y_cg_direto?: number;
 }
 
 export const RenderizadorComporta: React.FC<RenderizadorComportaProps> = (props) => {

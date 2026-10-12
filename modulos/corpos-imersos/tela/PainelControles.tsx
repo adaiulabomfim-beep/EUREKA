@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Settings2, Droplets, Layers, AlertTriangle } from 'lucide-react';
+import { Box, Settings2, Droplets, Layers, AlertTriangle, FlaskConical } from 'lucide-react';
 import { MATERIALS, FLUIDS } from '../dominio/configuracao';
 import { ObjectShape } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
@@ -53,6 +53,8 @@ interface PainelControlesProps {
   onCordLengthChange: (val: number) => void;
   shape2: ObjectShape;
   onShape2Change: (shape: ObjectShape) => void;
+  showFluidComparison?: boolean;
+  onToggleFluidComparison?: () => void;
 }
 
 export const PainelControles: React.FC<PainelControlesProps> = ({
@@ -97,6 +99,8 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   onCordLengthChange,
   shape2,
   onShape2Change,
+  showFluidComparison = false,
+  onToggleFluidComparison,
 }) => {
   const inputGroupClass = 'space-y-1.5';
   const labelClass = "block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5";
@@ -218,6 +222,52 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                 <div className="w-24">
                   <label className="text-[10px] font-medium text-slate-400 mb-1 block">Profund. (cm)</label>
                   <NumberInput value={depthA} min={1} max={1000} step="1" onChange={onDepthAChange} />
+                </div>
+              </div>
+
+              {/* Toggle Comparador de Fluidos */}
+              <div className={`mt-3 p-2.5 rounded-xl border transition-all ${
+                showFluidComparison 
+                  ? 'bg-blue-50/80 border-blue-200 shadow-sm' 
+                  : 'bg-slate-50/70 border-slate-200/60 hover:bg-slate-50'
+              }`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`p-1.5 rounded-lg transition-colors shrink-0 ${
+                      showFluidComparison ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      <FlaskConical className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold text-slate-800 flex items-center gap-1.5">
+                        <span className="truncate">Comparador</span>
+                        <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${
+                          showFluidComparison 
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
+                            : 'bg-slate-200 text-slate-500'
+                        }`}>
+                          {showFluidComparison ? 'Ativado' : 'Off'}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-slate-400 truncate">Óleo, Água e Glicerina</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onToggleFluidComparison}
+                    className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      showFluidComparison ? 'bg-blue-600' : 'bg-slate-300'
+                    }`}
+                    title={showFluidComparison ? 'Desativar comparador de fluidos' : 'Ativar comparador de fluidos'}
+                    aria-label={showFluidComparison ? 'Desativar comparador de fluidos' : 'Ativar comparador de fluidos'}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        showFluidComparison ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
             </div>

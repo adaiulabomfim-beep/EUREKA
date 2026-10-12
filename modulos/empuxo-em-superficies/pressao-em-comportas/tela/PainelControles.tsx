@@ -1,8 +1,14 @@
 import React from 'react';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
-import { FormaComporta, PosicaoDobradica, FLUIDOS_PREDEFINIDOS } from '../dominio/tipos';
+import {
+  FormaComporta,
+  PosicaoDobradica,
+  FLUIDOS_PREDEFINIDOS,
+  SistemaUnidades,
+  ModoPosicionamentoComporta,
+} from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
-import { BookOpen, Square, Circle, Waves, Anchor, Link, Droplets } from 'lucide-react';
+import { BookOpen, Square, Circle, Waves, Anchor, Link, Droplets, Scale } from 'lucide-react';
 
 interface PainelControlesProps {
   config: ConfiguracaoSimulacaoComporta;
@@ -64,7 +70,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
   const gateBottomY = Math.max(0, gateTopY - gateHeight);
   
   return (
-    <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
+    <div id="tour-controles" data-tour="painel-controles" className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
       
       {/* SIMULAÇÕES PRONTAS */}
       <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white">
@@ -89,6 +95,42 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* SISTEMA DE UNIDADES */}
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-3.5 rounded-2xl shadow-xl shadow-blue-200/20">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+            <Scale className="w-3.5 h-3.5 text-blue-600" />
+            Sistema de Unidades
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setConfig(prev => ({ ...prev, sistemaUnidades: SistemaUnidades.SI }))}
+            className={`py-2 px-2.5 rounded-xl border text-[10px] font-bold tracking-wider transition-all flex flex-col items-center justify-center ${
+              (config.sistemaUnidades || SistemaUnidades.SI) === SistemaUnidades.SI
+                ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
+            }`}
+          >
+            <span>SI (Padrão)</span>
+            <span className="text-[8px] opacity-80 mt-0.5">kN, kPa (γ=9810)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfig(prev => ({ ...prev, sistemaUnidades: SistemaUnidades.TECNICO_KGF }))}
+            className={`py-2 px-2.5 rounded-xl border text-[10px] font-bold tracking-wider transition-all flex flex-col items-center justify-center ${
+              config.sistemaUnidades === SistemaUnidades.TECNICO_KGF
+                ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
+            }`}
+          >
+            <span>Técnico (kgf)</span>
+            <span className="text-[8px] opacity-80 mt-0.5">kgf, kgf/m² (γ=1000)</span>
+          </button>
+        </div>
       </div>
 
       {/* Níveis e Fluidos */}
@@ -254,19 +296,136 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       </div>
                   )}
 
-                  <div>
-                      <label className={labelClass}>Profundidade do Topo (h1)</label>
-                      <NumberInput value={config.comporta.profundidadeTopo} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, profundidadeTopo: val}}))} min={0} max={config.fluidoMontante.nivel} step={0.1} />
+                  {/* Modo de Posicionamento da Comporta */}
+                  <div className="pt-2 border-t border-slate-100">
+                      <label className={labelClass}>Modo de Posicionamento</label>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfig(prev => {
+                                const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                const currentY_CG = prev.comporta.y_cg_direto ?? (prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + prev.comporta.altura / 2);
+                                const h_topo = Math.max(0, currentY_CG * sinTheta - (prev.comporta.altura / 2) * sinTheta);
+                                return {
+                                  ...prev,
+                                  comporta: {
+                                    ...prev.comporta,
+                                    modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
+                                    profundidadeTopo: parseFloat(h_topo.toFixed(3))
+                                  }
+                                };
+                              });
+                            }}
+                            className={`py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${
+                              (config.comporta.modoPosicionamento || ModoPosicionamentoComporta.PADRAO_H_TOPO) === ModoPosicionamentoComporta.PADRAO_H_TOPO
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                                : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'
+                            }`}
+                          >
+                            Padrão (h₁)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfig(prev => {
+                                const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                const calculatedY_CG = prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + prev.comporta.altura / 2;
+                                return {
+                                  ...prev,
+                                  comporta: {
+                                    ...prev.comporta,
+                                    modoPosicionamento: ModoPosicionamentoComporta.Y_CG_DIRETO,
+                                    y_cg_direto: prev.comporta.y_cg_direto ?? parseFloat(calculatedY_CG.toFixed(3))
+                                  }
+                                };
+                              });
+                            }}
+                            className={`py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${
+                              config.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                                : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'
+                            }`}
+                          >
+                            Modo y<sub>CG</sub> Direto
+                          </button>
+                      </div>
+
+                      {config.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO ? (
+                          <div>
+                              <div className="flex items-center justify-between mb-1">
+                                  <label className={labelClass + " !mb-0"}>Distância NA ao Centróide (y<sub>CG</sub>)</label>
+                                  <span className="text-[9px] text-blue-600 font-bold">metros</span>
+                              </div>
+                              <NumberInput
+                                value={config.comporta.y_cg_direto ?? parseFloat(((config.comporta.profundidadeTopo / Math.sin(((config.comporta.angulo || 90) * Math.PI) / 180)) + config.comporta.altura / 2).toFixed(2))}
+                                onChange={(val: number) => {
+                                  setConfig(prev => {
+                                    const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                    const h_CG = val * sinTheta;
+                                    const h_topo = Math.max(0, h_CG - (prev.comporta.altura / 2) * sinTheta);
+                                    return {
+                                      ...prev,
+                                      comporta: {
+                                        ...prev.comporta,
+                                        modoPosicionamento: ModoPosicionamentoComporta.Y_CG_DIRETO,
+                                        y_cg_direto: val,
+                                        profundidadeTopo: parseFloat(h_topo.toFixed(3))
+                                      }
+                                    };
+                                  });
+                                }}
+                                min={0.1}
+                                max={100}
+                                step={0.05}
+                              />
+                              <div className="text-[10px] text-slate-400 mt-1 flex justify-between font-mono">
+                                <span>h<sub>topo</sub>: {config.comporta.profundidadeTopo.toFixed(2)}m</span>
+                                <span>h<sub>CG</sub>: {((config.comporta.y_cg_direto ?? 1.5) * Math.sin(((config.comporta.angulo || 90) * Math.PI) / 180)).toFixed(2)}m</span>
+                              </div>
+                          </div>
+                      ) : (
+                          <div>
+                              <label className={labelClass}>Profundidade do Topo (h₁)</label>
+                              <NumberInput
+                                value={config.comporta.profundidadeTopo}
+                                onChange={(val: number) => setConfig(prev => {
+                                  const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                  const calculatedY_CG = val / Math.max(0.01, sinTheta) + prev.comporta.altura / 2;
+                                  return {
+                                    ...prev,
+                                    comporta: {
+                                      ...prev.comporta,
+                                      profundidadeTopo: val,
+                                      y_cg_direto: parseFloat(calculatedY_CG.toFixed(3))
+                                    }
+                                  };
+                                })}
+                                min={0}
+                                max={config.fluidoMontante.nivel}
+                                step={0.1}
+                              />
+                          </div>
+                      )}
                   </div>
 
                   <div>
                       <label className={labelClass}>Ângulo de Inclinação (θ)</label>
-                      <NumberInput value={config.comporta.angulo || 90} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, angulo: val}}))} min={1} max={90} step={1} />
-                  </div>
-
-                  <div>
-                      <label className={labelClass}>Abertura (%)</label>
-                      <NumberInput value={config.comporta.abertura || 0} onChange={(val: number) => setConfig(prev => ({...prev, comporta: {...prev.comporta, abertura: val}}))} min={0} max={100} step={1} />
+                      <NumberInput value={config.comporta.angulo || 90} onChange={(val: number) => setConfig(prev => {
+                        const sinTheta = Math.sin((val * Math.PI) / 180);
+                        let h_topo = prev.comporta.profundidadeTopo;
+                        if (prev.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && prev.comporta.y_cg_direto) {
+                          h_topo = Math.max(0, prev.comporta.y_cg_direto * sinTheta - (prev.comporta.altura / 2) * sinTheta);
+                        }
+                        return {
+                          ...prev,
+                          comporta: {
+                            ...prev.comporta,
+                            angulo: val,
+                            profundidadeTopo: parseFloat(h_topo.toFixed(3))
+                          }
+                        };
+                      })} min={1} max={90} step={1} />
                   </div>
 
                   <div className="pt-4 border-t border-blue-50">

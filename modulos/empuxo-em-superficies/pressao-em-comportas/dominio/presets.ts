@@ -1,7 +1,30 @@
-import { FormaComporta, PosicaoDobradica } from './tipos';
+import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from './tipos';
 import { ConfiguracaoSimulacaoComporta } from './configuracao';
 
 export const PRESETS: { [key: string]: ConfiguracaoSimulacaoComporta & { title: string, subtitle: string } } = {
+  exercicioCircular60: {
+    title: "Exercício: Comporta Circular 60°",
+    subtitle: "D = 1,00 m, Y_CG = 1,50 m, θ = 60°",
+    sistemaUnidades: SistemaUnidades.TECNICO_KGF,
+    fluidoMontante: { chave: 'agua', nivel: 4.5, densidade: 1000, gravidade: 9.81 },
+    fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
+    comporta: {
+      ativa: true,
+      forma: FormaComporta.CIRCULAR,
+      largura: 1.0,
+      altura: 1.0,
+      profundidadeTopo: 0.866,
+      modoPosicionamento: ModoPosicionamentoComporta.Y_CG_DIRETO,
+      y_cg_direto: 1.50,
+      angulo: 60,
+      posicaoDobradica: PosicaoDobradica.NONE,
+      temTirante: false,
+      posicaoTiranteRelativa: 1,
+      anguloTirante: 0,
+      pesoProprio: 0,
+      pesoProprioAtivo: false,
+    }
+  },
   comportaVertical: {
     title: "Comporta Vertical",
     subtitle: "Clássica θ = 90°",

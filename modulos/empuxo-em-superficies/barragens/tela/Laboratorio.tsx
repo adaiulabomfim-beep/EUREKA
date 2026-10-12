@@ -7,13 +7,13 @@ import { PainelControles } from './PainelControles';
 import { PainelResultados } from './PainelResultados';
 import { Memorial } from './Memorial';
 import { DAM_PRESETS } from '../dominio/presets';
+import { salvarNoHistorico } from '../../../../interface/historicoGerenciador';
 
 interface DamLabProps {
     onContextUpdate?: (ctx: string) => void;
-    onDataUpdate?: (data: any) => void;
 }
 
-export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate, onDataUpdate }) => {
+export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   // STATE
   const [damType, setDamType] = useState<TipoBarragem>(TipoBarragem.GRAVIDADE);
   const [damHeight, setDamHeight] = useState<number>(15);
@@ -95,7 +95,32 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate, onDataUpda
   const liveResults = useMemo(() => simularBarragem(config), [damType, damHeight, effectiveBaseWidth, damCrestWidth, inclinationAngle, buttressAngle, archRadius, effectiveUpstreamLevel, effectiveDownstreamLevel, density, gravity]);
 
   useEffect(() => { setAnalyzedResults(null); }, [liveResults]);
-  const handleCalculate = () => { setAnalyzedResults(liveResults); };
+  const handleCalculate = () => {
+    setAnalyzedResults(liveResults);
+    if (liveResults) {
+      salvarNoHistorico({
+        modulo: 'barragens',
+        moduloNome: 'Barragens',
+        titulo: `Barragem ${damType} (H=${damHeight}m)`,
+        parametros: {
+          'Tipo': damType,
+          'Altura (m)': damHeight,
+          'Largura Base (m)': effectiveBaseWidth,
+          'Largura Crista (m)': damCrestWidth,
+          'Nível Montante (m)': effectiveUpstreamLevel,
+          ...(hasDownstream ? { 'Nível Jusante (m)': effectiveDownstreamLevel } : {}),
+        },
+        resultados: {
+          empuxo: liveResults.forceData.FR_net,
+          empuxoFormatado: `${(Math.abs(liveResults.forceData.FR_net) / 1000).toFixed(2)} kN/m`,
+          peso: liveResults.stabilityData?.weight,
+          pesoFormatado: liveResults.stabilityData ? `${(liveResults.stabilityData.weight / 1000).toFixed(2)} kN/m` : undefined,
+          centroPressao: `${liveResults.forceData.y_cp_net.toFixed(2)} m (do fundo)`,
+          segurancaOuStatus: liveResults.stabilityData?.safetyFactorOverturning ? `FS: ${liveResults.stabilityData.safetyFactorOverturning.toFixed(2)}` : undefined,
+        },
+      });
+    }
+  };
 
   const contextString = useMemo(() => `LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${effectiveBaseWidth}m, Largura Crista=${damCrestWidth}m, θ=${inclinationAngle}°, Nível Montante=${effectiveUpstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m`, [damType, damHeight, effectiveBaseWidth, damCrestWidth, inclinationAngle, effectiveUpstreamLevel, effectiveDownstreamLevel]);
 
@@ -105,7 +130,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate, onDataUpda
       }
   }, [contextString, onContextUpdate]);
 
-  const exportData = useMemo(() => ({
+  const exportData = {
     tipo: 'barragens',
     geometria: `Barragem ${damType}`,
     dimensoes: {
@@ -119,13 +144,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate, onDataUpda
     alturaSubmersa: effectiveUpstreamLevel,
     isAnalyzed: !!analyzedResults,
     analyzedResults: analyzedResults
-  }), [damType, damHeight, effectiveBaseWidth, damCrestWidth, analyzedResults, effectiveUpstreamLevel]);
-
-  useEffect(() => {
-    if (onDataUpdate) {
-      onDataUpdate(exportData);
-    }
-  }, [exportData, onDataUpdate]);
+  };
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,12 +1,11 @@
 import React, { useMemo } from 'react';
-import { Edges, Html } from '@react-three/drei';
+import { Edges } from '@react-three/drei';
 import { buildBarragemGravidade } from '../builders/buildBarragemGravidade';
 import { buildAguaGravidade } from '../builders/buildAguaGravidade';
 import { HatchMaterial } from '../core/materials';
 import { AnimatedWaterMaterial } from './AnimatedWater';
 import { GroundPlane } from './GroundPlane';
 import { construirGeometria } from '../../tipos/gravidade/geometria';
-import { calcularHidrostatica, calcularEstabilidade } from '../../tipos/gravidade/calculos';
 import { EmpuxoVector3D } from './EmpuxoVector3D';
 import { PressureDistribution3D } from './PressureDistribution3D';
 
@@ -52,14 +51,6 @@ export const BarragemScene: React.FC<any> = ({
     );
   }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, channelWidth, downstreamLevel]);
 
-  const hidrost = useMemo(() => {
-    return calcularHidrostatica(damHeight, inclinationAngle, upstreamLevel, downstreamLevel, 1000 * 9.81);
-  }, [damHeight, inclinationAngle, upstreamLevel, downstreamLevel]);
-
-  const estab = useMemo(() => {
-    return calcularEstabilidade(damHeight, damBaseWidth, damCrestWidth, upstreamLevel, downstreamLevel, force, y_cp);
-  }, [damHeight, damBaseWidth, damCrestWidth, upstreamLevel, downstreamLevel, force, y_cp]);
-
   return (
     <group>
       <GroundPlane damHeight={damHeight} damBaseWidth={damBaseWidth} channelWidth={channelWidth} actualBaseWidth={actualBaseWidth} />
@@ -95,7 +86,7 @@ export const BarragemScene: React.FC<any> = ({
                 actualBaseWidth={actualBaseWidth}
                 offsetX={actualBaseWidth / 2}
                 isUpstream={true}
-                color="#38bdf8" // Match 2D bright sky blue
+                color="#2563eb" // Bright royal blue (same configuration as 2D)
                 channelWidth={channelWidth}
               />
             </>
@@ -108,7 +99,7 @@ export const BarragemScene: React.FC<any> = ({
                 actualBaseWidth={actualBaseWidth}
                 offsetX={actualBaseWidth / 2}
                 isUpstream={false}
-                color="#38bdf8" // Match 2D bright sky blue
+                color="#3b82f6" // Bright sky blue (same configuration as 2D)
                 channelWidth={channelWidth}
                 damHeight={damHeight}
                 damCrestWidth={damCrestWidth}
@@ -125,11 +116,10 @@ export const BarragemScene: React.FC<any> = ({
               actualBaseWidth={actualBaseWidth}
               offsetX={actualBaseWidth / 2}
               isUpstream={force > 0}
-              label={force > 0 ? "FR" : "FR (Jusante)"}
+              label={force > 0 ? "Resultante (Net)" : "Resultante (Jusante)"}
               color={force > 0 ? "#ef4444" : "#f59e0b"}
             />
           )}
-
         </>
       )}
     </group>
