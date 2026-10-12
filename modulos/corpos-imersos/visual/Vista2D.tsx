@@ -228,7 +228,8 @@ export const Vista2D: React.FC<Vista2DProps> = ({
     [cx, centerOfBuoyancyY_visual, pan.y]
   );
 
-  const arrowLenP = Math.min(120, Math.max(30, objectWeight * 0.005));
+  const maxArrowP = Math.max(25, cy - 16);
+  const arrowLenP = Math.min(maxArrowP, Math.min(110, Math.max(30, objectWeight * 0.005)));
   const arrowLenE = Math.min(120, Math.max(30, buoyancyForce * 0.005));
 
   const showBuoyancyVector = isSimulating && h_sub_actual > 0.001;

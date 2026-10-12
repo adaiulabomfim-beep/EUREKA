@@ -46,111 +46,20 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   const [showFrontalView, setShowFrontalView] = useState<boolean>(true);
   const [showExerciseDims, setShowExerciseDims] = useState<boolean>(true);
 
-  // Pan and Zoom Navigation Engine (Interatividade idêntica ao módulo de Barragens)
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState<number>(1);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [isResetting, setIsResetting] = useState<boolean>(false);
-  const lastMouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const touchStartRef = useRef<{ x: number; y: number; dist?: number }>({ x: 0, y: 0 });
+  // Visualização 2D Fixa Padrão (Sem zoom e sem arrastar no 2D, conforme solicitado)
+  const pan = { x: 0, y: 0 };
+  const zoom = 1;
+  const isResetting = false;
 
   // Tooltips interativos de pontos notáveis
   const [hoveredItem, setHoveredItem] = useState<'CG' | 'CP' | 'PRISM' | null>(null);
 
-  const resetView = useCallback(() => {
-    setIsResetting(true);
-    setPan({ x: 0, y: 0 });
-    setZoom(1);
-    const timer = setTimeout(() => setIsResetting(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const zoomIn = useCallback(() => {
-    setZoom((z) => Math.min(2.8, +(z * 1.2).toFixed(2)));
-  }, []);
-
-  const zoomOut = useCallback(() => {
-    setZoom((z) => Math.max(0.4, +(z / 1.2).toFixed(2)));
-  }, []);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 0 || e.button === 1) {
-      setIsDragging(true);
-      lastMouseRef.current = { x: e.clientX, y: e.clientY };
-    }
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isDragging) return;
-      const dx = e.clientX - lastMouseRef.current.x;
-      const dy = e.clientY - lastMouseRef.current.y;
-      setPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-      lastMouseRef.current = { x: e.clientX, y: e.clientY };
-    },
-    [isDragging]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.08 : 0.92;
-    setZoom((prev) => Math.max(0.4, Math.min(2.8, +(prev * factor).toFixed(3))));
-  }, []);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    } else if (e.touches.length === 2) {
-      setIsDragging(false);
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      touchStartRef.current = { x: 0, y: 0, dist };
-    }
-  }, []);
-
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      if (e.touches.length === 1 && isDragging) {
-        const dx = e.touches[0].clientX - touchStartRef.current.x;
-        const dy = e.touches[0].clientY - touchStartRef.current.y;
-        setPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-        touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      } else if (e.touches.length === 2 && touchStartRef.current.dist) {
-        const dist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        const factor = dist / touchStartRef.current.dist;
-        setZoom((prev) => Math.max(0.4, Math.min(2.8, +(prev * factor).toFixed(3))));
-        touchStartRef.current.dist = dist;
-      }
-    },
-    [isDragging]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-    touchStartRef.current = { x: 0, y: 0 };
-  }, []);
+  const resetView = useCallback(() => {}, []);
+  const zoomIn = useCallback(() => {}, []);
+  const zoomOut = useCallback(() => {}, []);
 
   const interactionHandlers = {
-    onMouseDown: handleMouseDown,
-    onMouseMove: handleMouseMove,
-    onMouseUp: handleMouseUp,
-    onMouseLeave: handleMouseUp,
-    onWheel: handleWheel,
-    onTouchStart: handleTouchStart,
-    onTouchMove: handleTouchMove,
-    onTouchEnd: handleTouchEnd,
-    onDoubleClick: resetView,
-    style: { cursor: isDragging ? 'grabbing' : 'grab' },
+    style: { cursor: 'default' },
   };
 
   const isKgf = props.sistemaUnidades === SistemaUnidades.TECNICO_KGF;

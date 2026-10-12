@@ -280,22 +280,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
             <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover:-rotate-180" />
           </button>
         </>
-      ) : (
-        /* Botão REINICIAR na posição exata conforme o layout de referência */
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            resetView();
-          }}
-          className="group absolute bottom-6 right-6 z-30 flex items-center gap-2 px-4 py-2.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-wider active:scale-95 transition-all select-none"
-          title="Reiniciar visualização e zoom padrão"
-          aria-label="Reiniciar visualização"
-        >
-          <RotateCcw className="h-4 w-4 text-slate-600 transition-transform duration-500 group-hover:-rotate-180" />
-          <span>REINICIAR</span>
-        </button>
-      )}
+      ) : null}
 
       <svg
         width="100%"
