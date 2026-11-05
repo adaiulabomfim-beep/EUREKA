@@ -39,9 +39,15 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
   const [is3D, setIs3D] = useState(false);
   const [showVectors, setShowVectors] = useState(true);
 
+  const handleCalculate = () => {
+    setShowVectors(true);
+    props.onCalculate();
+  };
+
   return (
     <RenderizadorComporta
       {...props}
+      onCalculate={handleCalculate}
       is3D={is3D}
       setIs3D={setIs3D}
       showVectors={showVectors}

@@ -168,7 +168,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
   // Position of water surface line and slope intersection
   const waterSurfaceY = 125;
-  const surfX = Math.min(460, SVG_W * 0.60);
+  const surfX = Math.min(425, SVG_W * 0.56);
   const P_surf = { x: surfX, y: waterSurfaceY };
 
   // Helper for points on the inclined plane at distance Y along incline from water surface
@@ -195,44 +195,49 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   const P_bed_left = { x: P_bed_inc.x - 70, y: P_bed_inc.y };
 
   const wallThick = 26; // px
+  const wallHorizThick = wallThick / sinTheta;
+  const rightSlabX = props.downstreamLevel > 0 ? SVG_W : P_bed_inc.x + wallHorizThick;
+  const rightSoilX = props.downstreamLevel > 0 ? SVG_W : P_bed_inc.x + wallHorizThick + 50;
 
   // --- SVG GEOMETRIC MESH / POLYGONS ---
   const renderedFaces: any[] = [];
 
-  // 1. Foundation Bed (Earth / Concrete bottom) — colado nos limites inferior e esquerdo da janela
+  // 1. Foundation Bed (Earth / Concrete bottom) — estende-se sob jusante quando ativa
   const soilBottomY = SVG_H;
   renderedFaces.push({
     id: 'canal-bed-base',
     kind: 'DAM',
     pts: [
       { x: 0, y: P_bed_inc.y + 24 },
-      { x: P_bed_inc.x + n_out.x * wallThick + 50, y: P_bed_inc.y + 24 },
-      { x: P_bed_inc.x + n_out.x * wallThick + 50, y: soilBottomY },
+      { x: rightSoilX, y: P_bed_inc.y + 24 },
+      { x: rightSoilX, y: soilBottomY },
       { x: 0, y: soilBottomY },
     ],
-    fill: '#a16207',
-    stroke: '#713f12',
+    fill: '#977347',
+    stroke: '#4a2a0e',
     strokeWidth: 1.2,
     hatchPattern: 'url(#earthPattern)',
     opacity: 1,
   });
 
-  // 2. Continuous Masonry Wall (Estrutura de alvenaria em toda a extensão do paramento e sob toda a água de montante)
+  // 2. Continuous Concrete Wall (Estrutura de concreto contínua no paramento e na laje de fundo)
   renderedFaces.push({
     id: 'wall-full-masonry',
     kind: 'DAM',
     pts: [
       P_crest,
-      { x: P_crest.x + n_out.x * wallThick, y: P_crest.y + n_out.y * wallThick },
-      { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + n_out.y * wallThick },
-      { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + 24 },
+      { x: P_crest.x + wallHorizThick, y: P_crest.y },
+      { x: P_bed_inc.x + wallHorizThick, y: P_bed_inc.y },
+      { x: rightSlabX, y: P_bed_inc.y },
+      { x: rightSlabX, y: P_bed_inc.y + 24 },
       { x: 0, y: P_bed_inc.y + 24 },
       { x: 0, y: P_bed_inc.y },
       P_bed_inc,
     ],
-    fill: 'url(#brickPattern)',
-    stroke: '#475569',
+    fill: '#9ca3af',
+    stroke: '#6b7280',
     strokeWidth: 1.2,
+    hatchPattern: 'url(#concretePattern)',
     opacity: 1,
   });
 
@@ -254,21 +259,24 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     opacity: 0.95,
   });
 
-  // Helper para cota visual de jusante proporcional ao fundo do canal
-  const canalBedSurfaceY = P_bed_inc.y + 24;
-  const downRatio = props.upstreamLevel > 0 ? Math.min(1.15, Math.max(0, props.downstreamLevel / props.upstreamLevel)) : 0;
-  const downDepthY = canalBedSurfaceY - downRatio * (canalBedSurfaceY - waterSurfaceY);
+  // Helper para cota visual de jusante proporcional ao fundo do canal (y = P_bed_inc.y)
+  const canalBedSurfaceY = P_bed_inc.y;
+  const downRatio = props.upstreamLevel > 0 ? Math.min(1.12, Math.max(0, props.downstreamLevel / props.upstreamLevel)) : 0;
+  const downRawY = canalBedSurfaceY - downRatio * (canalBedSurfaceY - waterSurfaceY);
+  const downDepthY = Math.min(canalBedSurfaceY, Math.max(downRawY, P_crest.y + 6));
+  const downStartX = P_surf.x + (u_down.x / u_down.y) * (downDepthY - waterSurfaceY) + wallHorizThick;
+  const downBottomLeftX = P_bed_inc.x + wallHorizThick;
 
-  // 5. Downstream water body (if active)
+  // 5. Downstream water body (if active) — encaixado perfeitamente na face traseira da parede inclinada
   if (props.downstreamLevel > 0) {
     renderedFaces.push({
       id: 'water-downstream-body',
       kind: 'WATER_DOWN',
       pts: [
-        { x: P_bot.x + n_out.x * wallThick, y: Math.min(canalBedSurfaceY, Math.max(downDepthY, P_crest.y + n_out.y * wallThick)) },
+        { x: downStartX, y: downDepthY },
         { x: SVG_W, y: downDepthY },
         { x: SVG_W, y: canalBedSurfaceY },
-        { x: P_bed_inc.x + n_out.x * wallThick, y: canalBedSurfaceY },
+        { x: downBottomLeftX, y: canalBedSurfaceY },
       ],
       fill: 'url(#fluidDepthB)',
       stroke: 'none',
@@ -395,7 +403,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
   // 2. Água Jusante (se ativada): Ondas móveis
   if (props.downstreamLevel > 0) {
-    const downStartX = P_bot.x + n_out.x * wallThick;
     overlayElements.push(
       <g key="downstream-surface-waves" pointerEvents="none">
         <line
@@ -494,7 +501,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
     // Largura do diagrama proporcional à pressão em cada ponto
     const maxP = Math.max(1, p_bot_Pa);
-    const maxDiagWidth = 65; // px
+    const maxDiagWidth = 56; // px
     const w_top = (p_top_Pa / maxP) * maxDiagWidth;
     const w_bot = maxDiagWidth;
 
@@ -506,8 +513,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
     // Ponto de início da seta F_R / E no diagrama
     const eStart = {
-      x: P_CP.x - n_out.x * (maxDiagWidth + 40),
-      y: P_CP.y - n_out.y * (maxDiagWidth + 40),
+      x: P_CP.x - n_out.x * (maxDiagWidth + 36),
+      y: P_CP.y - n_out.y * (maxDiagWidth + 36),
     };
 
     return (
@@ -554,59 +561,33 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           );
         })}
 
-        {/* Label p_topo */}
-        <g transform={`translate(${ptTopOuter.x - n_out.x * 12 - 22}, ${ptTopOuter.y - n_out.y * 6 - 20})`}>
-          <rect
-            x={-44}
-            y={-9}
-            width={88}
-            height={18}
-            rx={3}
-            fill="white"
-            className="dark:fill-slate-900"
-            stroke="none"
-          />
-          <text
-            x={0}
-            y={0}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#475569"
-            className="dark:fill-slate-200"
-            fontSize="11"
-            fontWeight="700"
-            stroke="none"
-          >
-            p<tspan baselineShift="sub" fontSize="7.5">topo</tspan> = {p_top_disp} {p_unit}
-          </text>
-        </g>
+        {/* Label p_topo (sem fundo branco, alinhado acima do topo do prisma) */}
+        <text
+          x={ptTopOuter.x - u_down.x * 10 - n_out.x * 4}
+          y={ptTopOuter.y - u_down.y * 10 - n_out.y * 4 - 4}
+          textAnchor="end"
+          dominantBaseline="central"
+          fill="#0f172a"
+          fontSize="11"
+          fontWeight="700"
+          stroke="none"
+        >
+          p<tspan baselineShift="sub" fontSize="7.5">topo</tspan> = {p_top_disp} {p_unit}
+        </text>
 
-        {/* Label p_base */}
-        <g transform={`translate(${ptBotOuter.x - n_out.x * 12 - 14}, ${ptBotOuter.y - n_out.y * 6 + 22})`}>
-          <rect
-            x={-44}
-            y={-9}
-            width={88}
-            height={18}
-            rx={3}
-            fill="white"
-            className="dark:fill-slate-900"
-            stroke="none"
-          />
-          <text
-            x={0}
-            y={0}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#475569"
-            className="dark:fill-slate-200"
-            fontSize="11"
-            fontWeight="700"
-            stroke="none"
-          >
-            p<tspan baselineShift="sub" fontSize="7.5">base</tspan> = {p_bot_disp} {p_unit}
-          </text>
-        </g>
+        {/* Label p_base (sem fundo branco, alinhado abaixo da base do prisma) */}
+        <text
+          x={ptBotOuter.x + u_down.x * 12 - n_out.x * 4}
+          y={ptBotOuter.y + u_down.y * 12 - n_out.y * 4 + 6}
+          textAnchor="end"
+          dominantBaseline="central"
+          fill="#0f172a"
+          fontSize="11"
+          fontWeight="700"
+          stroke="none"
+        >
+          p<tspan baselineShift="sub" fontSize="7.5">base</tspan> = {p_bot_disp} {p_unit}
+        </text>
 
         {/* Seta de F_R / E apontando do diagrama diretamente para o Ponto E (CP) */}
         <line
@@ -620,45 +601,24 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           className="transition-all"
         />
 
-        {/* Badge da Força Resultante E com Efeito Glow */}
+        {/* Rótulo limpo da Força Resultante E (sem fundo branco) */}
         <g
-          transform={`translate(${eStart.x - n_out.x * 36 - u_down.x * 10}, ${eStart.y - n_out.y * 36 - u_down.y * 10})`}
-          filter="url(#glowResultant)"
+          transform={`translate(${eStart.x - n_out.x * 8}, ${eStart.y - n_out.y * 8 - 8})`}
           onMouseEnter={() => setHoveredItem('CP')}
           onMouseLeave={() => setHoveredItem(null)}
           style={{ cursor: 'pointer' }}
         >
-          <rect
-            x={-42}
-            y={-14}
-            width={84}
-            height={28}
-            rx={6}
-            fill="#0f172a"
-            stroke={hoveredItem === 'CP' ? '#f87171' : '#ffffff'}
-            strokeWidth={hoveredItem === 'CP' ? 2 : 1.5}
-          />
           <text
             x={0}
-            y={-2}
-            textAnchor="middle"
+            y={0}
+            textAnchor="end"
             dominantBaseline="central"
-            fill="#ffffff"
-            fontSize="11"
-            fontWeight="bold"
+            fill="#b91c1c"
+            fontSize="12"
+            fontWeight="800"
+            stroke="none"
           >
             E = {force_disp}
-          </text>
-          <text
-            x={0}
-            y={8}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#94a3b8"
-            fontSize="8"
-            fontWeight="bold"
-          >
-            ({isKgf ? `${F_resultant_kN.toFixed(1)} kN` : `${Math.round(F_resultant_kgf).toLocaleString('pt-BR')} kgf`})
           </text>
         </g>
       </g>
@@ -669,7 +629,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   const renderFrontalView = () => {
     if (!showFrontalView || !props.hasGate) return null;
 
-    const D_proj = 190;
+    const D_proj = 185;
     const R_px = (H * SCALE) / 2;
     const W_px = W * SCALE;
 
@@ -680,7 +640,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     };
 
     // Projection Lines extending perpendicular from the gate on the incline
-    const projLineExtra = 40;
+    const projLineExtra = 32;
     const P_top_proj_end = {
       x: P_top.x + n_out.x * (D_proj + R_px + projLineExtra),
       y: P_top.y + n_out.y * (D_proj + R_px + projLineExtra),
@@ -706,7 +666,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     };
 
     // Dimension line across the frontal face
-    const dimOffset = R_px + 28;
+    const dimOffset = R_px + 24;
     const dimP1 = {
       x: P_top_proj.x + n_out.x * dimOffset,
       y: P_top_proj.y + n_out.y * dimOffset,
@@ -727,8 +687,9 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           x2={P_top_proj_end.x}
           y2={P_top_proj_end.y}
           stroke="#94a3b8"
-          strokeWidth="1.2"
+          strokeWidth="1.1"
           strokeDasharray="4 3"
+          opacity="0.7"
         />
         <line
           x1={P_bot.x}
@@ -736,8 +697,9 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           x2={P_bot_proj_end.x}
           y2={P_bot_proj_end.y}
           stroke="#94a3b8"
-          strokeWidth="1.2"
+          strokeWidth="1.1"
           strokeDasharray="4 3"
+          opacity="0.7"
         />
 
         {/* Dimension extension ticks to frontal dimension */}
@@ -747,7 +709,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           x2={dimP1.x}
           y2={dimP1.y}
           stroke="#64748b"
-          strokeWidth="1.6"
+          strokeWidth="1.4"
           strokeDasharray="3 3"
           opacity="0.45"
         />
@@ -757,47 +719,64 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           x2={dimP2.x}
           y2={dimP2.y}
           stroke="#64748b"
-          strokeWidth="1.6"
+          strokeWidth="1.4"
           strokeDasharray="3 3"
           opacity="0.45"
         />
 
-        {/* Dimension line with arrows for gate size/diameter */}
-        <line
-          x1={dimP1.x}
-          y1={dimP1.y}
-          x2={dimP2.x}
-          y2={dimP2.y}
-          stroke="#64748b"
-          strokeWidth="1.6"
-          markerStart="url(#arrow)"
-          markerEnd="url(#arrow)"
-        />
-        {/* Dimension Label */}
+        {/* Dimension line with arrows and clean break for gate size/diameter */}
         {(() => {
-          const cx = (dimP1.x + dimP2.x) / 2 + n_out.x * 14;
-          const cy = (dimP1.y + dimP2.y) / 2 + n_out.y * 14;
-          const textW = dimLabel.length * 7 + 10;
+          const dx = dimP2.x - dimP1.x;
+          const dy = dimP2.y - dimP1.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const ux = dx / len;
+          const uy = dy / len;
+          const cx = (dimP1.x + dimP2.x) / 2;
+          const cy = (dimP1.y + dimP2.y) / 2;
+          const gapHalf = 13;
           return (
             <g>
-              <rect
-                x={cx - textW / 2}
-                y={cy - 9}
-                width={textW}
-                height={18}
-                fill="white"
-                className="dark:fill-slate-900"
-                stroke="none"
-                rx={3}
-              />
+              {len > gapHalf * 2 + 10 ? (
+                <>
+                  <line
+                    x1={dimP1.x}
+                    y1={dimP1.y}
+                    x2={cx - ux * gapHalf}
+                    y2={cy - uy * gapHalf}
+                    stroke="#64748b"
+                    strokeWidth="1.5"
+                    markerStart="url(#arrow)"
+                  />
+                  <line
+                    x1={cx + ux * gapHalf}
+                    y1={cy + uy * gapHalf}
+                    x2={dimP2.x}
+                    y2={dimP2.y}
+                    stroke="#64748b"
+                    strokeWidth="1.5"
+                    markerEnd="url(#arrow)"
+                  />
+                </>
+              ) : (
+                <line
+                  x1={dimP1.x}
+                  y1={dimP1.y}
+                  x2={dimP2.x}
+                  y2={dimP2.y}
+                  stroke="#64748b"
+                  strokeWidth="1.5"
+                  markerStart="url(#arrow)"
+                  markerEnd="url(#arrow)"
+                />
+              )}
               <text
                 x={cx}
                 y={cy}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fill="#475569"
+                fill="#334155"
                 className="dark:fill-slate-200"
-                fontSize="12"
+                fontSize="11.5"
                 fontWeight="700"
                 stroke="none"
               >
@@ -898,8 +877,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                 const a = (i / steps) * Math.PI;
                 const s = Math.sin(a) * H_px;
                 const c = Math.cos(a) * R_semi;
-                const px = P_top_proj.x + u_down.x * s + n_out.x * c;
-                const py = P_top_proj.y + u_down.y * s + n_out.y * c;
+                const px = P_bot_proj.x - u_down.x * s + n_out.x * c;
+                const py = P_bot_proj.y - u_down.y * s + n_out.y * c;
                 pts.push(`${px.toFixed(2)},${py.toFixed(2)}`);
               }
               const dSemi = `M ${pts.join(' L ')} Z`;
@@ -927,8 +906,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <circle cx={C_proj.x} cy={C_proj.y} r={4.5} fill="#ffffff" stroke="#0f172a" strokeWidth={2} />
           <circle cx={C_proj.x} cy={C_proj.y} r={1.5} fill="#0f172a" />
           <text
-            x={C_proj.x - n_out.x * 12 + u_down.x * 6}
-            y={C_proj.y - n_out.y * 12 + u_down.y * 6}
+            x={C_proj.x - n_out.x * 14 - u_down.x * 12}
+            y={C_proj.y - n_out.y * 14 - u_down.y * 12}
             textAnchor="middle"
             dominantBaseline="central"
             fill="#0f172a"
@@ -944,8 +923,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         <g>
           <circle cx={CP_proj.x} cy={CP_proj.y} r={4.5} fill="#ef4444" stroke="#ffffff" strokeWidth={1.8} />
           <text
-            x={CP_proj.x - n_out.x * 14}
-            y={CP_proj.y - n_out.y * 14}
+            x={CP_proj.x + n_out.x * 15 + u_down.x * 12}
+            y={CP_proj.y + n_out.y * 15 + u_down.y * 12}
             textAnchor="middle"
             dominantBaseline="central"
             fill="#b91c1c"
@@ -973,84 +952,92 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   };
 
   // --- RENDER TEXTBOOK ENGINEERING DIMENSIONS (COTAGENS DIDÁTICAS) ---
-  // Estilo padronizado idêntico ao módulo de Barragens
+  // Visualização limpa, organizada e sem fundos brancos nas cotas e informações
   const renderDimensions = () => {
     if (!showExerciseDims) return null;
 
     const dims: React.ReactNode[] = [];
 
-    // Rótulos das cotas verticais (h) escalonados em "faixas" logo abaixo da linha d'água,
-    // para que nunca se sobreponham entre si nem às demais anotações.
-    // Retorna o deslocamento Y do rótulo em relação ao ponto médio da cota.
-    const labelBandY = (pY: number, band: number) => {
-      const mid = (waterSurfaceY + pY) / 2;
-      const target = waterSurfaceY + 18 + band * 22;
-      return Math.min(target, pY - 12) - mid;
-    };
-
-    // Helper para cotas ortogonais (estilo Barragens)
-    const drawDim = (
+    // Helper para cotas verticais ortogonais (sem fundo branco e com interrupção limpa da linha no texto)
+    const drawVerticalDimAtX = (
       key: string,
       p1: { x: number; y: number },
       p2: { x: number; y: number },
+      dimX: number,
       labelNode: React.ReactNode,
-      approxCharLen: number,
-      offsetPx: { x: number; y: number } = { x: 0, y: 0 },
-      textOffsetPx: { x: number; y: number } = { x: 0, y: 0 }
+      labelRatioY: number = 0.5
     ) => {
-      const p1Off = { x: p1.x + offsetPx.x, y: p1.y + offsetPx.y };
-      const p2Off = { x: p2.x + offsetPx.x, y: p2.y + offsetPx.y };
-
-      const cx = (p1Off.x + p2Off.x) / 2 + textOffsetPx.x;
-      const cy = (p1Off.y + p2Off.y) / 2 + textOffsetPx.y;
-
-      const textW = approxCharLen * 7 + 10;
-      const textH = 18;
+      const yTop = Math.min(p1.y, p2.y);
+      const yBot = Math.max(p1.y, p2.y);
+      const spanY = yBot - yTop;
+      const cy = yTop + Math.max(16, Math.min(spanY - 16, spanY * labelRatioY));
+      const gapHalfY = 10;
 
       return (
-        <g key={key} stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.95">
+        <g key={key} fill="none" opacity="0.95">
+          {/* Linhas de chamada tracejadas horizontais */}
           <line
             x1={p1.x}
             y1={p1.y}
-            x2={p1Off.x}
-            y2={p1Off.y}
+            x2={dimX}
+            y2={p1.y}
+            stroke="#64748b"
+            strokeWidth="1.2"
             strokeDasharray="3 3"
-            opacity="0.45"
+            opacity="0.4"
           />
           <line
             x1={p2.x}
             y1={p2.y}
-            x2={p2Off.x}
-            y2={p2Off.y}
+            x2={dimX}
+            y2={p2.y}
+            stroke="#64748b"
+            strokeWidth="1.2"
             strokeDasharray="3 3"
-            opacity="0.45"
+            opacity="0.4"
           />
-          <line
-            x1={p1Off.x}
-            y1={p1Off.y}
-            x2={p2Off.x}
-            y2={p2Off.y}
-            markerStart="url(#arrow)"
-            markerEnd="url(#arrow)"
-          />
-          <rect
-            x={cx - textW / 2}
-            y={cy - textH / 2}
-            width={textW}
-            height={textH}
-            fill="white"
-            className="dark:fill-slate-900"
-            rx={3}
-            stroke="none"
-          />
+          {/* Linha de cota dividida acima e abaixo do texto para não cruzar o rótulo */}
+          {spanY > gapHalfY * 2 + 10 ? (
+            <>
+              <line
+                x1={dimX}
+                y1={yTop}
+                x2={dimX}
+                y2={cy - gapHalfY}
+                stroke="#475569"
+                strokeWidth="1.5"
+                markerStart="url(#arrow)"
+              />
+              <line
+                x1={dimX}
+                y1={cy + gapHalfY}
+                x2={dimX}
+                y2={yBot}
+                stroke="#475569"
+                strokeWidth="1.5"
+                markerEnd="url(#arrow)"
+              />
+            </>
+          ) : (
+            <line
+              x1={dimX}
+              y1={yTop}
+              x2={dimX}
+              y2={yBot}
+              stroke="#475569"
+              strokeWidth="1.5"
+              markerStart="url(#arrow)"
+              markerEnd="url(#arrow)"
+            />
+          )}
           <text
-            x={cx}
+            x={dimX}
             y={cy}
             textAnchor="middle"
             dominantBaseline="central"
-            fill="#475569"
-            className="dark:fill-slate-200"
-            fontSize="12"
+            fill="#0f172a"
+            className="dark:fill-slate-100"
+            fontSize="11.5"
             fontWeight="700"
             stroke="none"
           >
@@ -1060,7 +1047,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       );
     };
 
-    // Helper para cotas inclinadas paralelas à superfície (estilo Barragens)
+    // Helper para cotas inclinadas paralelas à superfície (sem fundo branco e com interrupção na linha)
     const drawSlantedDim = (
       key: string,
       p1Orig: { x: number; y: number },
@@ -1068,59 +1055,81 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       p1Off: { x: number; y: number },
       p2Off: { x: number; y: number },
       labelNode: React.ReactNode,
-      approxCharLen: number,
-      textOffsetPx: { x: number; y: number } = { x: 0, y: 0 }
+      labelRatio: number = 0.5
     ) => {
-      const cx = (p1Off.x + p2Off.x) / 2 + textOffsetPx.x;
-      const cy = (p1Off.y + p2Off.y) / 2 + textOffsetPx.y;
+      const dx = p2Off.x - p1Off.x;
+      const dy = p2Off.y - p1Off.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
 
-      const textW = approxCharLen * 7 + 10;
-      const textH = 18;
+      const cx = p1Off.x + dx * labelRatio;
+      const cy = p1Off.y + dy * labelRatio;
+      const gapHalf = 14;
 
       return (
-        <g key={key} stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.95">
+        <g key={key} fill="none" opacity="0.95">
           <line
             x1={p1Orig.x}
             y1={p1Orig.y}
             x2={p1Off.x}
             y2={p1Off.y}
+            stroke="#64748b"
+            strokeWidth="1.2"
             strokeDasharray="3 3"
-            opacity="0.45"
+            opacity="0.4"
           />
           <line
             x1={p2Orig.x}
             y1={p2Orig.y}
             x2={p2Off.x}
             y2={p2Off.y}
+            stroke="#64748b"
+            strokeWidth="1.2"
             strokeDasharray="3 3"
-            opacity="0.45"
+            opacity="0.4"
           />
-          <line
-            x1={p1Off.x}
-            y1={p1Off.y}
-            x2={p2Off.x}
-            y2={p2Off.y}
-            markerStart="url(#arrow)"
-            markerEnd="url(#arrow)"
-          />
-          <rect
-            x={cx - textW / 2}
-            y={cy - textH / 2}
-            width={textW}
-            height={textH}
-            fill="white"
-            className="dark:fill-slate-900"
-            rx={3}
-            stroke="none"
-          />
+          {len > gapHalf * 2 + 12 ? (
+            <>
+              <line
+                x1={p1Off.x}
+                y1={p1Off.y}
+                x2={cx - ux * gapHalf}
+                y2={cy - uy * gapHalf}
+                stroke="#475569"
+                strokeWidth="1.5"
+                markerStart="url(#arrow)"
+              />
+              <line
+                x1={cx + ux * gapHalf}
+                y1={cy + uy * gapHalf}
+                x2={p2Off.x}
+                y2={p2Off.y}
+                stroke="#475569"
+                strokeWidth="1.5"
+                markerEnd="url(#arrow)"
+              />
+            </>
+          ) : (
+            <line
+              x1={p1Off.x}
+              y1={p1Off.y}
+              x2={p2Off.x}
+              y2={p2Off.y}
+              stroke="#475569"
+              strokeWidth="1.5"
+              markerStart="url(#arrow)"
+              markerEnd="url(#arrow)"
+            />
+          )}
           <text
             x={cx}
             y={cy}
             textAnchor="middle"
             dominantBaseline="central"
-            fill="#475569"
+            fill="#334155"
             className="dark:fill-slate-200"
-            fontSize="12"
+            fontSize="11.5"
             fontWeight="700"
             stroke="none"
           >
@@ -1136,16 +1145,16 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       x: number,
       y: number,
       text: string,
-      flipX: boolean = true
+      flipX: boolean = false
     ) => {
       const dir = flipX ? -1 : 1;
       return (
         <g key={key} stroke="#475569" strokeWidth="1.2" opacity="0.95">
           <polygon points={`${x},${y} ${x - 7},${y - 14} ${x},${y - 14}`} fill="none" />
           <polygon points={`${x},${y} ${x},${y - 14} ${x + 7},${y - 14}`} fill="#475569" />
-          <polyline points={`${x},${y - 14} ${x},${y - 30} ${x + dir * 52},${y - 30}`} fill="none" />
+          <polyline points={`${x},${y - 14} ${x},${y - 30} ${x + dir * 56},${y - 30}`} fill="none" />
           <text
-            x={x + dir * 26}
+            x={x + dir * 28}
             y={y - 34}
             textAnchor="middle"
             dominantBaseline="alphabetic"
@@ -1161,119 +1170,107 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       );
     };
 
-    // 1. Símbolo de Nível da Água Montante (NA) posicionado junto à parede, com haste voltada para a esquerda
-    const naX = P_surf.x - 18;
+    // 1. Símbolo de Nível da Água Montante (NA) no canto esquerdo da superfície d'água, com traço virado para a esquerda
+    const naX = 82;
     const naText = `NA=${(props.upstreamLevel || 0).toFixed(2)}`;
     dims.push(drawLevelSymbol('na-level-symbol', naX, waterSurfaceY, naText, true));
 
     // Nível da Água Jusante (se ativo)
     if (props.downstreamLevel > 0) {
-      const naDownX = SVG_W - 70;
-      dims.push(drawLevelSymbol('na-downstream-symbol', naDownX, downDepthY, `NA=${props.downstreamLevel.toFixed(2)}`, false));
+      const naDownX = SVG_W - 28;
+      dims.push(drawLevelSymbol('na-downstream-symbol', naDownX, downDepthY, `NA=${props.downstreamLevel.toFixed(2)}`, true));
     }
 
-    // 2. Indicador do Peso Específico (γ) na massa d'água (limpo e sem bordas pesadas)
+    // 2. Indicador do Peso Específico (γ) posicionado de forma limpa no canto inferior esquerdo do reservatório (sem fundo branco)
     dims.push(
-      <g key="water-gamma-badge" transform={`translate(95, ${waterSurfaceY + 115})`}>
-        <rect
-          x={-55}
-          y={-18}
-          width={110}
-          height={36}
-          rx={3}
-          fill="white"
-          className="dark:fill-slate-900"
-          stroke="none"
-          opacity={0.92}
-        />
+      <g key="water-gamma-badge" transform={`translate(18, ${P_bed_inc.y - 24})`}>
         <text
           x={0}
-          y={-5}
-          textAnchor="middle"
+          y={0}
+          textAnchor="start"
           dominantBaseline="central"
-          fill="#1e3a8a"
-          className="dark:fill-blue-300"
-          fontSize="11"
+          fill="#0f172a"
+          className="dark:fill-blue-200"
+          fontSize="11.5"
           fontWeight="700"
+          stroke="none"
         >
-          γ = {gamma_kgf} kgf/m³
-        </text>
-        <text
-          x={0}
-          y={10}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="#475569"
-          className="dark:fill-slate-400"
-          fontSize="9"
-          fontWeight="600"
-        >
-          ({(gamma_N / 1000).toFixed(2)} kN/m³)
+          γ = {gamma_kgf} kgf/m³ ({(gamma_N / 1000).toFixed(2)} kN/m³)
         </text>
       </g>
     );
 
-    // 3. Profundidade vertical até o topo da comporta: h_topo
-    dims.push(
-      drawDim(
-        'dim-h-top',
-        { x: P_top.x, y: waterSurfaceY },
-        { x: P_top.x, y: P_top.y },
-        <>
-          h<tspan baselineShift="sub" fontSize="8.5">topo</tspan> = {h_top.toFixed(2)} m
-        </>,
-        14,
-        { x: -35, y: 0 },
-        { x: 0, y: labelBandY(P_top.y, 0) }
-      )
-    );
+    // 3, 4 e 5. Colunas verticais de profundidade (h_topo, h_CG, h_CP) organizadas à esquerda do prisma de pressão
+    // No modo Y_CG Direto, antes de analisar, o dado de entrada do exercício é y_CG = 1.50 m (ao longo da inclinação),
+    // enquanto h_topo e h_CG (projeções verticais h = y·senθ) e h_CP aparecem ao clicar em Analisar (ou quando em modo Padrão h₁).
+    const isDirectYcgMode = props.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO;
+    const prismClearX =
+      props.isAnalyzed && props.showVectors
+        ? Math.min(P_bot.x - n_out.x * 65, P_CP.x - n_out.x * 105) - 34
+        : Math.min(P_top.x, P_bot.x) - 35;
 
-    // 4. Profundidade vertical do centróide: h_CG (espaçada horizontalmente e texto posicionado sem sobreposição)
-    const dimX_cg_off = -95;
-    const cgDepth = Math.max(20, P_CG.y - waterSurfaceY);
-    dims.push(
-      drawDim(
-        'dim-h-cg',
-        { x: P_CG.x, y: waterSurfaceY },
-        { x: P_CG.x, y: P_CG.y },
-        <>
-          h<tspan baselineShift="sub" fontSize="8.5">CG</tspan> = {h_CG.toFixed(2)} m
-        </>,
-        13,
-        { x: dimX_cg_off, y: 0 },
-        { x: 0, y: labelBandY(P_CG.y, 1) }
-      )
-    );
+    const colTopX = Math.max(155, Math.min(245, prismClearX));
+    const colCgX = Math.max(92, colTopX - 68);
+    const colCpX = Math.max(32, colCgX - 68);
 
-    // 5. Profundidade vertical do centro de pressão: h_CP (somente após análise, posicionado sem colidir com h_CG nem com o empuxo)
-    if (props.isAnalyzed) {
-      const dimX_cp_off = -160;
-      const cpDepth = Math.max(20, P_CP.y - waterSurfaceY);
+    // 3. Profundidade vertical até o topo da comporta: h_topo (exibida sempre no modo h₁ ou após Analisar)
+    if (!isDirectYcgMode || props.isAnalyzed) {
       dims.push(
-        drawDim(
-          'dim-h-cp',
-          { x: P_CP.x, y: waterSurfaceY },
-          { x: P_CP.x, y: P_CP.y },
+        drawVerticalDimAtX(
+          'dim-h-top',
+          { x: P_top.x, y: waterSurfaceY },
+          { x: P_top.x, y: P_top.y },
+          colTopX,
           <>
-            h<tspan baselineShift="sub" fontSize="8.5">CP</tspan> = {h_CP.toFixed(2)} m
+            h<tspan baselineShift="sub" fontSize="8.5">topo</tspan> = {h_top.toFixed(2)} m
           </>,
-          13,
-          { x: dimX_cp_off, y: 0 },
-          { x: 0, y: labelBandY(P_CP.y, 2) }
+          0.36
         )
       );
     }
 
-    // 6. Ângulo de Inclinação (θ) na superfície d'água
-    const arcR = 48;
+    // 4. Profundidade vertical do centróide: h_CG (exibida ao analisar)
+    if (props.isAnalyzed) {
+      dims.push(
+        drawVerticalDimAtX(
+          'dim-h-cg',
+          { x: P_CG.x, y: waterSurfaceY },
+          { x: P_CG.x, y: P_CG.y },
+          colCgX,
+          <>
+            h<tspan baselineShift="sub" fontSize="8.5">CG</tspan> = {h_CG.toFixed(2)} m
+          </>,
+          0.52
+        )
+      );
+    }
+
+    // 5. Profundidade vertical do centro de pressão: h_CP (somente após análise)
+    if (props.isAnalyzed) {
+      dims.push(
+        drawVerticalDimAtX(
+          'dim-h-cp',
+          { x: P_CP.x, y: waterSurfaceY },
+          { x: P_CP.x, y: P_CP.y },
+          colCpX,
+          <>
+            h<tspan baselineShift="sub" fontSize="8.5">CP</tspan> = {h_CP.toFixed(2)} m
+          </>,
+          0.68
+        )
+      );
+    }
+
+    // 6. Ângulo de Inclinação (θ) na superfície d'água (sem fundo branco)
+    const arcR = 46;
     const arcEndX = P_surf.x - u_down.x * arcR;
     const arcEndY = P_surf.y - u_down.y * arcR;
     dims.push(
-      <g key="angle-arc-indicator" stroke="#64748b" strokeWidth="1.6" fill="none">
+      <g key="angle-arc-indicator" stroke="#64748b" strokeWidth="1.5" fill="none">
         <line
           x1={P_surf.x}
           y1={waterSurfaceY}
-          x2={P_surf.x + 75}
+          x2={P_surf.x + 72}
           y2={waterSurfaceY}
           strokeDasharray="3 3"
           opacity="0.45"
@@ -1281,36 +1278,24 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         <path
           d={`M ${P_surf.x + arcR},${waterSurfaceY} A ${arcR} ${arcR} 0 0 0 ${arcEndX},${arcEndY}`}
         />
-        <g transform={`translate(${P_surf.x + arcR + 14}, ${waterSurfaceY - 14})`}>
-          <rect
-            x={-18}
-            y={-9}
-            width={36}
-            height={18}
-            rx={3}
-            fill="white"
-            className="dark:fill-slate-900"
-            stroke="none"
-          />
-          <text
-            x={0}
-            y={0}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#475569"
-            className="dark:fill-slate-200"
-            fontSize="12"
-            fontWeight="700"
-            stroke="none"
-          >
-            {thetaDeg}°
-          </text>
-        </g>
+        <text
+          x={P_surf.x + arcR + 14}
+          y={waterSurfaceY - 12}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#334155"
+          className="dark:fill-slate-200"
+          fontSize="12"
+          fontWeight="700"
+          stroke="none"
+        >
+          {thetaDeg}°
+        </text>
       </g>
     );
 
-    // 7. Distâncias inclinadas ao longo do plano da comporta: y_CG e y_CP (com subíndices perfeitos e sem underscores)
-    const D_slanted_cg = 55;
+    // 7. Distâncias inclinadas ao longo do plano da comporta: y_CG e y_CP (escalonadas para não colidirem com a parede)
+    const D_slanted_cg = 66;
     const ref_surf_cg = { x: P_surf.x + n_out.x * D_slanted_cg, y: P_surf.y + n_out.y * D_slanted_cg };
     const ref_cg_off = { x: P_CG.x + n_out.x * D_slanted_cg, y: P_CG.y + n_out.y * D_slanted_cg };
 
@@ -1324,13 +1309,13 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         <>
           y<tspan baselineShift="sub" fontSize="8.5">CG</tspan> = {Y_CG.toFixed(2)} m
         </>,
-        13
+        0.42
       )
     );
 
-    // Cota inclinada y_CP: afastada para fora (D_slanted_cp = 98) para evitar qualquer sobreposição
+    // Cota inclinada y_CP: afastada para fora e com rótulo escalonado em 66% do comprimento
     if (props.isAnalyzed) {
-      const D_slanted_cp = 98;
+      const D_slanted_cp = 118;
       const ref_surf_cp = { x: P_surf.x + n_out.x * D_slanted_cp, y: P_surf.y + n_out.y * D_slanted_cp };
       const ref_cp_off = { x: P_CP.x + n_out.x * D_slanted_cp, y: P_CP.y + n_out.y * D_slanted_cp };
 
@@ -1344,7 +1329,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <>
             y<tspan baselineShift="sub" fontSize="8.5">CP</tspan> = {Y_CP.toFixed(2)} m
           </>,
-          13
+          0.66
         )
       );
     }

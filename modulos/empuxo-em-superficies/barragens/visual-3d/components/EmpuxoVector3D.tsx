@@ -124,10 +124,11 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
 
       {/* Label */}
       {label && (
-        <Html position={arrowOrigin.clone().add(new THREE.Vector3(0, 0.8, 0))} center style={{ pointerEvents: 'none' }} occlude>
-           <div className="bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded shadow-lg border border-slate-700 font-mono whitespace-nowrap z-50">
-            {label}: {(absForce / 1000).toFixed(1)} kN
-           </div>
+        <Html position={arrowOrigin.clone().add(new THREE.Vector3(0, 0.8, 0))} center style={{ pointerEvents: 'none' }}>
+          <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-red-600 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border border-red-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            <span>E = {(absForce / 1000).toFixed(1)} kN</span>
+          </div>
         </Html>
       )}
     </group>

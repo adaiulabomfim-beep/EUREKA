@@ -159,11 +159,18 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
 
         <button
           type="button"
-          onClick={() => setShowVectors(!showVectors)}
+          onClick={() => {
+            if (!isAnalyzed) {
+              setShowVectors(true);
+              onCalculate();
+            } else {
+              setShowVectors(!showVectors);
+            }
+          }}
           className={`
             flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap
             ${
-              showVectors
+              isAnalyzed && showVectors
                 ? 'bg-blue-100/80 text-blue-700 shadow-inner'
                 : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
             }

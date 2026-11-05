@@ -161,19 +161,6 @@ const App: React.FC = () => {
                     <SeletorTema />
 
                     <button
-                      title="Histórico de Cenários e Comparador"
-                      onClick={() => setIsHistoryOpen(true)}
-                      id="tour-btn-historico"
-                      className="flex-shrink-0 flex items-center justify-center w-auto px-4 h-10 rounded-full bg-blue-50/90 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition-colors border border-blue-200/90 dark:border-blue-800/80 shadow-sm gap-2 font-bold text-xs uppercase active:scale-95"
-                    >
-                      <History className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                      <span>Histórico</span>
-                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">
-                        {numHistorico}
-                      </span>
-                    </button>
-
-                    <button
                       title="Reiniciar Tour Guiado do Laboratório"
                       onClick={() => iniciarTourGuiado(true)}
                       id="tour-btn-iniciar"
@@ -309,6 +296,7 @@ const App: React.FC = () => {
 
             {/* Quick Floating Tab for History on Right Side */}
             <button
+              id="tour-btn-historico"
               onClick={() => setIsHistoryOpen(true)}
               title="Abrir Histórico de Simulações"
               className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-white/95 dark:bg-slate-900/95 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-r-0 border-blue-200 dark:border-slate-800 rounded-l-2xl shadow-xl p-2.5 flex flex-col items-center gap-1.5 transition-all hover:scale-105 group active:scale-95"

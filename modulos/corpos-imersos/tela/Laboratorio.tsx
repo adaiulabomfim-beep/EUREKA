@@ -17,6 +17,7 @@ import { Vista3D } from '../visual/Vista3D';
 import { simularCorposImersos } from '../calculos/simulador';
 import { getFluidColor } from '../visual/visualUtils';
 import { salvarNoHistorico } from '../../../interface/historicoGerenciador';
+import { ScrollablePanel } from '../../../interface/ScrollablePanel';
 
 interface BodyFallLabProps {
   onContextUpdate?: (ctx: string) => void;
@@ -69,8 +70,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   // --- LAYOUT CALCULATIONS ---
   const svgHeight = 600;
   const svgWidth = 700;
-  const tankBottomY = 510;
-  const tankTopMargin = 160;
+  const tankBottomY = 530;
+  const tankTopMargin = 195;
   const availablePixelHeight = tankBottomY - tankTopMargin;
   const availablePixelWidth = svgWidth - 120;
 
@@ -132,7 +133,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId]);
 
   const equilibriumBlockY = originalFluidSurfaceY + (initialPhysics.d_eq * visualScaleFactor) - (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0) - visualHeight;
-  const startBlockY = Math.max(110, tankBottomY - (autoTankHeight * visualScaleFactor) - visualHeight - 40);
+  const totalInitialVisualH = visualHeight + (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0);
+  const startBlockY = Math.max(45, tankBottomY - currentTankH - totalInitialVisualH - 22);
 
   useEffect(() => {
     if (!isSimulating) {
@@ -499,11 +501,16 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[620px]">
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
-        <div id="tour-controles" data-tour="painel-controles" className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto pr-1 custom-scrollbar">
+        <ScrollablePanel
+          id="tour-controles"
+          dataTour="painel-controles"
+          className="lg:col-span-3 h-[620px] max-h-[620px] min-h-0"
+          contentClassName="flex flex-col gap-4 pr-3.5 pb-4"
+        >
           {/* SIMULAÇÕES PRONTAS */}
-          <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white">
+          <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white shrink-0">
             <div className="flex items-center gap-2 mb-3 text-sm font-bold tracking-wider opacity-90">
               <BookOpen className="w-4 h-4" />
               SIMULAÇÕES PRONTAS
@@ -590,7 +597,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             showFluidComparison={showFluidComparison}
             onToggleFluidComparison={() => setShowFluidComparison((prev) => !prev)}
           />
-        </div>
+        </ScrollablePanel>
 
         {/* --- CENTER: SCENE --- */}
         <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 flex flex-col h-full bg-white rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20 min-h-[500px]">

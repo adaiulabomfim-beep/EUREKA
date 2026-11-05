@@ -3,6 +3,7 @@ import { Construction, Layers, BookOpen, Waves } from 'lucide-react';
 import { TipoBarragem } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
 import { DamPreset } from '../dominio/presets';
+import { ScrollablePanel } from '../../../../interface/ScrollablePanel';
 
 export const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon, title }) => (
     <div className="flex items-center gap-2 mb-5 pb-3 border-b border-blue-50">
@@ -59,10 +60,15 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   const selectClass = "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-blue-50/30 text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm cursor-pointer hover:bg-white";
 
   return (
-    <div id="tour-controles" data-tour="painel-controles" className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
+    <ScrollablePanel
+      id="tour-controles"
+      dataTour="painel-controles"
+      className="lg:col-span-3 h-[620px] max-h-[620px] min-h-0"
+      contentClassName="flex flex-col gap-4 pr-3.5 pb-4"
+    >
       
       {/* SIMULAÇÕES PRONTAS */}
-      <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white">
+      <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white shrink-0">
         <div className="flex items-center gap-2 mb-3 text-sm font-bold tracking-wider opacity-90">
           <BookOpen className="w-4 h-4" />
           SIMULAÇÕES PRONTAS
@@ -86,7 +92,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
       </div>
 
       {/* Dam Properties */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 shrink-0">
           <SectionHeader icon={<Construction className="w-4 h-4" />} title="Estrutura da Barragem" />
           <div className="space-y-4">
               <div>
@@ -144,7 +150,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
       </div>
 
       {/* Water Levels */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 flex-1">
+      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 shrink-0">
           <SectionHeader icon={<Layers className="w-4 h-4" />} title="Níveis D'água" />
           <div className="space-y-4">
               <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 rounded-xl border border-slate-200/60 hover:bg-slate-50 transition-colors">
@@ -167,7 +173,15 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
               <div className="space-y-3 relative">
                   <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Montante (m)</label>
-                      <NumberInput min={0} max={maxWaterLevel} value={upstreamLevel} onChange={setUpstreamLevel} />
+                      <NumberInput
+                        min={0}
+                        max={maxWaterLevel}
+                        value={upstreamLevel}
+                        onChange={(val) => {
+                          setUpstreamLevel(val);
+                          if (downstreamLevel > val) setDownstreamLevel(val);
+                        }}
+                      />
                   </div>
               </div>
 
@@ -175,12 +189,17 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                   <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100">
                       <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jusante (m)</label>
-                          <NumberInput min={0} max={maxWaterLevel} value={downstreamLevel} onChange={setDownstreamLevel} />
+                          <NumberInput
+                            min={0}
+                            max={upstreamLevel}
+                            value={Math.min(downstreamLevel, upstreamLevel)}
+                            onChange={(val) => setDownstreamLevel(Math.min(val, upstreamLevel))}
+                          />
                       </div>
                   </div>
               )}
           </div>
       </div>
-    </div>
+    </ScrollablePanel>
   );
 };

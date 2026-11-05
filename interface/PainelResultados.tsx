@@ -1,5 +1,6 @@
 import React from 'react';
 import { LucideIcon, Info } from 'lucide-react';
+import { ScrollablePanel } from './ScrollablePanel';
 
 export type CardTheme = 'red' | 'green' | 'blue' | 'purple' | 'amber' | 'cyan' | 'slate';
 
@@ -150,7 +151,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
 }) => {
 
   return (
-    <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col h-full min-h-[480px] transition-colors duration-200">
+    <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col h-full min-h-0 max-h-[620px] transition-colors duration-200">
 
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 py-3 border-b border-slate-100 dark:border-slate-800">
@@ -167,9 +168,12 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
 
 
       {/* Cards */}
-      <div className="p-3 space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">
+      <ScrollablePanel
+        className="flex-1 min-h-0"
+        contentClassName="p-3 pr-3.5 space-y-2.5"
+      >
         {children}
-      </div>
+      </ScrollablePanel>
 
 
       {/* Footer Button */}

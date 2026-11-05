@@ -116,7 +116,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   const isObjectTooWide = (shape === ObjectShape.CUBE ? dim1 : dim1 * 2) > tankWidth;
 
   return (
-    <div className="flex flex-col gap-4 overflow-y-auto pr-1 custom-scrollbar">
+    <div className="flex flex-col gap-4 shrink-0">
       {/* Object Properties */}
       <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
         <SectionHeader icon={<Box className="w-4 h-4" />} title="Propriedades do Objeto" />

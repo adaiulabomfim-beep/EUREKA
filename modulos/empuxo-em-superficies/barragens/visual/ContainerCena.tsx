@@ -391,25 +391,26 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                 {v.val !== undefined && v.val !== null && v.val !== '' && (
                   <g transform={`translate(${labelX}, ${labelY})`}>
                     <rect
-                      x={-32}
+                      x={-36}
                       y={-11}
-                      width={64}
+                      width={72}
                       height={22}
-                      rx={6}
-                      fill="#0f172a"
-                      opacity={0.8}
+                      rx={11}
+                      fill="#ffffff"
+                      opacity={0.92}
+                      stroke="#fecaca"
+                      strokeWidth={1.2}
                     />
                     <text
                       x={0}
                       y={0}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fill="#ffffff"
-                      fontSize={10}
+                      fill="#dc2626"
+                      fontSize={10.5}
                       fontWeight="bold"
-                      fontFamily="monospace"
                     >
-                      {String(v.val)}
+                      E = {String(v.val)}
                     </text>
                   </g>
                 )}

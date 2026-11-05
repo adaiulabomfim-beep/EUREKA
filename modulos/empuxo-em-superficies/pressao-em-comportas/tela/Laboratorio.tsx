@@ -49,7 +49,9 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     fluidoJusante: { 
       ...prev.fluidoJusante, 
       ativo: val,
-      nivel: (val && prev.fluidoJusante.nivel === 0) ? 5 : prev.fluidoJusante.nivel
+      nivel: (val && prev.fluidoJusante.nivel === 0)
+        ? Math.max(0.5, Number((prev.fluidoMontante.nivel * 0.5).toFixed(1)))
+        : Math.min(prev.fluidoJusante.nivel, prev.fluidoMontante.nivel)
     } 
   }));
   
@@ -141,8 +143,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     if (ang <= 0) {
       alerts.push('Ângulo de inclinação nulo ou negativo (θ ≤ 0°): risco de indeterminação física e divisão por zero (sen θ = 0).');
     }
-    if (hasDownstream && downstreamLevel >= upstreamLevel) {
-      alerts.push('Nível de jusante maior ou igual ao de montante: fluxo de escoamento reverso ou equilíbrio inviável.');
+    if (hasDownstream && downstreamLevel > upstreamLevel) {
+      alerts.push('Nível de jusante maior que o de montante: fluxo de escoamento reverso ou equilíbrio inviável.');
     }
     const ybarTotal = getGateYBarTotal(gateShape, gateHeight);
     const h_topo = config.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && config.comporta.y_cg_direto !== undefined
@@ -177,7 +179,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[620px]">
         
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
         <PainelControles 

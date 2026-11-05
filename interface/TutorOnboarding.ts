@@ -70,8 +70,8 @@ export const TOUR_STEPS: DriveStep[] = [
     popover: {
       title: '🕒 7. Histórico & Comparador de Cenários',
       description: 'Salve os parâmetros e resultados das suas últimas <strong>5 simulações</strong> no painel retrátil para comparar rapidamente diferentes fluidos, cotas e geometrias lado a lado.',
-      side: 'bottom',
-      align: 'end',
+      side: 'left',
+      align: 'center',
     },
   },
   {

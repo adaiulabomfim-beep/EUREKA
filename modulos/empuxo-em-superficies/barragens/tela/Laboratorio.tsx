@@ -148,7 +148,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[800px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[620px]">
         
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
         <PainelControles
