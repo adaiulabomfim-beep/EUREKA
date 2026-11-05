@@ -136,6 +136,8 @@ function calculateImmersion(
 
   const objectMass = totalVolume * customObjDensity;
   const objectWeight = objectMass * gravity + extraWeight;
+  const effectiveDensity = totalVolume > 0 && gravity > 0 ? (objectWeight / gravity) / totalVolume : customObjDensity;
+  const densityLabel = extraWeight > 0 ? `densidade efetiva (${effectiveDensity.toFixed(0)} kg/m³)` : `densidade do objeto (${customObjDensity} kg/m³)`;
 
   const maxBuoyancy = fluidDensity * totalVolume * gravity;
   const theme = getFluidColorTheme(fluidName);
@@ -149,7 +151,16 @@ function calculateImmersion(
   let explanation: string;
   let whyCalado: string;
 
-  if (objectWeight < maxBuoyancy * 0.999) {
+  if (Math.abs(objectWeight - maxBuoyancy) <= maxBuoyancy * 0.0005) {
+    status = 'EQUILÍBRIO NEUTRO';
+    buoyancyForce = objectWeight;
+    submergedVolume = totalVolume;
+    apparentWeight = 0;
+    submergedFraction = 1.0;
+    submergedHeightCm = totalHeightCm;
+    explanation = `A ${densityLabel} é praticamente idêntica à do fluido (${fluidDensity} kg/m³). O corpo fica suspenso em qualquer profundidade com empuxo igual ao peso.`;
+    whyCalado = `Totalmente submerso (100%), sem tocar o fundo e sem emergir.`;
+  } else if (objectWeight < maxBuoyancy) {
     status = 'FLUTUANDO';
     buoyancyForce = objectWeight;
     submergedVolume = buoyancyForce / (fluidDensity * gravity);
@@ -162,7 +173,7 @@ function calculateImmersion(
       const R = toM(dim1);
       let low = 0;
       let high = 2 * R;
-      for (let i = 0; i < 25; i++) {
+      for (let i = 0; i < 40; i++) {
         const mid = (low + high) / 2;
         const v = calculateVolumeFromBottom(ObjectShape.SPHERE, R, mid);
         if (v < submergedVolume) {
@@ -174,25 +185,16 @@ function calculateImmersion(
       submergedHeightCm = ((low + high) / 2) * 100;
     }
 
-    explanation = `Como a densidade do objeto (${customObjDensity} kg/m³) é menor que a do fluido (${fluidDensity} kg/m³), o corpo flutua em equilíbrio: Empuxo = Peso (${buoyancyForce.toFixed(1)} N).`;
+    explanation = `Como a ${densityLabel} é menor que a do fluido (${fluidDensity} kg/m³), o corpo flutua em equilíbrio: Empuxo = Peso (${buoyancyForce.toFixed(1)} N).`;
     whyCalado = `O objeto precisa submergir apenas ${(submergedFraction * 100).toFixed(1)}% do seu volume (${submergedHeightCm.toFixed(1)} cm de calado) para deslocar líquido com peso igual ao seu.`;
-  } else if (Math.abs(objectWeight - maxBuoyancy) <= maxBuoyancy * 0.005) {
-    status = 'EQUILÍBRIO NEUTRO';
-    buoyancyForce = objectWeight;
-    submergedVolume = totalVolume;
-    apparentWeight = 0;
-    submergedFraction = 1.0;
-    submergedHeightCm = totalHeightCm;
-    explanation = `Densidades praticamente idênticas (${customObjDensity} ≈ ${fluidDensity} kg/m³). O corpo fica suspenso em qualquer profundidade com empuxo igual ao peso.`;
-    whyCalado = `Totalmente submerso (100%), sem tocar o fundo e sem emergir.`;
   } else {
     status = 'AFUNDADO';
     buoyancyForce = maxBuoyancy;
     submergedVolume = totalVolume;
-    apparentWeight = objectWeight - buoyancyForce;
+    apparentWeight = Math.max(0, objectWeight - buoyancyForce);
     submergedFraction = 1.0;
     submergedHeightCm = totalHeightCm;
-    explanation = `Como a densidade do objeto (${customObjDensity} kg/m³) é maior que a do fluido (${fluidDensity} kg/m³), o peso (${objectWeight.toFixed(1)} N) supera o empuxo máximo (${buoyancyForce.toFixed(1)} N).`;
+    explanation = `Como a ${densityLabel} é maior que a do fluido (${fluidDensity} kg/m³), o peso (${objectWeight.toFixed(1)} N) supera o empuxo máximo (${buoyancyForce.toFixed(1)} N).`;
     whyCalado = `O corpo afunda até o fundo do recipiente. O peso aparente no fundo é de ${apparentWeight.toFixed(1)} N.`;
   }
 

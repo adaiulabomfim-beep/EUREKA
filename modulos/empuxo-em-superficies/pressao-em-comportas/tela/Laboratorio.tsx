@@ -3,6 +3,7 @@ import { Maximize, AlertCircle, AlertTriangle } from 'lucide-react';
 import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from '../dominio/tipos';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
 import { simularComportas } from '../calculos/simulador';
+import { getGateYBarTotal } from '../calculos/hidrostatica';
 import { CenaPressaoComporta } from '../visual/CenaPressaoComporta';
 import { PRESETS } from '../dominio/presets';
 import { PainelResultados } from './PainelResultados';
@@ -82,6 +83,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   const handleCalculate = () => {
     setAnalyzedResults(liveResults);
     if (liveResults) {
+      const weightN = gateWeightEnabled ? gateWeight * gravity : 0;
       salvarNoHistorico({
         modulo: 'comportas',
         moduloNome: 'Comportas',
@@ -97,8 +99,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
         resultados: {
           empuxo: liveResults.forceData.FR_net,
           empuxoFormatado: `${(Math.abs(liveResults.forceData.FR_net) / 1000).toFixed(2)} kN`,
-          peso: gateWeightEnabled ? gateWeight * 1000 : undefined,
-          pesoFormatado: gateWeightEnabled ? `${gateWeight.toFixed(2)} kN` : undefined,
+          peso: gateWeightEnabled ? weightN : undefined,
+          pesoFormatado: gateWeightEnabled ? `${(weightN / 1000).toFixed(2)} kN (${gateWeight.toFixed(0)} kg)` : undefined,
           centroPressao: `s_cp = ${(liveResults.forceData.s_cp_net).toFixed(2)} m`,
           segurancaOuStatus: 'Análise Concluída',
         },
@@ -142,19 +144,20 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     if (hasDownstream && downstreamLevel >= upstreamLevel) {
       alerts.push('Nível de jusante maior ou igual ao de montante: fluxo de escoamento reverso ou equilíbrio inviável.');
     }
+    const ybarTotal = getGateYBarTotal(gateShape, gateHeight);
     const h_topo = config.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && config.comporta.y_cg_direto !== undefined
-      ? config.comporta.y_cg_direto * Math.sin((ang * Math.PI) / 180) - (gateHeight / 2) * Math.sin((ang * Math.PI) / 180)
+      ? config.comporta.y_cg_direto * Math.sin((ang * Math.PI) / 180) - ybarTotal * Math.sin((ang * Math.PI) / 180)
       : gateDepthFromCrest;
 
-    if (h_topo < 0) {
+    if (h_topo < -1e-4) {
       alerts.push('Profundidade do topo da comporta negativa: a crista da comporta está posicionada acima da linha d\'água (NA).');
     }
     const h_bot = h_topo + gateHeight * Math.sin((ang * Math.PI) / 180);
-    if (h_bot > upstreamLevel) {
+    if (h_bot > upstreamLevel + 1e-4) {
       alerts.push('Comporta excede a profundidade disponível: a base da comporta ultrapassa o fundo do reservatório.');
     }
     return alerts;
-  }, [gateInclination, hasDownstream, downstreamLevel, upstreamLevel, config.comporta, gateDepthFromCrest, gateHeight]);
+  }, [gateInclination, hasDownstream, downstreamLevel, upstreamLevel, config.comporta, gateDepthFromCrest, gateHeight, gateShape]);
 
   const exportData = {
     tipo: 'comportas',
@@ -164,10 +167,9 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       'Base/Largura (m)': gateWidth,
       'Inclinação (°)': gateInclination
     },
-    // We set dummy values so validation passes if analyzed
     empuxo: analyzedResults ? analyzedResults.forceData.FR_net : 0, 
-    peso: gateWeightEnabled ? gateWeight * 1000 : 0, // Using N instead of kN maybe?
-    volumeDeslocado: analyzedResults ? 1 : 0, // Just a placeholder so validation passes
+    peso: gateWeightEnabled ? gateWeight * gravity : 0,
+    volumeDeslocado: analyzedResults ? 1 : 0,
     alturaSubmersa: upstreamLevel,
     isAnalyzed: !!analyzedResults,
     analyzedResults: analyzedResults
@@ -211,8 +213,10 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
           )}
 
             <CenaPressaoComporta
-                upstreamLevel={upstreamLevel} downstreamLevel={downstreamLevel}
+                upstreamLevel={upstreamLevel} downstreamLevel={hasDownstream ? downstreamLevel : 0}
                 upstreamFluidKey={upstreamFluidKey} downstreamFluidKey={downstreamFluidKey}
+                upstreamDensity={density} downstreamDensity={fluidoJusante.densidade}
+                gravity={gravity} liveResults={liveResults}
                 hasGate={hasGate} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}
                 gateInclination={gateInclination}

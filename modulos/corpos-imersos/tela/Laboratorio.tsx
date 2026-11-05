@@ -10,6 +10,7 @@ import { MATERIALS, FLUIDS } from '../dominio/configuracao';
 import { ObjectShape } from '../dominio/tipos';
 import { PainelControles } from './PainelControles';
 import { PainelResultados } from './PainelResultados';
+import { PainelComparacaoFluidos } from './PainelComparacaoFluidos';
 import { Memorial } from './Memorial';
 import { Vista2D } from '../visual/Vista2D';
 import { Vista3D } from '../visual/Vista3D';
@@ -60,6 +61,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [showCalculations, setShowCalculations] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
   const [showCenterOfBuoyancy, setShowCenterOfBuoyancy] = useState<boolean>(true);
+  const [showFluidComparison, setShowFluidComparison] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [currentEnunciado, setCurrentEnunciado] = useState<string | null>(null);
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
@@ -125,8 +127,9 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     tankWidth, tankDepth, visualScaleFactor, visualHeight,
     fluidSurfaceY: originalFluidSurfaceY, h_in_A: 0, h_in_B: 0,
     h_in_A_2: 0, h_in_B_2: 0,
-    extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2
-  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2]);
+    extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2,
+    rigidRod: activeExerciseId === 'ex2'
+  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId]);
 
   const equilibriumBlockY = originalFluidSurfaceY + (initialPhysics.d_eq * visualScaleFactor) - (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0) - visualHeight;
   const startBlockY = Math.max(110, tankBottomY - (autoTankHeight * visualScaleFactor) - visualHeight - 40);
@@ -222,8 +225,9 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     tankWidth, tankDepth, visualScaleFactor, visualHeight,
     fluidSurfaceY: originalFluidSurfaceY, h_in_A, h_in_B,
     h_in_A_2, h_in_B_2,
-    extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2
-  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2]);
+    extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2,
+    rigidRod: activeExerciseId === 'ex2'
+  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId]);
 
   const exportData = useMemo(() => ({
     tipo: 'corpos-imersos',
@@ -234,14 +238,20 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       ...(twoBlocks ? { 'Aresta 2 (cm)': dim1_2 } : {})
     },
     densidadeObjeto: customObjDensity,
+    densidadeEquivalente: physics.equivalentDensity,
     densidadeFluido: rhoA,
+    status: physics.status,
     empuxo: physics.buoyancyForce,
     peso: physics.objectWeight,
-    volumeDeslocado: physics.vol_deslocado / 1e6,
+    volumeDeslocado: physics.vol_deslocado,
     alturaSubmersa: physics.h_sub_actual / 100
   }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics]);
 
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
+  const maxBlockY = tankBottomY - (twoBlocks ? (visualHeight + H2_cm_visual + initialPhysics.actualCordLength * visualScaleFactor) : visualHeight);
+  const visualBlockY = !physics.status.includes('AFUNDADO')
+    ? Math.min(maxBlockY, animBlockY - physics.deltaH_cm * visualScaleFactor)
+    : animBlockY;
 
   // --- HANDLERS ---
   const handleMaterialChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -301,7 +311,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         setShape2(ObjectShape.SPHERE);
         setDim1_2(10);
         setSelectedMaterial2('Custom');
-        setDensity2(1200); // Esfera B: 1.2 g/cm3 = 1200 kg/m3
+        setDensity2(700); // Esfera B: 0.7 g/cm3 = 700 kg/m3 (para Esfera A 50% submersa ligada por arame rígido)
         setCordLength(20);
 
         setSelectedFluid('Água Doce');
@@ -436,12 +446,23 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     dim1,
     dim2,
     selectedFluid,
+    customFluidDensity,
     depthA,
     selectedFluidB,
+    customFluidDensityB,
     depthB,
     enableTwoFluids,
     tankWidth,
+    tankDepth,
     tankHeight,
+    extraWeight,
+    twoBlocks,
+    selectedMaterial2,
+    density2,
+    dim1_2,
+    dim2_2,
+    cordLength,
+    shape2,
   ]);
 
   const objectWidthCm = shape === ObjectShape.CUBE ? dim1 : dim1 * 2;
@@ -472,8 +493,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   }
 
   const geom = {
-    formula: shape === ObjectShape.CUBE ? 'L³' : shape === ObjectShape.SPHERE ? '4/3 · π · r³' : 'L · P · H',
-    substitution: shape === ObjectShape.CUBE ? `${dim1}³` : shape === ObjectShape.SPHERE ? `4/3 · π · ${dim1}³` : `${dim1} · ${dim1} · ${dim2}`
+    formula: shape === ObjectShape.CUBE ? 'L³' : shape === ObjectShape.SPHERE ? '4/3 · π · r³' : 'π · r² · h',
+    substitution: shape === ObjectShape.CUBE ? `${(dim1 / 100).toFixed(2)}³` : shape === ObjectShape.SPHERE ? `4/3 · π · ${(dim1 / 100).toFixed(2)}³` : `π · ${(dim1 / 100).toFixed(2)}² · ${(dim2 / 100).toFixed(2)}`
   };
 
   return (
@@ -515,6 +536,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             customObjDensity={customObjDensity}
             shape={shape}
             dim1={dim1}
+            dim2={dim2}
             selectedFluid={selectedFluid}
             customFluidDensity={customFluidDensity}
             depthA={depthA}
@@ -529,6 +551,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             onCustomObjDensityChange={setCustomObjDensity}
             onShapeChange={setShape}
             onDim1Change={setDim1}
+            onDim2Change={setDim2}
             onFluidChange={(e) => {
                 setSelectedFluid(e.target.value);
                 if (e.target.value !== 'Custom') setCustomFluidDensity(FLUIDS.find((f) => f.name === e.target.value)?.density || 0);
@@ -564,6 +587,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             onCordLengthChange={setCordLength}
             shape2={shape2}
             onShape2Change={setShape2}
+            showFluidComparison={showFluidComparison}
+            onToggleFluidComparison={() => setShowFluidComparison((prev) => !prev)}
           />
         </div>
 
@@ -587,7 +612,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 deltaH_cm={physics.deltaH_cm}
                 colorA={colorA}
                 colorB={colorB}
-                isObjectAboveWater={animBlockY < fluidSurfaceY}
+                isObjectAboveWater={visualBlockY < fluidSurfaceY}
                 TANK_BORDER_COLOR={TANK_BORDER_COLOR}
                 OBJECT_BORDER_COLOR={OBJECT_BORDER_COLOR}
                 objColor={objColor}
@@ -595,13 +620,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 shape={shape}
                 visualWidth={visualWidth}
                 visualHeight={visualHeight}
-                objBottomDistFromTankBottom={tankBottomY - (animBlockY + visualHeight)}
+                objBottomDistFromTankBottom={tankBottomY - (visualBlockY + visualHeight)}
                 objD_visual={dim1 * visualScaleFactor}
                 visualTankDepth={tankDepth * visualScaleFactor}
                 showFBD={showFBD}
                 objectWeight={physics.objectWeight}
                 buoyancyForce={physics.buoyancyForce}
-                centerOfBuoyancyY_visual={(animBlockY + visualHeight) - (physics.centerOfBuoyancyY * visualScaleFactor)}
+                centerOfBuoyancyY_visual={(visualBlockY + visualHeight) - (physics.centerOfBuoyancyY * visualScaleFactor)}
                 showCenterOfBuoyancy={showCenterOfBuoyancy}
                 onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}
                 h_sub_actual={physics.h_sub_actual}
@@ -625,7 +650,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 visualWidth={visualWidth}
                 visualHeight={visualHeight}
                 selectedMaterial={selectedMaterial}
-                blockY={animBlockY}
+                blockY={visualBlockY}
                 fluidSurfaceY={fluidSurfaceY}
                 originalFluidSurfaceY={originalFluidSurfaceY}
                 depthA={depthA}
@@ -646,7 +671,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 showFBD={showFBD}
                 objectWeight={physics.objectWeight}
                 buoyancyForce={physics.buoyancyForce}
-                centerOfBuoyancyY_visual={(animBlockY + visualHeight) - (physics.centerOfBuoyancyY * visualScaleFactor)}
+                centerOfBuoyancyY_visual={(visualBlockY + visualHeight) - (physics.centerOfBuoyancyY * visualScaleFactor)}
                 h_sub_actual={physics.h_sub_actual}
                 showCenterOfBuoyancy={showCenterOfBuoyancy}
                 onToggleCenterOfBuoyancy={() => setShowCenterOfBuoyancy(!showCenterOfBuoyancy)}
@@ -709,6 +734,9 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 const proximo = !isSimulating;
                 setIsSimulating(proximo);
                 if (proximo && physics) {
+                  const E_eq = physics.eqBuoyancyForce ?? physics.buoyancyForce;
+                  const V_eq = physics.eqVolDeslocado ?? physics.vol_deslocado;
+                  const H_eq = physics.eqHSubActual ?? physics.h_sub_actual;
                   salvarNoHistorico({
                     modulo: 'corpos-imersos',
                     moduloNome: 'Corpos Imersos',
@@ -722,13 +750,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                       'Densidade Fluido': `${rhoA} kg/m³`,
                     },
                     resultados: {
-                      empuxo: physics.buoyancyForce,
-                      empuxoFormatado: physics.buoyancyForce >= 10000 ? `${(physics.buoyancyForce / 1000).toFixed(2)} kN` : `${physics.buoyancyForce.toFixed(1)} N`,
+                      empuxo: E_eq,
+                      empuxoFormatado: E_eq >= 10000 ? `${(E_eq / 1000).toFixed(2)} kN` : `${E_eq.toFixed(1)} N`,
                       peso: physics.objectWeight,
                       pesoFormatado: physics.objectWeight >= 10000 ? `${(physics.objectWeight / 1000).toFixed(2)} kN` : `${physics.objectWeight.toFixed(1)} N`,
-                      volumeDeslocado: `${(physics.vol_deslocado / 1e3).toFixed(2)} L`,
-                      alturaSubmersa: `${physics.h_sub_actual.toFixed(1)} cm`,
-                      segurancaOuStatus: physics.buoyancyForce > physics.objectWeight ? 'Flutua (E > P)' : physics.buoyancyForce < physics.objectWeight ? 'Afunda (E < P)' : 'Equilíbrio Neutro',
+                      volumeDeslocado: `${(V_eq * 1000).toFixed(2)} L (${V_eq.toFixed(4)} m³)`,
+                      alturaSubmersa: `${H_eq.toFixed(1)} cm`,
+                      segurancaOuStatus: physics.status.includes('AFUNDADO') ? 'Afunda (P > E)' : physics.status.includes('NEUTRO') ? 'Equilíbrio Neutro (E = P)' : 'Flutua (E = P)',
                     },
                   });
                 }
@@ -766,6 +794,24 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
           specialResult={specialResult}
         />
       </div>
+
+      {/* Comparador de Fluidos */}
+      {showFluidComparison && (
+        <PainelComparacaoFluidos
+          shape={shape}
+          dim1={dim1}
+          dim2={dim2}
+          selectedMaterial={selectedMaterial}
+          customObjDensity={customObjDensity}
+          gravity={gravity}
+          extraWeight={extraWeight}
+          onApplyFluid={(fluidName, fluidDensity) => {
+            setSelectedFluid(fluidName);
+            setCustomFluidDensity(fluidDensity);
+          }}
+          onClose={() => setShowFluidComparison(false)}
+        />
+      )}
 
       {/* Floating Calculation Panel */}
       {showCalculations && isSimulating && (

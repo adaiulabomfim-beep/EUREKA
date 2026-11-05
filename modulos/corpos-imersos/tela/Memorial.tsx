@@ -65,6 +65,9 @@ export const Memorial: React.FC<MemorialProps> = ({
   onClose,
   activeExerciseId
 }) => {
+  const totalVolume = physics.volume + (physics.volume2 || 0);
+  const effectiveRho = physics.equivalentDensity ?? physics.objectDensity ?? 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white/95 backdrop-blur-xl w-[95vw] lg:w-[75vw] h-[95vh] lg:h-[75vh] overflow-y-auto rounded-3xl shadow-2xl border border-blue-100 animate-in slide-in-from-bottom-10 zoom-in-95 duration-300 relative">
@@ -135,8 +138,8 @@ export const Memorial: React.FC<MemorialProps> = ({
               <div className="w-6 h-px bg-slate-200"></div> Geometria & Massa <div className="flex-1 h-px bg-slate-100"></div>
             </h4>
             <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
-                <CalculationLine theme="slate" label="Volume Total (V)" symbol="V" formula={geom.formula} substitution={geom.substitution} result={physics.volume.toFixed(4)} unit="m³" />
-                <CalculationLine theme="slate" label="Massa (m)" symbol="m" formula="ρ · V" substitution={`${physics.objectDensity} · ${physics.volume.toFixed(4)}`} result={physics.objectMass.toFixed(2)} unit="kg" />
+                <CalculationLine theme="slate" label="Volume Total (V)" symbol="V" formula={geom.formula} substitution={geom.substitution} result={totalVolume.toFixed(4)} unit="m³" />
+                <CalculationLine theme="slate" label="Massa (m)" symbol="m" formula="ρ · V" substitution={`${Number.isInteger(effectiveRho) ? effectiveRho : effectiveRho.toFixed(1)} · ${totalVolume.toFixed(4)}`} result={physics.objectMass.toFixed(2)} unit="kg" />
                 <CalculationLine theme="red" label="Peso (P)" symbol="P" formula="m · g" substitution={`${physics.objectMass.toFixed(2)} · ${gravity}`} result={physics.objectWeight.toFixed(2)} unit="N" />
             </div>
           </section>
@@ -234,8 +237,8 @@ export const Memorial: React.FC<MemorialProps> = ({
               <CalculationLine theme="amber"
                 label="Peso Aparente (Dinamômetro)"
                 symbol={<>P<sub>ap</sub></>}
-                formula="|P - E|"
-                substitution={`|${physics.objectWeight.toFixed(2)} - ${physics.buoyancyForce.toFixed(2)}|`}
+                formula="max(0, P - E)"
+                substitution={`max(0, ${physics.objectWeight.toFixed(2)} - ${physics.buoyancyForce.toFixed(2)})`}
                 result={physics.apparentWeight.toFixed(2)}
                 unit="N"
                 isSubHeader

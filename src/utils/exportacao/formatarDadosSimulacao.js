@@ -4,13 +4,15 @@ export const formatarDadosSimulacao = (simulacao) => {
   const formatNumber = (num, min=2, max=2) => Number(num).toLocaleString('pt-BR', {minimumFractionDigits: min, maximumFractionDigits: max});
   
   const objDes = parseFloat(simulacao.densidadeObjeto) || 0;
+  const effDes = parseFloat(simulacao.densidadeEquivalente) || objDes;
   const fluidoDes = parseFloat(simulacao.densidadeFluido) || 0;
+  const statusSim = String(simulacao.status || '');
   
   let statusTexto = "O objeto permanecerá em EQUILÍBRIO (totalmente submerso), pois as densidades são iguais.";
-  if (objDes > fluidoDes) {
-     statusTexto = "Como a densidade do corpo é maior que a do fluido (consequentemente o peso é maior que o empuxo máximo), o corpo tende a AFUNDAR.";
-  } else if (objDes < fluidoDes) {
-     statusTexto = "Como a densidade do corpo é menor que a do fluido, o corpo irá FLUTUAR, deslocando um volume de fluido cujo peso se iguala ao peso total do corpo.";
+  if (statusSim.includes('AFUNDADO') || (!statusSim && effDes > fluidoDes)) {
+     statusTexto = "Como a densidade efetiva do corpo é maior que a do fluido (consequentemente o peso é maior que o empuxo máximo), o corpo tende a AFUNDAR.";
+  } else if (statusSim.includes('FLUTUANDO') || statusSim.includes('INTERFACE') || (!statusSim && effDes < fluidoDes)) {
+     statusTexto = "Como a densidade efetiva do corpo é menor que a do fluido, o corpo irá FLUTUAR, deslocando um volume de fluido cujo peso se iguala ao peso total do corpo.";
   }
 
   const geoMapSubstantivo = {

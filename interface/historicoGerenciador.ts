@@ -112,7 +112,18 @@ export function capturarCenarioAtual(): CenarioHistorico | null {
       resultados.pesoFormatado = P >= 10000 ? `${(P / 1000).toFixed(2)} kN` : `${P.toFixed(1)} N`;
       resultados.volumeDeslocado = data.volumeDeslocado ? `${(data.volumeDeslocado * 1e3).toFixed(2)} L (${(data.volumeDeslocado).toFixed(4)} m³)` : undefined;
       resultados.alturaSubmersa = data.alturaSubmersa ? `${(data.alturaSubmersa * 100).toFixed(1)} cm` : undefined;
-      resultados.segurancaOuStatus = E > P ? 'Flutua (E > P)' : E < P ? 'Afunda (E < P)' : 'Equilíbrio Neutro (E = P)';
+      const st = String(data.status || '');
+      resultados.segurancaOuStatus = st.includes('AFUNDADO')
+        ? 'Afunda (P > E)'
+        : st.includes('NEUTRO')
+        ? 'Equilíbrio Neutro (E = P)'
+        : st.includes('FLUTUANDO') || st.includes('INTERFACE')
+        ? 'Flutua (E = P)'
+        : Math.abs(E - P) <= Math.max(1e-2, 1e-3 * P)
+        ? 'Flutua (E = P)'
+        : E < P
+        ? 'Afunda (E < P)'
+        : 'Flutua (E > P)';
     } else if (tipo === 'barragens') {
       moduloNome = 'Barragens';
       titulo = data.geometria || 'Barragem Hidráulica';

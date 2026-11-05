@@ -7,12 +7,17 @@ import {
   SistemaUnidades,
   ModoPosicionamentoComporta,
 } from '../dominio/tipos';
+import { ResultadoSimulacaoComporta } from '../dominio/resultado';
 
 interface Vista2DProps {
   upstreamLevel: number;
   downstreamLevel: number;
   upstreamFluidKey: string;
   downstreamFluidKey: string;
+  upstreamDensity?: number;
+  downstreamDensity?: number;
+  gravity?: number;
+  liveResults?: ResultadoSimulacaoComporta;
   hasGate: boolean;
   gateShape: FormaComporta;
   gateWidth: number;
@@ -25,6 +30,8 @@ interface Vista2DProps {
   hasTieRod: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
+  gateWeight?: number;
+  gateWeightEnabled?: boolean;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
@@ -96,8 +103,9 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     Ixx = Math.pow(r, 4) * (Math.PI / 8 - 8 / (9 * Math.PI));
   }
 
-  // Posicionamento: Modo Y_CG direto vs Modo Padrão (h1)
-  let h_top = Math.max(0, props.gateDepthFromCrest);
+  // Posicionamento: Modo Y_CG direto vs Modo Padrão (h1) — sincronizado com liveResults
+  const upData = props.liveResults?.forceData?.up;
+  let h_top = props.liveResults?.h_top_up !== undefined ? props.liveResults.h_top_up : props.gateDepthFromCrest;
   let Y_CG = 0;
   let Y_top = 0;
 
@@ -106,37 +114,44 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     props.y_cg_direto !== undefined &&
     props.y_cg_direto > 0
   ) {
-    Y_CG = props.y_cg_direto;
-    const h_CG_nominal = Y_CG * sinTheta;
-    h_top = Math.max(0, h_CG_nominal - y_cg_rel * sinTheta);
-    Y_top = Y_CG - y_cg_rel;
+    Y_CG = upData?.Y_CG ?? props.y_cg_direto;
+    const h_CG_nominal = props.y_cg_direto * sinTheta;
+    h_top = props.liveResults?.h_top_up ?? (h_CG_nominal - y_cg_rel * sinTheta);
+    Y_top = h_top / sinTheta;
   } else {
     Y_top = h_top / sinTheta;
-    Y_CG = Y_top + y_cg_rel;
+    Y_CG = upData?.Y_CG ?? (Y_top + y_cg_rel);
   }
 
-  const h_CG = Y_CG * sinTheta;
+  if (upData && upData.area > 0) {
+    Area = upData.area;
+    Ixx = upData.Ixx ?? Ixx;
+    y_cg_rel = upData.s_cg ?? y_cg_rel;
+  }
+
+  const h_CG = upData?.h_cg ?? (Y_CG * sinTheta);
 
   // Eccentricity along the incline: delta_y = Ixx / (A * Y_CG)
-  const delta_y = Area > 0 && Y_CG > 0 ? Ixx / (Area * Y_CG) : 0;
-  const Y_CP = Y_CG + delta_y;
-  const h_CP = Y_CP * sinTheta;
+  const delta_y = upData?.delta_y ?? (Area > 0 && Y_CG > 0 ? Ixx / (Area * Y_CG) : 0);
+  const Y_CP = upData?.Y_CP ?? (Y_CG + delta_y);
+  const h_CP = upData?.h_cp ?? (Y_CP * sinTheta);
   const h_bot = h_top + H * sinTheta;
 
-  // Fluid properties
+  // Fluid properties (respeitando densidade customizada)
   const fluidInfo = FLUIDOS_PREDEFINIDOS[props.upstreamFluidKey] || FLUIDOS_PREDEFINIDOS.agua;
-  const rho = fluidInfo.densidade || 1000;
-  const g = 9.81;
-  const gamma_N = rho * g; // N/m³
+  const rho = props.upstreamDensity ?? props.liveResults?.densityUp ?? fluidInfo.densidade ?? 1000;
+  const g = props.gravity ?? 9.81;
+  const gamma_N = props.liveResults?.gammaUp ?? (rho * g); // N/m³
   const gamma_kgf = rho; // kgf/m³
 
   // Pressões no topo e na base da comporta
-  const p_top_Pa = gamma_N * Math.max(0, h_top);
-  const p_bot_Pa = gamma_N * Math.max(0, h_bot);
-  const p_cg_Pa = gamma_N * Math.max(0, h_CG);
+  const p_top_Pa = upData?.p_top ?? (gamma_N * Math.max(0, h_top));
+  const p_bot_Pa = upData?.p_bot ?? (gamma_N * Math.max(0, h_bot));
+  const p_cg_Pa = upData?.p_cg ?? (gamma_N * Math.max(0, h_CG));
 
   // Força resultante teórica ou analisada
-  const F_resultant_N = props.isAnalyzed && props.force > 0 ? props.force : p_cg_Pa * Area;
+  const netForceLive = props.liveResults ? Math.abs(props.liveResults.forceData.FR_net) : p_cg_Pa * Area;
+  const F_resultant_N = props.isAnalyzed && Math.abs(props.force) > 0 ? Math.abs(props.force) : netForceLive;
   const F_resultant_kN = F_resultant_N / 1000;
   const F_resultant_kgf = F_resultant_N / g;
 
@@ -202,7 +217,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     opacity: 1,
   });
 
-  // 2. Continuous Masonry Wall (Estrutura de alvenaria em toda a extensão do paramento)
+  // 2. Continuous Masonry Wall (Estrutura de alvenaria em toda a extensão do paramento e sob toda a água de montante)
   renderedFaces.push({
     id: 'wall-full-masonry',
     kind: 'DAM',
@@ -211,9 +226,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       { x: P_crest.x + n_out.x * wallThick, y: P_crest.y + n_out.y * wallThick },
       { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + n_out.y * wallThick },
       { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + 24 },
-      { x: P_bed_left.x - 30, y: P_bed_inc.y + 24 },
-      { x: P_bed_left.x - 30, y: P_bed_inc.y },
-      P_bed_left,
+      { x: 0, y: P_bed_inc.y + 24 },
+      { x: 0, y: P_bed_inc.y },
       P_bed_inc,
     ],
     fill: 'url(#brickPattern)',
@@ -222,7 +236,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     opacity: 1,
   });
 
-  // 4. Reservoir Water Body (Montante / Upstream side on left) — colado no limite esquerdo da janela
+  // 4. Reservoir Water Body (Montante / Upstream side on left) — colado no limite esquerdo da janela e sobre a base de alvenaria
   renderedFaces.push({
     id: 'water-upstream-body',
     kind: 'WATER_UP',
@@ -232,10 +246,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       P_top,
       props.hasGate ? P_bot : P_top,
       P_bed_inc,
-      P_bed_left,
-      { x: P_bed_left.x - 30, y: P_bed_inc.y },
       { x: 0, y: P_bed_inc.y },
-      { x: 0, y: P_bed_inc.y + 24 },
     ],
     fill: 'url(#fluidDepthA)',
     stroke: 'none',
@@ -243,17 +254,21 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     opacity: 0.95,
   });
 
+  // Helper para cota visual de jusante proporcional ao fundo do canal
+  const canalBedSurfaceY = P_bed_inc.y + 24;
+  const downRatio = props.upstreamLevel > 0 ? Math.min(1.15, Math.max(0, props.downstreamLevel / props.upstreamLevel)) : 0;
+  const downDepthY = canalBedSurfaceY - downRatio * (canalBedSurfaceY - waterSurfaceY);
+
   // 5. Downstream water body (if active)
   if (props.downstreamLevel > 0) {
-    const downDepthY = waterSurfaceY + (props.upstreamLevel - props.downstreamLevel) * SCALE;
     renderedFaces.push({
       id: 'water-downstream-body',
       kind: 'WATER_DOWN',
       pts: [
-        { x: P_bot.x + n_out.x * wallThick, y: P_bot.y + n_out.y * wallThick },
+        { x: P_bot.x + n_out.x * wallThick, y: Math.min(canalBedSurfaceY, Math.max(downDepthY, P_crest.y + n_out.y * wallThick)) },
         { x: SVG_W, y: downDepthY },
-        { x: SVG_W, y: P_bed_inc.y + 24 },
-        { x: P_bed_inc.x + n_out.x * wallThick, y: P_bed_inc.y + 24 },
+        { x: SVG_W, y: canalBedSurfaceY },
+        { x: P_bed_inc.x + n_out.x * wallThick, y: canalBedSurfaceY },
       ],
       fill: 'url(#fluidDepthB)',
       stroke: 'none',
@@ -380,7 +395,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
   // 2. Água Jusante (se ativada): Ondas móveis
   if (props.downstreamLevel > 0) {
-    const downDepthY = waterSurfaceY + (props.upstreamLevel - props.downstreamLevel) * SCALE;
     const downStartX = P_bot.x + n_out.x * wallThick;
     overlayElements.push(
       <g key="downstream-surface-waves" pointerEvents="none">
@@ -541,7 +555,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         })}
 
         {/* Label p_topo */}
-        <g transform={`translate(${ptTopOuter.x - n_out.x * 12}, ${ptTopOuter.y - n_out.y * 6})`}>
+        <g transform={`translate(${ptTopOuter.x - n_out.x * 12 - 22}, ${ptTopOuter.y - n_out.y * 6 - 20})`}>
           <rect
             x={-44}
             y={-9}
@@ -568,7 +582,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         </g>
 
         {/* Label p_base */}
-        <g transform={`translate(${ptBotOuter.x - n_out.x * 12}, ${ptBotOuter.y - n_out.y * 6})`}>
+        <g transform={`translate(${ptBotOuter.x - n_out.x * 12 - 14}, ${ptBotOuter.y - n_out.y * 6 + 22})`}>
           <rect
             x={-44}
             y={-9}
@@ -608,7 +622,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
         {/* Badge da Força Resultante E com Efeito Glow */}
         <g
-          transform={`translate(${eStart.x - n_out.x * 10 - u_down.x * 10}, ${eStart.y - n_out.y * 10 - u_down.y * 10})`}
+          transform={`translate(${eStart.x - n_out.x * 36 - u_down.x * 10}, ${eStart.y - n_out.y * 36 - u_down.y * 10})`}
           filter="url(#glowResultant)"
           onMouseEnter={() => setHoveredItem('CP')}
           onMouseLeave={() => setHoveredItem(null)}
@@ -682,15 +696,24 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       y: C_proj.y + u_down.y * (delta_y * SCALE),
     };
 
+    const P_top_proj = {
+      x: P_top.x + n_out.x * D_proj,
+      y: P_top.y + n_out.y * D_proj,
+    };
+    const P_bot_proj = {
+      x: P_bot.x + n_out.x * D_proj,
+      y: P_bot.y + n_out.y * D_proj,
+    };
+
     // Dimension line across the frontal face
     const dimOffset = R_px + 28;
     const dimP1 = {
-      x: C_proj.x - u_down.x * R_px + n_out.x * dimOffset,
-      y: C_proj.y - u_down.y * R_px + n_out.y * dimOffset,
+      x: P_top_proj.x + n_out.x * dimOffset,
+      y: P_top_proj.y + n_out.y * dimOffset,
     };
     const dimP2 = {
-      x: C_proj.x + u_down.x * R_px + n_out.x * dimOffset,
-      y: C_proj.y + u_down.y * R_px + n_out.y * dimOffset,
+      x: P_bot_proj.x + n_out.x * dimOffset,
+      y: P_bot_proj.y + n_out.y * dimOffset,
     };
 
     const dimLabel = `${H.toFixed(2)} m (${(H * 100).toFixed(0)} cm)`;
@@ -719,8 +742,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
         {/* Dimension extension ticks to frontal dimension */}
         <line
-          x1={C_proj.x - u_down.x * R_px}
-          y1={C_proj.y - u_down.y * R_px}
+          x1={P_top_proj.x}
+          y1={P_top_proj.y}
           x2={dimP1.x}
           y2={dimP1.y}
           stroke="#64748b"
@@ -729,8 +752,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           opacity="0.45"
         />
         <line
-          x1={C_proj.x + u_down.x * R_px}
-          y1={C_proj.y + u_down.y * R_px}
+          x1={P_bot_proj.x}
+          y1={P_bot_proj.y}
           x2={dimP2.x}
           y2={dimP2.y}
           stroke="#64748b"
@@ -866,30 +889,36 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
         {shape === FormaComporta.SEMI_CIRCULAR && (
           <g>
-            <circle
-              cx={C_proj.x}
-              cy={C_proj.y}
-              r={R_px}
-              fill="#f8fafc"
-              stroke="#0f172a"
-              strokeWidth="2"
-            />
-            <circle
-              cx={C_proj.x}
-              cy={C_proj.y}
-              r={R_px}
-              fill="url(#gateHatchPattern)"
-              stroke="none"
-            />
-            <line
-              x1={C_proj.x - u_down.x * (R_px + 10)}
-              y1={C_proj.y - u_down.y * (R_px + 10)}
-              x2={C_proj.x + u_down.x * (R_px + 10)}
-              y2={C_proj.y + u_down.y * (R_px + 10)}
-              stroke="#64748b"
-              strokeWidth="1"
-              strokeDasharray="7 3 2 3"
-            />
+            {(() => {
+              const H_px = H * SCALE;
+              const R_semi = Math.min(H_px * 0.85, 62);
+              const steps = 32;
+              const pts: string[] = [];
+              for (let i = 0; i <= steps; i++) {
+                const a = (i / steps) * Math.PI;
+                const s = Math.sin(a) * H_px;
+                const c = Math.cos(a) * R_semi;
+                const px = P_top_proj.x + u_down.x * s + n_out.x * c;
+                const py = P_top_proj.y + u_down.y * s + n_out.y * c;
+                pts.push(`${px.toFixed(2)},${py.toFixed(2)}`);
+              }
+              const dSemi = `M ${pts.join(' L ')} Z`;
+              return (
+                <>
+                  <path d={dSemi} fill="#f8fafc" stroke="#0f172a" strokeWidth="2" />
+                  <path d={dSemi} fill="url(#gateHatchPattern)" stroke="none" />
+                  <line
+                    x1={P_top_proj.x - u_down.x * 10}
+                    y1={P_top_proj.y - u_down.y * 10}
+                    x2={P_bot_proj.x + u_down.x * 10}
+                    y2={P_bot_proj.y + u_down.y * 10}
+                    stroke="#64748b"
+                    strokeWidth="1"
+                    strokeDasharray="7 3 2 3"
+                  />
+                </>
+              );
+            })()}
           </g>
         )}
 
@@ -949,6 +978,15 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     if (!showExerciseDims) return null;
 
     const dims: React.ReactNode[] = [];
+
+    // Rótulos das cotas verticais (h) escalonados em "faixas" logo abaixo da linha d'água,
+    // para que nunca se sobreponham entre si nem às demais anotações.
+    // Retorna o deslocamento Y do rótulo em relação ao ponto médio da cota.
+    const labelBandY = (pY: number, band: number) => {
+      const mid = (waterSurfaceY + pY) / 2;
+      const target = waterSurfaceY + 18 + band * 22;
+      return Math.min(target, pY - 12) - mid;
+    };
 
     // Helper para cotas ortogonais (estilo Barragens)
     const drawDim = (
@@ -1130,8 +1168,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
     // Nível da Água Jusante (se ativo)
     if (props.downstreamLevel > 0) {
-      const downDepthY = waterSurfaceY + (props.upstreamLevel - props.downstreamLevel) * SCALE;
-      const naDownX = P_bot.x + 35;
+      const naDownX = SVG_W - 70;
       dims.push(drawLevelSymbol('na-downstream-symbol', naDownX, downDepthY, `NA=${props.downstreamLevel.toFixed(2)}`, false));
     }
 
@@ -1187,7 +1224,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         </>,
         14,
         { x: -35, y: 0 },
-        { x: 0, y: 0 }
+        { x: 0, y: labelBandY(P_top.y, 0) }
       )
     );
 
@@ -1204,7 +1241,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         </>,
         13,
         { x: dimX_cg_off, y: 0 },
-        { x: 0, y: -cgDepth * 0.22 }
+        { x: 0, y: labelBandY(P_CG.y, 1) }
       )
     );
 
@@ -1222,7 +1259,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           </>,
           13,
           { x: dimX_cp_off, y: 0 },
-          { x: 0, y: -cpDepth * 0.38 }
+          { x: 0, y: labelBandY(P_CP.y, 2) }
         )
       );
     }
@@ -1342,8 +1379,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
               strokeWidth={2}
             />
             <text
-              x={P_CG.x + n_out.x * 14 - u_down.x * 4}
-              y={P_CG.y + n_out.y * 14 - u_down.y * 4}
+              x={P_CG.x + n_out.x * 18 - u_down.x * 12}
+              y={P_CG.y + n_out.y * 18 - u_down.y * 12}
               textAnchor="middle"
               dominantBaseline="central"
               fill="#0f172a"
@@ -1385,8 +1422,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                 strokeWidth={1.8}
               />
               <text
-                x={P_CP.x + n_out.x * 14 + u_down.x * 4}
-                y={P_CP.y + n_out.y * 14 + u_down.y * 4}
+                x={P_CP.x + n_out.x * 18 + u_down.x * 12}
+                y={P_CP.y + n_out.y * 18 + u_down.y * 12}
                 textAnchor="middle"
                 dominantBaseline="central"
                 fill="#b91c1c"

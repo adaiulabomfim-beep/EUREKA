@@ -106,6 +106,8 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   cordLength_visual = 0,
   obj2Color = '#475569',
   extraWeight = 0,
+  shape2 = ObjectShape.CUBE,
+  visualWidth2 = 0,
 }) => {
   // câmera do 3D antigo
   const [rotX, setRotX] = useState<number>(15);
@@ -398,7 +400,10 @@ export const Vista3D: React.FC<Vista3DProps> = ({
       .sort((a, b) => a.z - b.z);
 
     // Bloco 2
-    const obj2Pts = twoBlocks ? getPoints(0, effectiveYBot - cordLength_visual - H2_visual, visualWidth, H2_visual, 0, objD_visual) : null;
+    const w2 = visualWidth2 > 0 ? visualWidth2 : visualWidth;
+    const yBot2 = effectiveYBot - cordLength_visual - H2_visual;
+    const center2 = project(0, tankBottomY - (yBot2 + H2_visual / 2), 0);
+    const obj2Pts = twoBlocks ? getPoints(0, yBot2, w2, H2_visual, 0, w2) : null;
     const faces2: FaceDef[] = obj2Pts ? [
       { pts: [obj2Pts.p1, obj2Pts.p2, obj2Pts.p3, obj2Pts.p4], n: { x: 0, y: 0, z: -1 } },
       { pts: [obj2Pts.p5, obj2Pts.p6, obj2Pts.p7, obj2Pts.p8], n: { x: 0, y: 0, z: 1 } },
@@ -437,12 +442,19 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         )}
 
         {/* Bloco 2 */}
-        {twoBlocks && sortedFaces2.map((f, i) => (
-          <g key={`b2-${i}`}>
-            <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill={obj2Color} stroke={OBJECT_BORDER_COLOR} strokeWidth="1" />
-            <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="black" fillOpacity={f.shadowOpacity} stroke="none" />
-            <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="white" fillOpacity={f.highlightOpacity} stroke="none" />
+        {twoBlocks && (shape2 === ObjectShape.SPHERE ? (
+          <g>
+            <circle cx={center2.x} cy={center2.y} r={w2 / 2} fill={obj2Color} stroke={OBJECT_BORDER_COLOR} strokeWidth="1" />
+            <circle cx={center2.x} cy={center2.y} r={w2 / 2} fill="url(#sphereLight)" stroke="none" pointerEvents="none" />
           </g>
+        ) : (
+          sortedFaces2.map((f, i) => (
+            <g key={`b2-${i}`}>
+              <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill={obj2Color} stroke={OBJECT_BORDER_COLOR} strokeWidth="1" />
+              <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="black" fillOpacity={f.shadowOpacity} stroke="none" />
+              <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="white" fillOpacity={f.highlightOpacity} stroke="none" />
+            </g>
+          ))
         ))}
 
         {/* Bloco 1 */}
@@ -520,7 +532,10 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     if (!showFBD) return null;
 
     const centerTop = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
-    const centerBottom = project(0, tankBottomY - objBottomDistFromTankBottom, 0);
+    const lowestDistFromBottom = twoBlocks
+      ? Math.max(0, objBottomDistFromTankBottom - cordLength_visual - H2_visual)
+      : objBottomDistFromTankBottom;
+    const centerBottom = project(0, tankBottomY - lowestDistFromBottom, 0);
     const centerCB = project(0, centerOfBuoyancyY_visual, 0);
 
     const arrowLenP = Math.min(120, Math.max(30, objectWeight * 0.005));

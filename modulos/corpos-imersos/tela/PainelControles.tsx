@@ -16,6 +16,7 @@ interface PainelControlesProps {
   customObjDensity: number;
   shape: ObjectShape;
   dim1: number;
+  dim2?: number;
   selectedFluid: string;
   customFluidDensity: number;
   depthA: number;
@@ -30,6 +31,7 @@ interface PainelControlesProps {
   onCustomObjDensityChange: (val: number) => void;
   onShapeChange: (shape: ObjectShape) => void;
   onDim1Change: (val: number) => void;
+  onDim2Change?: (val: number) => void;
   onFluidChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onCustomFluidDensityChange: (val: number) => void;
   onDepthAChange: (val: number) => void;
@@ -62,6 +64,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   customObjDensity,
   shape,
   dim1,
+  dim2 = 100,
   selectedFluid,
   customFluidDensity,
   depthA,
@@ -76,6 +79,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   onCustomObjDensityChange,
   onShapeChange,
   onDim1Change,
+  onDim2Change,
   onFluidChange,
   onCustomFluidDensityChange,
   onDepthAChange,
@@ -122,15 +126,22 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <select className={selectClass} value={shape} onChange={(e) => onShapeChange(e.target.value as ObjectShape)}>
               <option value={ObjectShape.CUBE}>Cubo</option>
               <option value={ObjectShape.SPHERE}>Esfera</option>
+              <option value={ObjectShape.CYLINDER}>Cilindro</option>
             </select>
           </div>
 
           <div className="bg-slate-50/40 p-3 rounded-xl border border-slate-100/60 space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className={`col-span-2 ${inputGroupClass}`}>
+              <div className={`${shape === ObjectShape.CYLINDER ? 'col-span-1' : 'col-span-2'} ${inputGroupClass}`}>
                 <label className={labelClass}>{shape === ObjectShape.CUBE ? 'Aresta (cm)' : 'Raio (cm)'}</label>
                 <NumberInput value={dim1} min={1} onChange={onDim1Change} />
               </div>
+              {shape === ObjectShape.CYLINDER && onDim2Change && (
+                <div className={`col-span-1 ${inputGroupClass}`}>
+                  <label className={labelClass}>Altura (cm)</label>
+                  <NumberInput value={dim2} min={1} onChange={onDim2Change} />
+                </div>
+              )}
             </div>
 
             {isObjectTooWide && (

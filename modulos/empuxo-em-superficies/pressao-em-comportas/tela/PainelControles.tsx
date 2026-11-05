@@ -8,6 +8,7 @@ import {
   ModoPosicionamentoComporta,
 } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
+import { getGateYBarTotal } from '../calculos/hidrostatica';
 import { BookOpen, Square, Circle, Waves, Anchor, Link, Droplets, Scale } from 'lucide-react';
 
 interface PainelControlesProps {
@@ -305,8 +306,9 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                             onClick={() => {
                               setConfig(prev => {
                                 const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
-                                const currentY_CG = prev.comporta.y_cg_direto ?? (prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + prev.comporta.altura / 2);
-                                const h_topo = Math.max(0, currentY_CG * sinTheta - (prev.comporta.altura / 2) * sinTheta);
+                                const ybarTotal = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
+                                const currentY_CG = prev.comporta.y_cg_direto ?? (prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + ybarTotal);
+                                const h_topo = Math.max(0, currentY_CG * sinTheta - ybarTotal * sinTheta);
                                 return {
                                   ...prev,
                                   comporta: {
@@ -330,7 +332,8 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                             onClick={() => {
                               setConfig(prev => {
                                 const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
-                                const calculatedY_CG = prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + prev.comporta.altura / 2;
+                                const ybarTotal = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
+                                const calculatedY_CG = prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + ybarTotal;
                                 return {
                                   ...prev,
                                   comporta: {
@@ -358,12 +361,13 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                                   <span className="text-[9px] text-blue-600 font-bold">metros</span>
                               </div>
                               <NumberInput
-                                value={config.comporta.y_cg_direto ?? parseFloat(((config.comporta.profundidadeTopo / Math.sin(((config.comporta.angulo || 90) * Math.PI) / 180)) + config.comporta.altura / 2).toFixed(2))}
+                                value={config.comporta.y_cg_direto ?? parseFloat(((config.comporta.profundidadeTopo / Math.sin(((config.comporta.angulo || 90) * Math.PI) / 180)) + getGateYBarTotal(config.comporta.forma, config.comporta.altura)).toFixed(2))}
                                 onChange={(val: number) => {
                                   setConfig(prev => {
                                     const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                    const ybarTotal = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
                                     const h_CG = val * sinTheta;
-                                    const h_topo = Math.max(0, h_CG - (prev.comporta.altura / 2) * sinTheta);
+                                    const h_topo = h_CG - ybarTotal * sinTheta;
                                     return {
                                       ...prev,
                                       comporta: {
@@ -391,7 +395,8 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                                 value={config.comporta.profundidadeTopo}
                                 onChange={(val: number) => setConfig(prev => {
                                   const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
-                                  const calculatedY_CG = val / Math.max(0.01, sinTheta) + prev.comporta.altura / 2;
+                                  const ybarTotal = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
+                                  const calculatedY_CG = val / Math.max(0.01, sinTheta) + ybarTotal;
                                   return {
                                     ...prev,
                                     comporta: {
@@ -413,9 +418,10 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       <label className={labelClass}>Ângulo de Inclinação (θ)</label>
                       <NumberInput value={config.comporta.angulo || 90} onChange={(val: number) => setConfig(prev => {
                         const sinTheta = Math.sin((val * Math.PI) / 180);
+                        const ybarTotal = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
                         let h_topo = prev.comporta.profundidadeTopo;
                         if (prev.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && prev.comporta.y_cg_direto) {
-                          h_topo = Math.max(0, prev.comporta.y_cg_direto * sinTheta - (prev.comporta.altura / 2) * sinTheta);
+                          h_topo = prev.comporta.y_cg_direto * sinTheta - ybarTotal * sinTheta;
                         }
                         return {
                           ...prev,
@@ -476,7 +482,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                                
                                {config.comporta.pesoProprioAtivo && (
                                    <div className="animate-in fade-in slide-in-from-top-2">
-                                       <label className={labelClass}>Peso da Comporta (kg)</label>
+                                       <label className={labelClass}>Massa da Comporta (kg)</label>
                                        <NumberInput value={config.comporta.pesoProprio} min={0} max={10000} step={10} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, pesoProprio: val}}))} />
                                    </div>
                                )}

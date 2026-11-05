@@ -2,12 +2,17 @@ import React from 'react';
 import { Vista2D } from './Vista2D';
 import { Scene3D } from '../visual-3d/Scene3D';
 import { FormaComporta, PosicaoDobradica, SistemaUnidades, ModoPosicionamentoComporta } from '../dominio/tipos';
+import { ResultadoSimulacaoComporta } from '../dominio/resultado';
 
 interface RenderizadorComportaProps {
   upstreamLevel: number;
   downstreamLevel: number;
   upstreamFluidKey: string;
   downstreamFluidKey: string;
+  upstreamDensity?: number;
+  downstreamDensity?: number;
+  gravity?: number;
+  liveResults?: ResultadoSimulacaoComporta;
   hasGate: boolean;
   gateShape: FormaComporta;
   gateWidth: number;
@@ -20,6 +25,8 @@ interface RenderizadorComportaProps {
   hasTieRod: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
+  gateWeight?: number;
+  gateWeightEnabled?: boolean;
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;

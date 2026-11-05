@@ -210,7 +210,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
 
   const fluidAHeight = Math.max(0, tankBottomY - fluidSurfaceY - (effectiveHB_px || 0));
   const rippleHeight = Math.max(0, Math.min(30, hA_dynamic_px));
-  const fluidBTop = fluidSurfaceY + hA_dynamic_px + pan.y;
+  const fluidBTop = tankBottomY - (effectiveHB_px || 0) + pan.y;
 
   const centerOfMass = useMemo(
     () => ({

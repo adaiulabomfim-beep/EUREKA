@@ -109,6 +109,7 @@ export const Memorial: React.FC<MemorialProps> = ({
   const area = analyzedResults.forceData.up.area;
   const Ixx = analyzedResults.forceData.up.Ixx ?? (isCircular ? (Math.PI * Math.pow(H / 2, 4)) / 4 : (W * Math.pow(H, 3)) / 12);
   const h_cg = analyzedResults.forceData.up.h_cg;
+  const ybarRel = isSemi ? (4 * H) / (3 * Math.PI) : H / 2;
   const Y_CG = analyzedResults.forceData.up.Y_CG ?? (h_cg / Math.max(0.001, sinTheta));
   const delta_y = analyzedResults.forceData.up.delta_y ?? (Ixx / (area * Y_CG));
   const Y_CP = analyzedResults.forceData.up.Y_CP ?? (Y_CG + delta_y);
@@ -118,7 +119,14 @@ export const Memorial: React.FC<MemorialProps> = ({
   const p_cg_Pa = gamma_N * h_cg;
   const p_cg_disp = isKgf ? (p_cg_Pa / g).toFixed(1) : (p_cg_Pa / 1000).toFixed(2);
 
-  // Força resultante
+  // Forças (Montante, Jusante e Líquida)
+  const FR_up_N = analyzedResults.forceData.up?.FR ?? (p_cg_Pa * area);
+  const FR_down_N = analyzedResults.forceData.down?.FR ?? 0;
+  const hasDownForce = FR_down_N > 1e-3;
+  const FR_up_disp = isKgf ? Math.round(FR_up_N / g).toLocaleString('pt-BR') : (FR_up_N / 1000).toFixed(2);
+  const FR_down_disp = isKgf ? Math.round(FR_down_N / g).toLocaleString('pt-BR') : (FR_down_N / 1000).toFixed(2);
+
+  // Força resultante líquida
   const FR_N = Math.abs(analyzedResults.forceData.FR_net);
   const FR_disp = isKgf ? Math.round(FR_N / g).toLocaleString('pt-BR') : (FR_N / 1000).toFixed(2);
 
@@ -236,7 +244,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                     ? `π · (${H.toFixed(2)})² / 4`
                     : isRect
                     ? `${W.toFixed(2)} · ${H.toFixed(2)}`
-                    : `π · (${(H / 2).toFixed(2)})² / 2`
+                    : `π · (${H.toFixed(2)})² / 2`
                 }
                 result={area.toFixed(4)}
                 unit="m²"
@@ -272,12 +280,14 @@ export const Memorial: React.FC<MemorialProps> = ({
                 formula={
                   config?.comporta?.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO
                     ? 'Informado diretamente'
+                    : isSemi
+                    ? 'h_topo / sin(θ) + 4R / (3π)'
                     : 'h_topo / sin(θ) + H/2'
                 }
                 substitution={
                   config?.comporta?.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO
                     ? undefined
-                    : `${(config?.comporta?.profundidadeTopo ?? 0).toFixed(2)} / sin(${gateInclination}°) + ${(H / 2).toFixed(2)}`
+                    : `${(config?.comporta?.profundidadeTopo ?? 0).toFixed(2)} / sin(${gateInclination}°) + ${ybarRel.toFixed(3)}`
                 }
                 result={Y_CG.toFixed(3)}
                 unit="m"
@@ -310,20 +320,56 @@ export const Memorial: React.FC<MemorialProps> = ({
               <div className="w-6 h-px bg-indigo-300"></div> 4. Força Hidrostática Resultante (Empuxo F_R) <div className="flex-1 h-px bg-slate-100"></div>
             </h4>
             <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
-              <CalculationLine
-                theme="indigo"
-                label="Força Resultante (F_R / E)"
-                symbol={<>F<sub>R</sub></>}
-                formula={<>p<sub>CG</sub> · A = γ · h<sub>CG</sub> · A</>}
-                substitution={
-                  isKgf
-                    ? `${p_cg_disp} · ${area.toFixed(4)}`
-                    : `${p_cg_disp} kPa · ${area.toFixed(4)} m²`
-                }
-                result={FR_disp}
-                unit={force_unit}
-                isSubHeader
-              />
+              {hasDownForce ? (
+                <>
+                  <CalculationLine
+                    theme="indigo"
+                    label="Força Hidrostática de Montante (F_R,M)"
+                    symbol={<>F<sub>R,M</sub></>}
+                    formula={<>p<sub>CG,M</sub> · A<sub>M</sub></>}
+                    substitution={
+                      isKgf
+                        ? `${p_cg_disp} · ${area.toFixed(4)}`
+                        : `${p_cg_disp} kPa · ${area.toFixed(4)} m²`
+                    }
+                    result={FR_up_disp}
+                    unit={force_unit}
+                  />
+                  <CalculationLine
+                    theme="indigo"
+                    label="Força Hidrostática de Jusante (F_R,J)"
+                    symbol={<>F<sub>R,J</sub></>}
+                    formula={<>γ<sub>J</sub> · h<sub>CG,J</sub> · A<sub>J</sub></>}
+                    result={FR_down_disp}
+                    unit={force_unit}
+                  />
+                  <CalculationLine
+                    theme="indigo"
+                    label="Força Resultante Líquida (F_R / E)"
+                    symbol={<>F<sub>R</sub></>}
+                    formula={<>|F<sub>R,M</sub> - F<sub>R,J</sub>|</>}
+                    substitution={`|${FR_up_disp} - ${FR_down_disp}|`}
+                    result={FR_disp}
+                    unit={force_unit}
+                    isSubHeader
+                  />
+                </>
+              ) : (
+                <CalculationLine
+                  theme="indigo"
+                  label="Força Resultante (F_R / E)"
+                  symbol={<>F<sub>R</sub></>}
+                  formula={<>p<sub>CG</sub> · A = γ · h<sub>CG</sub> · A</>}
+                  substitution={
+                    isKgf
+                      ? `${p_cg_disp} · ${area.toFixed(4)}`
+                      : `${p_cg_disp} kPa · ${area.toFixed(4)} m²`
+                  }
+                  result={FR_disp}
+                  unit={force_unit}
+                  isSubHeader
+                />
+              )}
             </div>
           </section>
 
@@ -366,27 +412,29 @@ export const Memorial: React.FC<MemorialProps> = ({
           </section>
 
           {/* 6. EQUILÍBRIO (SE HOUVER DOBRADIÇA OU TIRANTE) */}
-          {(analyzedResults.equilibrium.M_hinge > 0 || analyzedResults.equilibrium.F_tie > 0) && (
+          {(Math.abs(analyzedResults.equilibrium.M_hinge) > 1e-6 || Math.abs(analyzedResults.equilibrium.F_tie) > 1e-6) && (
             <section>
               <h4 className="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <div className="w-6 h-px bg-purple-200"></div> 6. Equilíbrio Estático de Momentos <div className="flex-1 h-px bg-slate-100"></div>
               </h4>
               <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
-                {analyzedResults.equilibrium.M_hinge > 0 && (
+                {Math.abs(analyzedResults.equilibrium.M_hinge) > 1e-6 && (
                   <CalculationLine
                     theme="purple"
                     label="Momento no Apoio da Dobradiça"
                     symbol={<>M<sub>hinge</sub></>}
-                    result={(analyzedResults.equilibrium.M_hinge / (isKgf ? g : 1000)).toFixed(2)}
+                    formula={<>F<sub>R</sub> · d<sub>CP</sub> ± W<sub>⊥</sub> · d<sub>CG</sub></>}
+                    result={(Math.abs(analyzedResults.equilibrium.M_hinge) / (isKgf ? g : 1000)).toFixed(2)}
                     unit={isKgf ? 'kgf·m' : 'kN·m'}
                   />
                 )}
-                {analyzedResults.equilibrium.F_tie > 0 && (
+                {Math.abs(analyzedResults.equilibrium.F_tie) > 1e-6 && (
                   <CalculationLine
                     theme="purple"
                     label="Força Necessária no Tirante"
                     symbol={<>F<sub>tie</sub></>}
-                    result={(analyzedResults.equilibrium.F_tie / (isKgf ? g : 1000)).toFixed(2)}
+                    formula={<>|M<sub>hinge</sub>| / (d<sub>tie</sub> · sin(α))</>}
+                    result={(Math.abs(analyzedResults.equilibrium.F_tie) / (isKgf ? g : 1000)).toFixed(2)}
                     unit={isKgf ? 'kgf' : 'kN'}
                     isSubHeader
                   />

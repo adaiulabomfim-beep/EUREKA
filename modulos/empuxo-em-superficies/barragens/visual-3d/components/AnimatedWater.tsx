@@ -47,7 +47,17 @@ function getWaterWaveTexture() {
     return waterTexCache;
 }
 
-export const AnimatedWaterMaterial: React.FC<{ opacity?: number }> = ({ opacity = 0.6 }) => {
+export const AnimatedWaterMaterial: React.FC<{
+    opacity?: number;
+    colorPrimaria?: string;
+    colorSecundaria?: string;
+    colorSuperficie?: string;
+}> = ({
+    opacity = 0.6,
+    colorPrimaria = '#3b82f6',
+    colorSecundaria = '#2563eb',
+    colorSuperficie = '#1d4ed8',
+}) => {
     const tex = useMemo(() => {
         const t = getWaterWaveTexture().clone();
         t.needsUpdate = true;
@@ -68,10 +78,10 @@ export const AnimatedWaterMaterial: React.FC<{ opacity?: number }> = ({ opacity 
                 `#include <worldpos_vertex>\n vWorldPosWater = (modelMatrix * vec4(position, 1.0)).xyz; vWorldNormalWater = normalize((modelMatrix * vec4(normal, 0.0)).xyz);`
             );
             
-            // Match 2D palette: #3b82f6 (top) → #2563eb (body) → #1d4ed8 (deep)
-            shader.uniforms.colorTopo = { value: new THREE.Color('#3b82f6') };
-            shader.uniforms.colorCorpo = { value: new THREE.Color('#2563eb') };
-            shader.uniforms.colorSombra = { value: new THREE.Color('#1d4ed8') };
+            // Match 2D palette
+            shader.uniforms.colorTopo = { value: new THREE.Color(colorPrimaria) };
+            shader.uniforms.colorCorpo = { value: new THREE.Color(colorSecundaria) };
+            shader.uniforms.colorSombra = { value: new THREE.Color(colorSuperficie) };
             shader.uniforms.waveColor = { value: new THREE.Color('#ffffff') };
 
             shader.fragmentShader = `uniform float time;\nuniform vec3 colorTopo;\nuniform vec3 colorCorpo;\nuniform vec3 colorSombra;\nuniform vec3 waveColor;\n` + shader.fragmentShader;
@@ -104,7 +114,7 @@ export const AnimatedWaterMaterial: React.FC<{ opacity?: number }> = ({ opacity 
         );
         tex.userData.shader = shader;
     };
-}, [tex]);
+}, [tex, colorPrimaria, colorSecundaria, colorSuperficie]);
 
 useFrame((state) => {
     if (tex.userData.shader) {
@@ -114,7 +124,7 @@ useFrame((state) => {
 
 return (
     <meshStandardMaterial 
-        color="#2563eb"
+        color={colorSecundaria}
         map={tex} 
         transparent={true} 
         opacity={opacity} 
@@ -122,6 +132,7 @@ return (
         metalness={0.0} 
         depthWrite={false}
         onBeforeCompile={onBeforeCompile}
+        customProgramCacheKey={() => `water-${colorPrimaria}-${colorSecundaria}`}
     />
 );
 };

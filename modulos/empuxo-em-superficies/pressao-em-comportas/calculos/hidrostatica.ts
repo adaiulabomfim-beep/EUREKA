@@ -121,6 +121,16 @@ export function hydroPlaneNet(
 }
 
 /**
+ * Retorna a distância do topo da comporta ao centróide geométrico total (ao longo do plano)
+ */
+export function getGateYBarTotal(gateShape: FormaComporta, gateHeight: number): number {
+  if (gateShape === FormaComporta.SEMI_CIRCULAR) {
+    return (4 * gateHeight) / (3 * Math.PI);
+  }
+  return gateHeight / 2;
+}
+
+/**
  * Helper para calcular propriedades geométricas e molhamento parcial
  */
 function getGeometryAndWet(
@@ -132,34 +142,20 @@ function getGeometryAndWet(
   directY_CG?: number
 ) {
   let A_total = 0;
-  let ybar_total = 0;
+  let ybar_total = getGateYBarTotal(gateShape, gateHeight);
   let Ixx_total = 0;
 
   if (gateShape === FormaComporta.RETANGULAR) {
     A_total = gateHeight * gateWidth;
-    ybar_total = gateHeight / 2;
     Ixx_total = (gateWidth * Math.pow(gateHeight, 3)) / 12;
   } else if (gateShape === FormaComporta.CIRCULAR) {
     const r = gateHeight / 2;
     A_total = Math.PI * Math.pow(r, 2);
-    ybar_total = r;
     Ixx_total = (Math.PI * Math.pow(r, 4)) / 4;
   } else if (gateShape === FormaComporta.SEMI_CIRCULAR) {
     const r = gateHeight;
     A_total = (Math.PI * Math.pow(r, 2)) / 2;
-    ybar_total = (4 * r) / (3 * Math.PI);
     Ixx_total = Math.pow(r, 4) * (Math.PI / 8 - 8 / (9 * Math.PI));
-  }
-
-  // Se directY_CG foi fornecido e a comporta está submersa
-  if (directY_CG !== undefined && directY_CG > 0) {
-    return {
-      A_wet: A_total,
-      ybar: ybar_total,
-      Ixx: Ixx_total,
-      yWetLength: gateHeight,
-      Y_CG_surface: directY_CG,
-    };
   }
 
   const sinSafe = Math.max(0.001, Math.abs(sinTheta));
@@ -176,11 +172,25 @@ function getGeometryAndWet(
     };
   }
 
+  // Se directY_CG foi fornecido e a comporta está totalmente submersa (h0 >= 0)
+  if (directY_CG !== undefined && directY_CG > 0 && h0 >= -1e-6) {
+    return {
+      A_wet: A_total,
+      ybar: ybar_total,
+      Ixx: Ixx_total,
+      yWetLength: gateHeight,
+      Y_CG_surface: directY_CG,
+    };
+  }
+
   // 2) Parcialmente submersa (topo da comporta fora da linha d'água: h0 < 0)
   if (h0 < 0) {
-    const y_dry = -h0 / sinSafe;
+    const y_dry = Math.min(gateHeight, Math.max(0, -h0 / sinSafe));
     const y_wet = Math.max(0, gateHeight - y_dry);
-    const frac = Math.min(1, Math.max(0, y_wet / gateHeight));
+
+    if (y_wet <= 1e-9) {
+      return { A_wet: 0, ybar: 0, Ixx: 0, yWetLength: 0, Y_CG_surface: 0 };
+    }
 
     if (gateShape === FormaComporta.RETANGULAR) {
       const A_wet = y_wet * gateWidth;
@@ -189,11 +199,44 @@ function getGeometryAndWet(
       const Y_CG_surface = y_wet / 2;
       return { A_wet, ybar, Ixx, yWetLength: y_wet, Y_CG_surface };
     } else {
-      // Circular / Semicircular parcial
-      const A_wet = A_total * frac;
-      const ybar = y_dry + y_wet / 2;
-      const Ixx = Ixx_total * Math.pow(frac, 3);
-      const Y_CG_surface = y_wet / 2;
+      // Integração numérica de Simpson (N = 200) para segmento circular / semicircular
+      const N = 200;
+      const dy = (gateHeight - y_dry) / N;
+      const widthAtY = (y: number): number => {
+        if (gateShape === FormaComporta.CIRCULAR) {
+          const r = gateHeight / 2;
+          const dy_c = y - r;
+          return 2 * Math.sqrt(Math.max(0, r * r - dy_c * dy_c));
+        } else {
+          const r = gateHeight;
+          const wBase = gateWidth > 0 ? gateWidth : 2 * r;
+          const ratio = Math.min(1, Math.max(0, y / r));
+          return wBase * Math.sqrt(Math.max(0, 1 - ratio * ratio));
+        }
+      };
+
+      let sumA = 0;
+      let sumMy = 0;
+      for (let i = 0; i <= N; i++) {
+        const y = y_dry + i * dy;
+        const w = (i === 0 || i === N) ? 1 : (i % 2 === 1 ? 4 : 2);
+        const by = widthAtY(y);
+        sumA += w * by;
+        sumMy += w * y * by;
+      }
+      const A_wet = (dy / 3) * sumA;
+      const ybar = A_wet > 1e-12 ? ((dy / 3) * sumMy) / A_wet : y_dry + y_wet / 2;
+
+      let sumIxx = 0;
+      for (let i = 0; i <= N; i++) {
+        const y = y_dry + i * dy;
+        const w = (i === 0 || i === N) ? 1 : (i % 2 === 1 ? 4 : 2);
+        const by = widthAtY(y);
+        const diff = y - ybar;
+        sumIxx += w * diff * diff * by;
+      }
+      const Ixx = (dy / 3) * sumIxx;
+      const Y_CG_surface = Math.max(1e-6, ybar - y_dry);
       return { A_wet, ybar, Ixx, yWetLength: y_wet, Y_CG_surface };
     }
   }
@@ -222,12 +265,15 @@ export function calculateNetForce(
   gammaUp: number,
   gammaDown: number,
   gateShape: FormaComporta,
-  directY_CG_up?: number
+  directY_CG_up?: number,
+  hasDownstream: boolean = true
 ): { FR_net: number; s_cp_net: number; up: any; down: any } {
   const sinTheta = Math.sin((gateInclination * Math.PI) / 180);
 
   const geomUp = getGeometryAndWet(gateHeight, gateWidth, gateShape, h_top_up, sinTheta, directY_CG_up);
-  const geomDown = getGeometryAndWet(gateHeight, gateWidth, gateShape, h_top_down, sinTheta);
+  const geomDown = hasDownstream
+    ? getGeometryAndWet(gateHeight, gateWidth, gateShape, h_top_down, sinTheta)
+    : { A_wet: 0, ybar: 0, Ixx: 0, yWetLength: 0, Y_CG_surface: 0 };
 
   // Cada lado usa seu próprio gamma e suas propriedades de molhamento
   const up = hydroPlaneSide(

@@ -134,7 +134,8 @@ export function getHatchTexture(type: MaterialType) {
 export const HatchMaterial: React.FC<{
   type: MaterialType;
   color?: string;
-}> = ({ type, color }) => {
+  texScale?: number;
+}> = ({ type, color, texScale }) => {
   const tex = getHatchTexture(type);
 
   const onBeforeCompile = useMemo(() => {
@@ -191,10 +192,11 @@ export const HatchMaterial: React.FC<{
       let fragmentMapReplace = '';
 
       if (type === 'concrete') {
+        const s = (texScale ?? 0.065).toFixed(4);
         // Concrete: multiply pattern with base gray.
         // Texture has white base + dark triangles/dots.
         fragmentMapReplace = shaderHeader + `
-          float texScale = 0.065;
+          float texScale = ${s};
 
           vec4 tx = texture2D(map, uvX * texScale);
           vec4 ty = texture2D(map, uvY * texScale);
@@ -210,9 +212,10 @@ export const HatchMaterial: React.FC<{
           diffuseColor.rgb = baseCol * pattern;
         `;
       } else if (type === 'earthDam') {
+        const s = (texScale ?? 0.12).toFixed(4);
         // Earth: multiply grouped diagonal lines with amber base.
         fragmentMapReplace = shaderHeader + `
-          float texScale = 0.12; // Increased scale to make the hatch much smaller
+          float texScale = ${s};
 
           vec4 tx = texture2D(map, uvX * texScale);
           vec4 ty = texture2D(map, uvY * texScale);
@@ -228,9 +231,10 @@ export const HatchMaterial: React.FC<{
           diffuseColor.rgb = baseCol * pattern;
         `;
       } else if (type === 'ground') {
+        const s = (texScale ?? 0.11).toFixed(4);
         // Ground: same diagonal lines over dark brown base.
         fragmentMapReplace = shaderHeader + `
-          float texScale = 0.11; // Increased scale to make the hatch much smaller
+          float texScale = ${s};
 
           vec4 tx = texture2D(map, uvX * texScale);
           vec4 ty = texture2D(map, uvY * texScale);
@@ -254,7 +258,7 @@ export const HatchMaterial: React.FC<{
         #endif`
       );
     };
-  }, [type]);
+  }, [type, texScale]);
 
   const baseColor = color || '#ffffff';
 
@@ -266,7 +270,7 @@ export const HatchMaterial: React.FC<{
       roughness={type === 'concrete' ? 0.7 : 0.9}
       metalness={0.05}
       onBeforeCompile={onBeforeCompile}
-      customProgramCacheKey={() => `${type}-${color ?? 'default'}-${TEX_VERSION}`}
+      customProgramCacheKey={() => `${type}-${color ?? 'default'}-${texScale ?? 'def'}-${TEX_VERSION}`}
     />
   );
 };

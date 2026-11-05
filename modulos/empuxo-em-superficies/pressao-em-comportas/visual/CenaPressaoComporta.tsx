@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FormaComporta, PosicaoDobradica, SistemaUnidades, ModoPosicionamentoComporta } from '../dominio/tipos';
+import { ResultadoSimulacaoComporta } from '../dominio/resultado';
 import { RenderizadorComporta } from './RenderizadorComporta';
 
 interface CenaProps {
@@ -7,6 +8,10 @@ interface CenaProps {
   downstreamLevel: number;
   upstreamFluidKey: string;
   downstreamFluidKey: string;
+  upstreamDensity?: number;
+  downstreamDensity?: number;
+  gravity?: number;
+  liveResults?: ResultadoSimulacaoComporta;
   hasGate: boolean;
   gateShape: FormaComporta;
   gateWidth: number;

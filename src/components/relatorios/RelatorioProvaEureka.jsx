@@ -183,10 +183,18 @@ export const RelatorioProvaEureka = ({
   const alturaSubmersa = (() => {
     if (dados.tipo !== 'corpos-imersos') return null;
 
+    const hDireta = parseNumero(simulacao.alturaSubmersa);
+    if (Number.isFinite(hDireta) && hDireta > 0) {
+      return `${hDireta.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} m`;
+    }
+
     const dim       = simulacao.dimensoes || {};
     const dim1      = dim['Aresta/Raio (cm)'] || dim['Aresta/Raio'] || 0;
     const dim2      = dim['Comprimento (cm)'] || dim['Comprimento'] || 0;
-    const objDens   = parseNumero(simulacao.densidadeObjeto)  || 0;
+    const objDens   = parseNumero(simulacao.densidadeEquivalente ?? simulacao.densidadeObjeto)  || 0;
     const fluidDens = parseNumero(simulacao.densidadeFluido)  || 0;
 
     if (fluidDens === 0) return null;
@@ -196,7 +204,22 @@ export const RelatorioProvaEureka = ({
 
     if      (dados.geometria === 'CUBE')     h = (Number(dim1) / 100) * ratio;
     else if (dados.geometria === 'CYLINDER') h = (Number(dim2) / 100) * ratio;
-    else if (dados.geometria === 'SPHERE')   h = (Number(dim1) / 100) * 2 * ratio;
+    else if (dados.geometria === 'SPHERE') {
+      const R = Number(dim1) / 100;
+      if (ratio >= 1) {
+        h = 2 * R;
+      } else {
+        const targetV = ratio * (4 / 3) * Math.PI * Math.pow(R, 3);
+        let lo = 0, hi = 2 * R;
+        for (let i = 0; i < 40; i++) {
+          const mid = 0.5 * (lo + hi);
+          const vCap = Math.PI * mid * mid * (R - mid / 3);
+          if (vCap < targetV) lo = mid;
+          else hi = mid;
+        }
+        h = 0.5 * (lo + hi);
+      }
+    }
     else                                     h = (Number(dim2) / 100) * ratio;
 
     if (objDens >= fluidDens) {
