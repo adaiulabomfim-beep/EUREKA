@@ -55,10 +55,10 @@ const App: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-slate-100 to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 font-sans text-slate-900 dark:text-slate-100 selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-200 transition-colors duration-300"
+            className={`${currentMode !== SimulationMode.THEORY ? 'lg:h-screen lg:max-h-screen lg:overflow-hidden' : ''} min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-slate-100 to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 font-sans text-slate-900 dark:text-slate-100 selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-200 transition-colors duration-300`}
           >
             {/* Header */}
-            <header className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 text-white shadow-lg sticky top-0 z-50 border-b border-transparent dark:border-slate-800 transition-colors duration-300">
+            <header className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 text-white shadow-lg sticky top-0 z-50 border-b border-transparent dark:border-slate-800 transition-colors duration-300 shrink-0">
               <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="bg-white/20 dark:bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
@@ -92,7 +92,7 @@ const App: React.FC = () => {
             </header>
 
             {/* Navigation Tabs */}
-            <div className="bg-white/75 dark:bg-slate-900/85 backdrop-blur-md border-b border-blue-100/70 dark:border-slate-800 shadow-sm z-40 sticky top-16 transition-colors duration-300">
+            <div className="bg-white/75 dark:bg-slate-900/85 backdrop-blur-md border-b border-blue-100/70 dark:border-slate-800 shadow-sm z-40 sticky top-16 transition-colors duration-300 shrink-0">
               <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-2">
                   <nav id="tour-nav-modos" data-tour="nav-modos" className="flex space-x-2 overflow-x-auto custom-scrollbar pr-4" aria-label="Tabs">
@@ -259,10 +259,10 @@ const App: React.FC = () => {
             </div>
 
             {/* Main Content Area */}
-            <main className="flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <main className={`flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-1 ${currentMode !== SimulationMode.THEORY ? 'lg:flex lg:flex-col lg:min-h-0 lg:overflow-hidden' : 'py-8'}`}>
+              <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${currentMode !== SimulationMode.THEORY ? 'lg:flex-1 lg:min-h-0 lg:flex lg:flex-col' : ''}`}>
                 {/* Section Title */}
-                <div className="mb-6 flex flex-col gap-1">
+                <div className="mb-2.5 flex flex-col gap-0.5 shrink-0">
                   <h2 className="text-lg md:text-xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-400 dark:to-cyan-400 uppercase drop-shadow-sm">
                     {currentMode === SimulationMode.IMMERSED_BODIES && 'Princípio de Arquimedes'}
                     {currentMode === SimulationMode.DAM_HYDROLOGY && 'Geometria e Análise de Barragens'}
@@ -288,7 +288,7 @@ const App: React.FC = () => {
             </main>
 
             {/* Global Footer */}
-            <footer className="w-full py-2 text-center mt-auto opacity-70 shrink-0">
+            <footer className="w-full py-1.5 text-center mt-auto opacity-70 shrink-0">
               <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] font-bold text-slate-400 dark:text-slate-500">
                 DESENVOLVIDO POR <span className="text-slate-500 dark:text-slate-400">ADAIULA FERRAZ</span>
               </p>

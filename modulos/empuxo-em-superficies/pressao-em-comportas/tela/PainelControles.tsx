@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
 import {
   FormaComporta,
@@ -9,7 +9,7 @@ import {
 } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
 import { getGateYBarTotal } from '../calculos/hidrostatica';
-import { BookOpen, Square, Circle, Waves, Anchor, Link, Droplets, Scale } from 'lucide-react';
+import { BookOpen, Square, Circle, Waves, Anchor, Link, Droplets, Scale, RotateCcw, X } from 'lucide-react';
 import { ScrollablePanel } from '../../../../interface/ScrollablePanel';
 
 interface PainelControlesProps {
@@ -21,7 +21,9 @@ interface PainelControlesProps {
   maxWaterLevel: number;
   toggleGate: (active: boolean) => void;
   loadPreset: (key: string) => void;
-  presets: { [key: string]: ConfiguracaoSimulacaoComporta & { title: string, subtitle: string } };
+  presets: { [key: string]: ConfiguracaoSimulacaoComporta & { title: string, subtitle: string, enunciado?: string } };
+  activePresetKey?: string | null;
+  onResetDefaults?: () => void;
   handleHeightChange: (val: number) => void;
   handleShapeChange: (newShape: FormaComporta) => void;
   wallDims: { height: number; thickness: number; width: number; };
@@ -29,16 +31,16 @@ interface PainelControlesProps {
 }
 
 export const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon, title }) => (
-    <div className="flex items-center gap-2 mb-5 pb-3 border-b border-blue-50">
-        <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">{icon}</div>
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h3>
+    <div className="flex items-center gap-2 mb-5 pb-3 border-b border-blue-50 dark:border-slate-800/80">
+        <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-lg">{icon}</div>
+        <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">{title}</h3>
     </div>
 );
 
 export const PainelControles: React.FC<PainelControlesProps> = (props) => {
   const { config, setConfig } = props;
-  const labelClass = "block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5";
-  const selectClass = "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-blue-50/30 text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm cursor-pointer hover:bg-white mb-2";
+  const labelClass = "block text-[9px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest mb-1.5";
+  const selectClass = "w-full h-9 px-3 border border-slate-200 dark:border-slate-700/80 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/60 mb-2";
 
   const handleFluidChange = (isUpstream: boolean, chave: string) => {
     const fluido = FLUIDOS_PREDEFINIDOS[chave];
@@ -75,15 +77,26 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
     <ScrollablePanel
       id="tour-controles"
       dataTour="painel-controles"
-      className="lg:col-span-3 h-[620px] max-h-[620px] min-h-0"
+      className="lg:col-span-3 h-[600px] lg:h-full lg:max-h-full min-h-0 overflow-hidden"
       contentClassName="flex flex-col gap-4 pr-3.5 pb-4"
     >
       
       {/* SIMULAÇÕES PRONTAS */}
       <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white shrink-0">
-        <div className="flex items-center gap-2 mb-3 text-sm font-bold tracking-wider opacity-90">
-          <BookOpen className="w-4 h-4" />
-          SIMULAÇÕES PRONTAS
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2 text-sm font-bold tracking-wider opacity-90">
+            <BookOpen className="w-4 h-4" />
+            SIMULAÇÕES PRONTAS
+          </div>
+          <button
+            type="button"
+            onClick={props.onResetDefaults}
+            title="Restaurar estado inicial"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 border border-white/30 text-[10px] font-bold uppercase tracking-wider text-white transition-colors cursor-pointer active:scale-95"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Resetar
+          </button>
         </div>
         <select
           className="w-full bg-white/20 hover:bg-white/30 transition-colors rounded-lg p-3 text-left flex items-center gap-3 border border-white/30 text-white outline-none cursor-pointer text-xs"
@@ -92,23 +105,42 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
               props.loadPreset(e.target.value);
             }
           }}
-          defaultValue=""
-          key={JSON.stringify(config.comporta)} // Force re-render on preset load
+          value={props.activePresetKey ?? ''}
         >
           <option value="" disabled className="text-gray-800">Selecione uma simulação...</option>
           {Object.entries(props.presets).map(([key, preset]) => (
             <option key={key} value={key} className="text-gray-800">
-              {preset.title} ({preset.subtitle})
+              {preset.title}
             </option>
           ))}
         </select>
+        {props.activePresetKey && props.presets[props.activePresetKey] && (
+          <div className="mt-2.5 p-3 bg-white/10 rounded-xl border border-white/20 text-xs leading-relaxed text-blue-50">
+            <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-white/15">
+              <span className="font-bold text-white text-[10px] uppercase tracking-wider">
+                {props.presets[props.activePresetKey].subtitle}
+              </span>
+              <button
+                type="button"
+                onClick={props.onResetDefaults}
+                title="Fechar simulação e voltar ao estado inicial"
+                className="p-0.5 rounded hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <p className="text-[11px] leading-relaxed text-blue-50/95 font-medium">
+              {props.presets[props.activePresetKey].enunciado}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* SISTEMA DE UNIDADES */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-3.5 rounded-2xl shadow-xl shadow-blue-200/20 shrink-0">
+      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200 shrink-0">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-            <Scale className="w-3.5 h-3.5 text-blue-600" />
+          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+            <Scale className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Sistema de Unidades
           </label>
         </div>
@@ -119,7 +151,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
             className={`py-2 px-2.5 rounded-xl border text-[10px] font-bold tracking-wider transition-all flex flex-col items-center justify-center ${
               (config.sistemaUnidades || SistemaUnidades.SI) === SistemaUnidades.SI
                 ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/60'
             }`}
           >
             <span>SI (Padrão)</span>
@@ -131,7 +163,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
             className={`py-2 px-2.5 rounded-xl border text-[10px] font-bold tracking-wider transition-all flex flex-col items-center justify-center ${
               config.sistemaUnidades === SistemaUnidades.TECNICO_KGF
                 ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/60'
             }`}
           >
             <span>Técnico (kgf)</span>
@@ -141,11 +173,11 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
       </div>
 
       {/* Comporta */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 shrink-0">
-          <div className="flex items-center justify-between mb-5 pb-3 border-b border-blue-50">
+      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200 shrink-0">
+          <div className="flex items-center justify-between mb-5 pb-3 border-b border-blue-50 dark:border-slate-800/80">
               <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Square className="w-4 h-4" /></div>
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Geometria da Comporta</h3>
+                  <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-lg"><Square className="w-4 h-4" /></div>
+                  <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Geometria da Comporta</h3>
               </div>
               <input type="checkbox" checked={config.comporta.ativa} onChange={(e) => props.toggleGate(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" />
           </div>
@@ -157,21 +189,21 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       <div className="grid grid-cols-3 gap-2">
                           <button 
                             onClick={() => props.handleShapeChange(FormaComporta.RETANGULAR)}
-                            className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${config.comporta.forma === FormaComporta.RETANGULAR ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'}`}
+                            className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${config.comporta.forma === FormaComporta.RETANGULAR ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/60'}`}
                           >
                               <Square className="w-4 h-4 mb-1" />
                               Retâng.
                           </button>
                           <button 
                             onClick={() => props.handleShapeChange(FormaComporta.CIRCULAR)}
-                            className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${config.comporta.forma === FormaComporta.CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'}`}
+                            className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${config.comporta.forma === FormaComporta.CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/60'}`}
                           >
                               <Circle className="w-4 h-4 mb-1" />
                               Circular
                           </button>
                           <button 
                             onClick={() => props.handleShapeChange(FormaComporta.SEMI_CIRCULAR)}
-                            className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${config.comporta.forma === FormaComporta.SEMI_CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'}`}
+                            className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${config.comporta.forma === FormaComporta.SEMI_CIRCULAR ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/60'}`}
                           >
                               <div className="w-4 h-2 border-t-2 border-l-2 border-r-2 border-current rounded-t-full mb-1 mt-2"></div>
                               Semi-Circ.
@@ -219,7 +251,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                   )}
 
                   {/* Modo de Posicionamento da Comporta */}
-                  <div className="pt-2 border-t border-slate-100">
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
                       <label className={labelClass}>Modo de Posicionamento</label>
                       <div className="grid grid-cols-2 gap-2 mb-3">
                           <button
@@ -243,7 +275,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                             className={`py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${
                               (config.comporta.modoPosicionamento || ModoPosicionamentoComporta.PADRAO_H_TOPO) === ModoPosicionamentoComporta.PADRAO_H_TOPO
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                                : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/60'
                             }`}
                           >
                             Padrão (h₁)
@@ -268,7 +300,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                             className={`py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${
                               config.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                                : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/60'
                             }`}
                           >
                             Modo y<sub>CG</sub> Direto
@@ -355,10 +387,10 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       })} min={1} max={90} step={1} />
                   </div>
 
-                  <div className="pt-4 border-t border-blue-50">
+                  <div className="pt-4 border-t border-blue-50 dark:border-slate-800/80">
                       <div className="flex items-center gap-2 mb-4">
-                          <div className="p-1 bg-blue-50 text-blue-600 rounded"><Anchor className="w-3 h-3" /></div>
-                          <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Apoios e Equilíbrio</h4>
+                          <div className="p-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded"><Anchor className="w-3 h-3" /></div>
+                          <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Apoios e Equilíbrio</h4>
                       </div>
                       
                       <div className="space-y-4">
@@ -375,7 +407,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                               </select>
                           </div>
 
-                          <div className="pt-2 border-t border-blue-50/50">
+                          <div className="pt-2 border-t border-blue-50/50 dark:border-slate-800/60">
                                <div className="flex items-center justify-between mb-3">
                                    <label className={labelClass + " !mb-0 flex items-center gap-1"}><Link className="w-3 h-3" /> Tirante / Escora</label>
                                    <input type="checkbox" checked={config.comporta.temTirante} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, temTirante: e.target.checked}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
@@ -395,7 +427,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                                )}
                            </div>
 
-                           <div className="pt-2 border-t border-blue-50/50">
+                           <div className="pt-2 border-t border-blue-50/50 dark:border-slate-800/60">
                                <div className="flex items-center justify-between mb-3">
                                    <label className={labelClass + " !mb-0"}>Considerar Peso Próprio</label>
                                    <input type="checkbox" checked={config.comporta.pesoProprioAtivo} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, pesoProprioAtivo: e.target.checked}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
@@ -415,11 +447,11 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
        </div>
 
       {/* Níveis e Fluidos */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20 shrink-0">
+      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200 shrink-0">
           <SectionHeader icon={<Waves className="w-4 h-4" />} title="Líquidos e Níveis" />
           
           <div className="space-y-4">
-              <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 rounded-xl border border-slate-200/60 hover:bg-slate-50 transition-colors">
+              <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   <input
                       type="checkbox"
                       checked={config.fluidoJusante.ativo}
@@ -429,11 +461,11 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                   />
                   <label
                       htmlFor="jusante-toggle"
-                      className="text-[10px] font-bold text-slate-700 cursor-pointer select-none uppercase tracking-widest flex-1"
+                      className="text-[10px] font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none uppercase tracking-widest flex-1"
                   >
                       Jusante (Saída)
                   </label>
-                  {config.fluidoJusante.ativo && <Waves className="w-4 h-4 text-cyan-500" />}
+                  {config.fluidoJusante.ativo && <Waves className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />}
               </div>
 
               <div className="space-y-3 relative">
@@ -471,7 +503,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
               </div>
 
               {config.fluidoJusante.ativo && (
-                  <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100">
+                  <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
                       <div className="flex flex-col gap-1.5">
                           <label className={labelClass}>Jusante (Saída)</label>
                           <select 

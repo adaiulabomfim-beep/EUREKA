@@ -144,8 +144,15 @@ export function capturarCenarioAtual(): CenarioHistorico | null {
       if (data.analyzedResults?.forceData?.y_cp_net !== undefined) {
         resultados.centroPressao = `${data.analyzedResults.forceData.y_cp_net.toFixed(2)} m (do fundo)`;
       }
-      if (data.analyzedResults?.stabilityData?.safetyFactorOverturning) {
-        resultados.segurancaOuStatus = `FS Tombamento: ${data.analyzedResults.stabilityData.safetyFactorOverturning.toFixed(2)}`;
+      if (data.analyzedResults?.stabilityData) {
+        const st = data.analyzedResults.stabilityData;
+        if (st.isArchDam) {
+          resultados.segurancaOuStatus = `Efeito de Arco | N = ${((st.archThrust ?? 0) / 1000).toFixed(1)} kN/m`;
+        } else if (typeof st.fs_tomb === 'number') {
+          resultados.segurancaOuStatus = `FS Tombamento: ${st.fs_tomb.toFixed(2)} | FS Desl: ${(st.fs_desl ?? 0).toFixed(2)}`;
+        } else if (st.safetyFactorOverturning) {
+          resultados.segurancaOuStatus = `FS Tombamento: ${st.safetyFactorOverturning.toFixed(2)}`;
+        }
       }
     } else if (tipo === 'comportas') {
       moduloNome = 'Comportas';

@@ -458,6 +458,13 @@ export const RelatorioVisualEureka = ({
           return <span>Sem análise realizada. Insira dados e execute a simulação.</span>;
        }
        const st = dados.analyzedResults.stabilityData;
+       if (st.isArchDam) {
+         return (
+           <span>
+             Em barragens em arco, a estabilidade é garantida pela <strong className="font-black text-[#2563eb]">transmissão de esforços em arco às ombreiras</strong> (esforço de compressão N ≈ {((st.archThrust || 0) / 1000).toLocaleString('pt-BR', {maximumFractionDigits: 1})} kN/m).
+           </span>
+         );
+       }
        const slideSafe = st.fs_desl >= 1.5;
        const overSafe = st.fs_tomb >= 1.5;
        return (
@@ -799,8 +806,8 @@ export const RelatorioVisualEureka = ({
               {dados.tipo === 'barragens' && (
                 <>
                   <ResultRow
-                    label="Força Res. (kN):"
-                    value={dados.analyzedResults ? `${(dados.analyzedResults.forceData.FR_net / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN` : '0,00 kN'}
+                    label="Força Res. (kN/m):"
+                    value={dados.analyzedResults ? `${(Math.abs(dados.analyzedResults.forceData.FR_net) / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN/m` : '0,00 kN/m'}
                     tone="green"
                   />
                   
@@ -812,19 +819,19 @@ export const RelatorioVisualEureka = ({
 
                   <ResultRow
                     label="Peso Barragem:"
-                    value={dados.analyzedResults && dados.analyzedResults.stabilityData ? `${(dados.analyzedResults.stabilityData.weight / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN` : '0,00 kN'}
+                    value={dados.analyzedResults && dados.analyzedResults.stabilityData ? `${(dados.analyzedResults.stabilityData.weight / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kN/m` : '0,00 kN/m'}
                     tone="blue"
                   />
                   
                   <ResultRow
                      label="FS Deslizamento:"
-                     value={dados.analyzedResults && dados.analyzedResults.stabilityData ? `${dados.analyzedResults.stabilityData.fs_desl.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
-                     tone={dados.analyzedResults && dados.analyzedResults.stabilityData && dados.analyzedResults.stabilityData.fs_desl >= 1.5 ? 'green' : 'red'}
+                     value={dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.isArchDam ? 'N/A (Arco)' : `${dados.analyzedResults.stabilityData.fs_desl.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`) : '-'}
+                     tone={dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.isArchDam ? 'blue' : dados.analyzedResults.stabilityData.fs_desl >= 1.5 ? 'green' : 'red') : 'blue'}
                   />
                    <ResultRow
                      label="FS Tombamento:"
-                     value={dados.analyzedResults && dados.analyzedResults.stabilityData ? `${dados.analyzedResults.stabilityData.fs_tomb.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
-                     tone={dados.analyzedResults && dados.analyzedResults.stabilityData && dados.analyzedResults.stabilityData.fs_tomb >= 1.5 ? 'green' : 'red'}
+                     value={dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.isArchDam ? 'N/A (Arco)' : `${dados.analyzedResults.stabilityData.fs_tomb.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`) : '-'}
+                     tone={dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.isArchDam ? 'blue' : dados.analyzedResults.stabilityData.fs_tomb >= 1.5 ? 'green' : 'red') : 'blue'}
                   />
                 </>
               )}

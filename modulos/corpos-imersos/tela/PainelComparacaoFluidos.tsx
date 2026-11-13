@@ -185,7 +185,7 @@ function calculateImmersion(
       submergedHeightCm = ((low + high) / 2) * 100;
     }
 
-    explanation = `Como a ${densityLabel} é menor que a do fluido (${fluidDensity} kg/m³), o corpo flutua em equilíbrio: Empuxo = Peso (${buoyancyForce.toFixed(1)} N).`;
+    explanation = `Como a ${densityLabel} é menor que a do fluido (${fluidDensity} kg/m³), o corpo flutua em equilíbrio: Empuxo = Peso (${(buoyancyForce / 1000).toFixed(2)} kN / ${buoyancyForce.toFixed(1)} N).`;
     whyCalado = `O objeto precisa submergir apenas ${(submergedFraction * 100).toFixed(1)}% do seu volume (${submergedHeightCm.toFixed(1)} cm de calado) para deslocar líquido com peso igual ao seu.`;
   } else {
     status = 'AFUNDADO';
@@ -194,8 +194,8 @@ function calculateImmersion(
     apparentWeight = Math.max(0, objectWeight - buoyancyForce);
     submergedFraction = 1.0;
     submergedHeightCm = totalHeightCm;
-    explanation = `Como a ${densityLabel} é maior que a do fluido (${fluidDensity} kg/m³), o peso (${objectWeight.toFixed(1)} N) supera o empuxo máximo (${buoyancyForce.toFixed(1)} N).`;
-    whyCalado = `O corpo afunda até o fundo do recipiente. O peso aparente no fundo é de ${apparentWeight.toFixed(1)} N.`;
+    explanation = `Como a ${densityLabel} é maior que a do fluido (${fluidDensity} kg/m³), o peso (${(objectWeight / 1000).toFixed(2)} kN / ${objectWeight.toFixed(1)} N) supera o empuxo máximo (${(buoyancyForce / 1000).toFixed(2)} kN / ${buoyancyForce.toFixed(1)} N).`;
+    whyCalado = `O corpo afunda até o fundo do recipiente. O peso aparente no fundo é de ${(apparentWeight / 1000).toFixed(2)} kN (${apparentWeight.toFixed(1)} N).`;
   }
 
   return {
@@ -265,7 +265,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
   const maxBuoyancyVal = Math.max(dataA.buoyancyForce, dataB.buoyancyForce, dataC.buoyancyForce, dataA.objectWeight, 1);
 
   return (
-    <div className="w-full bg-white rounded-3xl border border-blue-100 shadow-xl overflow-hidden transition-all duration-300">
+    <div className="w-full bg-white dark:bg-slate-900 rounded-3xl border border-blue-100 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300">
       {/* Header bar */}
       <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-700 p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -346,13 +346,13 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
       {isExpanded && (
         <div className="p-5 md:p-6 space-y-6">
           {/* Object summary bar & presets */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80">
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Objeto de Teste:</span>
-                <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-slate-800 shadow-sm flex items-center gap-1.5">
+                <span className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-100 shadow-sm flex items-center gap-1.5">
                   <span
-                    className="w-3 h-3 rounded-full border border-slate-300 shrink-0"
+                    className="w-3 h-3 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
                     style={{ backgroundColor: objColor }}
                   />
                   {selectedMaterial} ({shape})
@@ -360,22 +360,22 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-slate-500 font-medium">Densidade:</span>
-                <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-100">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Densidade:</span>
+                <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-100 dark:border-blue-800/60">
                   {customObjDensity} kg/m³
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-slate-500 font-medium">Peso Real (P):</span>
-                <span className="px-2 py-0.5 rounded bg-red-50 text-red-700 font-bold border border-red-100">
-                  {dataA.objectWeight.toFixed(1)} N
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Peso Real (P):</span>
+                <span className="px-2 py-0.5 rounded bg-red-50 dark:bg-rose-950/60 text-red-700 dark:text-rose-300 font-bold border border-red-100 dark:border-rose-800/60">
+                  {(dataA.objectWeight / 1000).toFixed(2)} kN ({dataA.objectWeight.toFixed(1)} N)
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-slate-500 font-medium">Volume Total:</span>
-                <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-bold border border-amber-100">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Volume Total:</span>
+                <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold border border-amber-100 dark:border-amber-800/60">
                   {(dataA.totalVolume * 1000).toFixed(2)} L
                 </span>
               </div>
@@ -390,7 +390,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                   setFluidB('Água Doce');
                   setFluidC('Glicerina');
                 }}
-                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors"
               >
                 Óleo • Água • Glicerina
               </button>
@@ -400,7 +400,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                   setFluidB('Água Doce');
                   setFluidC('Mel');
                 }}
-                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-200/80 text-slate-700 hover:bg-slate-300 transition-colors"
+                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
               >
                 Gasolina • Água • Mel
               </button>
@@ -410,7 +410,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                   setFluidB('Água do Mar');
                   setFluidC('Mercúrio');
                 }}
-                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-200/80 text-slate-700 hover:bg-slate-300 transition-colors"
+                className="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
               >
                 Etanol • Mar • Mercúrio
               </button>
@@ -418,14 +418,14 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
           </div>
 
           {/* Navigation view tabs */}
-          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab('visual')}
                 className={`px-4 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
                   activeTab === 'visual'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -436,7 +436,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                 className={`px-4 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
                   activeTab === 'grafico'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <Sliders className="w-3.5 h-3.5" />
@@ -447,7 +447,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                 className={`px-4 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
                   activeTab === 'tabela'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <Scale className="w-3.5 h-3.5" />
@@ -512,23 +512,23 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                 return (
                   <div
                     key={key}
-                    className="flex flex-col bg-white rounded-2xl border-2 border-slate-100 hover:border-blue-200 transition-all shadow-lg hover:shadow-xl overflow-hidden"
+                    className="flex flex-col bg-white dark:bg-slate-800/80 rounded-2xl border-2 border-slate-100 dark:border-slate-700/80 hover:border-blue-200 dark:hover:border-blue-700 transition-all shadow-lg hover:shadow-xl overflow-hidden"
                   >
                     {/* Fluid Dropdown Selector Header */}
-                    <div className={`p-3.5 bg-gradient-to-r ${theme.bg} border-b border-slate-200/60 flex items-center justify-between`}>
+                    <div className={`p-3.5 bg-gradient-to-r ${theme.bg} border-b border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between`}>
                       <div className="flex items-center gap-2 flex-1 mr-2">
                         <span
                           className="w-3.5 h-3.5 rounded-full border border-white shadow-sm shrink-0"
                           style={{ backgroundColor: theme.fill }}
                         />
                         <div className="flex-1">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 block">
                             Fluido ({key})
                           </label>
                           <select
                             value={current}
                             onChange={(e) => setter(e.target.value)}
-                            className="w-full bg-white/90 hover:bg-white text-slate-800 font-black text-xs py-1 px-2 rounded-lg border border-slate-200 shadow-sm outline-none cursor-pointer transition-colors"
+                            className="w-full bg-white/90 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-black text-xs py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm outline-none cursor-pointer transition-colors"
                           >
                             {FLUIDS.map((f) => (
                               <option key={f.name} value={f.name}>
@@ -540,13 +540,13 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Densidade</span>
-                        <span className="text-xs font-black text-slate-800">{data.fluidDensity} kg/m³</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-300 block">Densidade</span>
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-100">{data.fluidDensity} kg/m³</span>
                       </div>
                     </div>
 
                     {/* Interactive SVG Beaker */}
-                    <div className="relative bg-gradient-to-b from-slate-50/60 to-white flex items-center justify-center p-3">
+                    <div className="relative bg-gradient-to-b from-slate-50/60 to-white dark:from-slate-900/60 dark:to-slate-900 flex items-center justify-center p-3">
                       <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full max-w-[240px] h-auto drop-shadow-sm select-none">
                         <defs>
                           <linearGradient id={`grad-fluid-${key}`} x1="0%" y1="0%" x2="0%" y2="100%">
@@ -754,10 +754,10 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                         <span
                           className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full shadow-sm border ${
                             isFloating
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                               : isNeutral
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                              ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                              : 'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                           }`}
                         >
                           {data.status}
@@ -766,14 +766,14 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                     </div>
 
                     {/* Submersion Progress Gauge */}
-                    <div className="px-4 py-2.5 bg-slate-50 border-t border-b border-slate-100">
-                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mb-1">
+                    <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900/70 border-t border-b border-slate-100 dark:border-slate-700/70">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
                         <span>Fração Submersa:</span>
-                        <span className="font-extrabold text-slate-800">
+                        <span className="font-extrabold text-slate-800 dark:text-slate-100">
                           {(data.submergedFraction * 100).toFixed(1)}%
                         </span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             isFloating ? 'bg-emerald-500' : isNeutral ? 'bg-amber-500' : 'bg-rose-500'
@@ -786,35 +786,35 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                     {/* Quantitative Results Card */}
                     <div className="p-4 space-y-2.5 flex-1 flex flex-col justify-between text-xs">
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 block">
+                        <div className="p-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
                             Empuxo (E)
                           </span>
-                          <span className="text-sm font-black text-emerald-900">
+                          <span className="text-sm font-black text-emerald-900 dark:text-emerald-200">
+                            {(data.buoyancyForce / 1000).toFixed(2)} kN
+                          </span>
+                          <span className="text-[9px] text-emerald-600 dark:text-emerald-400 block">
                             {data.buoyancyForce.toFixed(1)} N
                           </span>
-                          <span className="text-[9px] text-emerald-600 block">
-                            ρ · Vsub · g
-                          </span>
                         </div>
 
-                        <div className="p-2 rounded-xl bg-blue-50/70 border border-blue-100">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-blue-700 block">
+                        <div className="p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-800/60">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 block">
                             Peso Aparente
                           </span>
-                          <span className="text-sm font-black text-blue-900">
-                            {data.apparentWeight.toFixed(1)} N
+                          <span className="text-sm font-black text-blue-900 dark:text-blue-200">
+                            {(data.apparentWeight / 1000).toFixed(2)} kN
                           </span>
-                          <span className="text-[9px] text-blue-600 block">
-                            P - E
+                          <span className="text-[9px] text-blue-600 dark:text-blue-400 block">
+                            {data.apparentWeight.toFixed(1)} N
                           </span>
                         </div>
 
-                        <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/60">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">
                             Calado (h sub)
                           </span>
-                          <span className="text-xs font-bold text-slate-700">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                             {data.submergedHeightCm.toFixed(1)} cm
                           </span>
                           <span className="text-[9px] text-slate-400 block">
@@ -822,11 +822,11 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                           </span>
                         </div>
 
-                        <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/60">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">
                             Vol. Deslocado
                           </span>
-                          <span className="text-xs font-bold text-slate-700">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                             {(data.submergedVolume * 1000).toFixed(2)} L
                           </span>
                           <span className="text-[9px] text-slate-400 block">
@@ -836,8 +836,8 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                       </div>
 
                       {/* Scientific explanation */}
-                      <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/60 text-[11px] leading-relaxed text-slate-600">
-                        <span className="font-bold text-slate-800 block mb-0.5">Explicação Física:</span>
+                      <div className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 block mb-0.5">Explicação Física:</span>
                         {data.explanation}
                       </div>
 
@@ -845,9 +845,9 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                       {onApplyFluid && (
                         <button
                           onClick={() => onApplyFluid(data.fluidName, data.fluidDensity)}
-                          className="w-full mt-2 py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 border border-slate-200"
+                          className="w-full mt-2 py-1.5 px-3 rounded-lg bg-slate-100 dark:bg-slate-700/80 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-200 hover:text-blue-700 dark:hover:text-blue-300 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-600"
                         >
-                          <Zap className="w-3 h-3 text-blue-500" />
+                          <Zap className="w-3 h-3 text-blue-500 dark:text-blue-400" />
                           Simular no Tanque 3D Principal
                         </button>
                       )}
@@ -861,10 +861,10 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
           {/* TAB 2: FORCES BAR CHART */}
           {activeTab === 'grafico' && (
             <div className="space-y-6">
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/70">
-                <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-blue-600" />
-                  Comparação do Empuxo (E) vs Peso do Objeto (P = {dataA.objectWeight.toFixed(1)} N)
+              <div className="bg-slate-50 dark:bg-slate-800/70 rounded-2xl p-6 border border-slate-200/70 dark:border-slate-700/70">
+                <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  Comparação do Empuxo (E) vs Peso do Objeto (P = {(dataA.objectWeight / 1000).toFixed(2)} kN / {dataA.objectWeight.toFixed(1)} N)
                 </h4>
 
                 <div className="space-y-4">
@@ -874,7 +874,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                     return (
                       <div key={key} className="space-y-1">
                         <div className="flex justify-between items-center text-xs">
-                          <div className="flex items-center gap-2 font-bold text-slate-700">
+                          <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
                             <span
                               className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: theme.fill }}
@@ -884,16 +884,16 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                             </span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="font-extrabold text-slate-900">
-                              E = {data.buoyancyForce.toFixed(1)} N
+                            <span className="font-extrabold text-slate-900 dark:text-slate-100">
+                              E = {(data.buoyancyForce / 1000).toFixed(2)} kN ({data.buoyancyForce.toFixed(1)} N)
                             </span>
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                 data.status === 'FLUTUANDO'
-                                  ? 'bg-emerald-100 text-emerald-800'
+                                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'
                                   : data.status === 'EQUILÍBRIO NEUTRO'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-rose-100 text-rose-800'
+                                  ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300'
+                                  : 'bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300'
                               }`}
                             >
                               {data.status}
@@ -901,7 +901,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                           </div>
                         </div>
 
-                        <div className="relative h-6 bg-slate-200 rounded-lg overflow-hidden flex items-center">
+                        <div className="relative h-6 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden flex items-center">
                           {/* Reference Weight line at 100% */}
                           <div
                             className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
@@ -915,7 +915,7 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                               backgroundColor: theme.fill,
                             }}
                           >
-                            {pctOfWeight >= 30 && `${data.buoyancyForce.toFixed(1)} N`}
+                            {pctOfWeight >= 30 && `${(data.buoyancyForce / 1000).toFixed(2)} kN (${data.buoyancyForce.toFixed(1)} N)`}
                           </div>
                         </div>
                       </div>
@@ -923,21 +923,21 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                   })}
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-0.5 bg-red-500 inline-block" />
-                    <span>Linha Vermelha: Peso Real do Objeto (P = {dataA.objectWeight.toFixed(1)} N)</span>
+                    <span>Linha Vermelha: Peso Real do Objeto (P = {(dataA.objectWeight / 1000).toFixed(2)} kN / {dataA.objectWeight.toFixed(1)} N)</span>
                   </div>
                   <span>Nota: Quando flutuando, E se iguala rigorosamente a P.</span>
                 </div>
               </div>
 
               {/* Density Spectrum Bar */}
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/70">
-                <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-2">
+              <div className="bg-slate-50 dark:bg-slate-800/70 rounded-2xl p-6 border border-slate-200/70 dark:border-slate-700/70">
+                <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider mb-2">
                   Espectro de Densidade dos Fluidos Selecionados
                 </h4>
-                <p className="text-xs text-slate-500 mb-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                   Se ρ(fluido) &gt; ρ(objeto) = {customObjDensity} kg/m³, o corpo flutua. Quanto mais denso o líquido, menor o calado submerso necessário.
                 </p>
 
@@ -945,14 +945,14 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                   {comparisonSlots.map(({ key, data }) => (
                     <div
                       key={key}
-                      className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between"
+                      className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between"
                     >
                       <div>
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-black text-slate-800">{data.fluidName}</span>
-                          <span className="text-xs font-bold text-blue-600">{data.fluidDensity} kg/m³</span>
+                          <span className="text-xs font-black text-slate-800 dark:text-slate-100">{data.fluidName}</span>
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{data.fluidDensity} kg/m³</span>
                         </div>
-                        <p className="text-[11px] text-slate-500 leading-tight">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                           {data.whyCalado}
                         </p>
                       </div>
@@ -968,10 +968,10 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
 
           {/* TAB 3: COMPARATIVE SUMMARY TABLE */}
           {activeTab === 'tabela' && (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                  <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700">
                     <th className="p-3">Propriedade</th>
                     {comparisonSlots.map(({ key, data }) => (
                       <th key={key} className="p-3">
@@ -980,26 +980,26 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">Densidade do Fluido (ρ)</td>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">Densidade do Fluido (ρ)</td>
                     {comparisonSlots.map(({ key, data }) => (
                       <td key={key} className="p-3 font-bold">
                         {data.fluidDensity} kg/m³
                       </td>
                     ))}
                   </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">Estado de Flutuabilidade</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">Estado de Flutuabilidade</td>
                     {comparisonSlots.map(({ key, data }) => (
                       <td key={key} className="p-3">
                         <span
                           className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
                             data.status === 'FLUTUANDO'
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'
                               : data.status === 'EQUILÍBRIO NEUTRO'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
+                              ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300'
+                              : 'bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300'
                           }`}
                         >
                           {data.status}
@@ -1007,40 +1007,40 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
                       </td>
                     ))}
                   </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">Empuxo Resultante (E)</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">Empuxo Resultante (E)</td>
                     {comparisonSlots.map(({ key, data }) => (
-                      <td key={key} className="p-3 font-bold text-emerald-600">
-                        {data.buoyancyForce.toFixed(2)} N
+                      <td key={key} className="p-3 font-bold text-emerald-600 dark:text-emerald-400">
+                        {(data.buoyancyForce / 1000).toFixed(2)} kN ({data.buoyancyForce.toFixed(1)} N)
                       </td>
                     ))}
                   </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">Peso Aparente (Pap = P - E)</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">Peso Aparente (Pap = P - E)</td>
                     {comparisonSlots.map(({ key, data }) => (
-                      <td key={key} className="p-3 font-bold text-blue-600">
-                        {data.apparentWeight.toFixed(2)} N
+                      <td key={key} className="p-3 font-bold text-blue-600 dark:text-blue-400">
+                        {(data.apparentWeight / 1000).toFixed(2)} kN ({data.apparentWeight.toFixed(1)} N)
                       </td>
                     ))}
                   </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">Fração Submersa</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">Fração Submersa</td>
                     {comparisonSlots.map(({ key, data }) => (
                       <td key={key} className="p-3">
                         {(data.submergedFraction * 100).toFixed(1)}%
                       </td>
                     ))}
                   </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">Calado Submerso (h_sub)</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">Calado Submerso (h_sub)</td>
                     {comparisonSlots.map(({ key, data }) => (
                       <td key={key} className="p-3">
                         {data.submergedHeightCm.toFixed(1)} cm / {data.totalHeightCm.toFixed(1)} cm
                       </td>
                     ))}
                   </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">Volume Deslocado (V_sub)</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">Volume Deslocado (V_sub)</td>
                     {comparisonSlots.map(({ key, data }) => (
                       <td key={key} className="p-3">
                         {(data.submergedVolume * 1000).toFixed(3)} L
@@ -1053,10 +1053,10 @@ export const PainelComparacaoFluidos: React.FC<PainelComparacaoFluidosProps> = (
           )}
 
           {/* Educational Insights Box */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-            <div className="text-xs leading-relaxed text-slate-700">
-              <span className="font-bold text-blue-900 block mb-0.5">
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border border-blue-100 dark:border-blue-900/60 flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+              <span className="font-bold text-blue-900 dark:text-blue-200 block mb-0.5">
                 Conclusão Pedagógica de Arquimedes:
               </span>
               O empuxo depende exclusivamente do <strong>peso do fluido deslocado</strong> (E = &rho;<sub>fluido</sub> &middot; V<sub>sub</sub> &middot; g).

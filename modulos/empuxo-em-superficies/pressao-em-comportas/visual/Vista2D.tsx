@@ -640,14 +640,20 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     };
 
     // Projection Lines extending perpendicular from the gate on the incline
-    const projLineExtra = 32;
+    const shapeExtentOut =
+      shape === FormaComporta.RETANGULAR
+        ? W_px / 2
+        : shape === FormaComporta.SEMI_CIRCULAR
+        ? Math.min(H * SCALE * 0.85, 62)
+        : R_px;
+    const projLineExtra = 38;
     const P_top_proj_end = {
-      x: P_top.x + n_out.x * (D_proj + R_px + projLineExtra),
-      y: P_top.y + n_out.y * (D_proj + R_px + projLineExtra),
+      x: P_top.x + n_out.x * (D_proj + shapeExtentOut + projLineExtra),
+      y: P_top.y + n_out.y * (D_proj + shapeExtentOut + projLineExtra),
     };
     const P_bot_proj_end = {
-      x: P_bot.x + n_out.x * (D_proj + R_px + projLineExtra),
-      y: P_bot.y + n_out.y * (D_proj + R_px + projLineExtra),
+      x: P_bot.x + n_out.x * (D_proj + shapeExtentOut + projLineExtra),
+      y: P_bot.y + n_out.y * (D_proj + shapeExtentOut + projLineExtra),
     };
 
     // Position of CP on the frontal view (eccentricity along longitudinal axis u_down)
@@ -666,7 +672,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     };
 
     // Dimension line across the frontal face
-    const dimOffset = R_px + 24;
+    const dimOffset = shapeExtentOut + 32;
     const dimP1 = {
       x: P_top_proj.x + n_out.x * dimOffset,
       y: P_top_proj.y + n_out.y * dimOffset,
@@ -723,68 +729,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           strokeDasharray="3 3"
           opacity="0.45"
         />
-
-        {/* Dimension line with arrows and clean break for gate size/diameter */}
-        {(() => {
-          const dx = dimP2.x - dimP1.x;
-          const dy = dimP2.y - dimP1.y;
-          const len = Math.hypot(dx, dy) || 1;
-          const ux = dx / len;
-          const uy = dy / len;
-          const cx = (dimP1.x + dimP2.x) / 2;
-          const cy = (dimP1.y + dimP2.y) / 2;
-          const gapHalf = 13;
-          return (
-            <g>
-              {len > gapHalf * 2 + 10 ? (
-                <>
-                  <line
-                    x1={dimP1.x}
-                    y1={dimP1.y}
-                    x2={cx - ux * gapHalf}
-                    y2={cy - uy * gapHalf}
-                    stroke="#64748b"
-                    strokeWidth="1.5"
-                    markerStart="url(#arrow)"
-                  />
-                  <line
-                    x1={cx + ux * gapHalf}
-                    y1={cy + uy * gapHalf}
-                    x2={dimP2.x}
-                    y2={dimP2.y}
-                    stroke="#64748b"
-                    strokeWidth="1.5"
-                    markerEnd="url(#arrow)"
-                  />
-                </>
-              ) : (
-                <line
-                  x1={dimP1.x}
-                  y1={dimP1.y}
-                  x2={dimP2.x}
-                  y2={dimP2.y}
-                  stroke="#64748b"
-                  strokeWidth="1.5"
-                  markerStart="url(#arrow)"
-                  markerEnd="url(#arrow)"
-                />
-              )}
-              <text
-                x={cx}
-                y={cy}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill="#334155"
-                className="dark:fill-slate-200"
-                fontSize="11.5"
-                fontWeight="700"
-                stroke="none"
-              >
-                {dimLabel}
-              </text>
-            </g>
-          );
-        })()}
 
         {/* --- TRUE FRONTAL GATE SHAPE --- */}
         {shape === FormaComporta.CIRCULAR && (
@@ -900,6 +844,67 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             })()}
           </g>
         )}
+
+        {/* Dimension line with arrows and clean break for gate size/diameter (rendered above gate shape) */}
+        {(() => {
+          const dx = dimP2.x - dimP1.x;
+          const dy = dimP2.y - dimP1.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const ux = dx / len;
+          const uy = dy / len;
+          const cx = (dimP1.x + dimP2.x) / 2;
+          const cy = (dimP1.y + dimP2.y) / 2;
+          const gapHalf = 14;
+          return (
+            <g>
+              {len > gapHalf * 2 + 10 ? (
+                <>
+                  <line
+                    x1={dimP1.x}
+                    y1={dimP1.y}
+                    x2={cx - ux * gapHalf}
+                    y2={cy - uy * gapHalf}
+                    stroke="#64748b"
+                    strokeWidth="1.5"
+                    markerStart="url(#arrow)"
+                  />
+                  <line
+                    x1={cx + ux * gapHalf}
+                    y1={cy + uy * gapHalf}
+                    x2={dimP2.x}
+                    y2={dimP2.y}
+                    stroke="#64748b"
+                    strokeWidth="1.5"
+                    markerEnd="url(#arrow)"
+                  />
+                </>
+              ) : (
+                <line
+                  x1={dimP1.x}
+                  y1={dimP1.y}
+                  x2={dimP2.x}
+                  y2={dimP2.y}
+                  stroke="#64748b"
+                  strokeWidth="1.5"
+                  markerStart="url(#arrow)"
+                  markerEnd="url(#arrow)"
+                />
+              )}
+              <text
+                x={cx - 12}
+                y={cy}
+                textAnchor="start"
+                dominantBaseline="central"
+                fill="#334155"
+                fontSize="11.5"
+                fontWeight="700"
+                stroke="none"
+              >
+                {dimLabel}
+              </text>
+            </g>
+          );
+        })()}
 
         {/* --- CENTROID (CG) NA VISTA FRONTAL --- */}
         <g>
@@ -1036,7 +1041,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             textAnchor="middle"
             dominantBaseline="central"
             fill="#0f172a"
-            className="dark:fill-slate-100"
             fontSize="11.5"
             fontWeight="700"
             stroke="none"
@@ -1128,7 +1132,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             textAnchor="middle"
             dominantBaseline="central"
             fill="#334155"
-            className="dark:fill-slate-200"
             fontSize="11.5"
             fontWeight="700"
             stroke="none"
@@ -1159,7 +1162,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             textAnchor="middle"
             dominantBaseline="alphabetic"
             fill="#334155"
-            className="dark:fill-slate-200"
             fontSize="11"
             fontWeight="bold"
             stroke="none"
@@ -1190,7 +1192,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           textAnchor="start"
           dominantBaseline="central"
           fill="#0f172a"
-          className="dark:fill-blue-200"
           fontSize="11.5"
           fontWeight="700"
           stroke="none"
@@ -1284,7 +1285,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           textAnchor="middle"
           dominantBaseline="central"
           fill="#334155"
-          className="dark:fill-slate-200"
           fontSize="12"
           fontWeight="700"
           stroke="none"

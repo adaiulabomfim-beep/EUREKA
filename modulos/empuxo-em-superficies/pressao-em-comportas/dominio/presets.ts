@@ -1,53 +1,92 @@
 import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from './tipos';
 import { ConfiguracaoSimulacaoComporta } from './configuracao';
 
-export const PRESETS: { [key: string]: ConfiguracaoSimulacaoComporta & { title: string, subtitle: string } } = {
-  exercicioCircular60: {
-    title: "Exercício: Comporta Circular 60°",
-    subtitle: "D = 1,00 m, Y_CG = 1,50 m, θ = 60°",
+export type PresetComporta = ConfiguracaoSimulacaoComporta & {
+  title: string;
+  subtitle: string;
+  enunciado: string;
+};
+
+/** Estado inicial neutro do laboratório (não aparece no seletor de simulações). */
+export const CONFIG_PADRAO_COMPORTA: ConfiguracaoSimulacaoComporta = {
+  sistemaUnidades: SistemaUnidades.SI,
+  fluidoMontante: { chave: 'agua', nivel: 12, densidade: 1000, gravidade: 9.81 },
+  fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
+  comporta: {
+    ativa: true,
+    forma: FormaComporta.RETANGULAR,
+    largura: 2,
+    altura: 3,
+    profundidadeTopo: 4,
+    modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
+    angulo: 90,
+    posicaoDobradica: PosicaoDobradica.NONE,
+    temTirante: false,
+    posicaoTiranteRelativa: 1,
+    anguloTirante: 0,
+    pesoProprio: 0,
+    pesoProprioAtivo: false,
+  },
+};
+
+export const PRESETS: { [key: string]: PresetComporta } = {
+  sim1: {
+    title: 'Simulação 1: Comporta Circular Vertical sob Pressão de Melaço',
+    subtitle: 'D = 0,90 m | h_topo = 2,40 m | d = 1,50',
+    enunciado:
+      'Uma comporta circular vertical, com diâmetro D = 0,90 m, está submetida à pressão de melaço, cuja densidade relativa é d = 1,50. A superfície livre do fluido encontra-se a 2,40 m acima do topo da comporta. Determine o empuxo hidrostático e a posição do centro de pressão.',
     sistemaUnidades: SistemaUnidades.TECNICO_KGF,
-    fluidoMontante: { chave: 'agua', nivel: 4.5, densidade: 1000, gravidade: 9.81 },
+    fluidoMontante: { chave: 'personalizado', nivel: 3.3, densidade: 1500, gravidade: 9.81 },
     fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
     comporta: {
       ativa: true,
       forma: FormaComporta.CIRCULAR,
-      largura: 1.0,
-      altura: 1.0,
-      profundidadeTopo: 0.866,
-      modoPosicionamento: ModoPosicionamentoComporta.Y_CG_DIRETO,
-      y_cg_direto: 1.50,
-      angulo: 60,
+      largura: 0.9,
+      altura: 0.9,
+      profundidadeTopo: 2.4,
+      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
+      angulo: 90,
       posicaoDobradica: PosicaoDobradica.NONE,
       temTirante: false,
       posicaoTiranteRelativa: 1,
       anguloTirante: 0,
       pesoProprio: 0,
       pesoProprioAtivo: false,
-    }
+    },
   },
-  comportaVertical: {
-    title: "Comporta Vertical",
-    subtitle: "Clássica θ = 90°",
-    fluidoMontante: { chave: 'agua', nivel: 12, densidade: 1000, gravidade: 9.81 },
+  sim2: {
+    title: 'Simulação 2: Comporta Articulada com Peso Próprio e Haste',
+    subtitle: 'b = 4,00 m | h = 3,00 m | θ = 60° | P = 10.000 kgf | d_P = 1,20 m',
+    enunciado:
+      'Uma comporta plana, com largura b = 4,00 m, está articulada no ponto A e é manobrada por uma haste instalada no ponto B. A comporta encontra-se inclinada a θ = 60° em relação à horizontal, com uma altura de água de h = 3,00 m. Seu peso próprio é de P = 10.000 kgf, cuja linha de ação está situada a 1,20 m da articulação. Considerando a distância de 1,60 m entre o nível da água e o ponto de aplicação da haste, determine a força exercida pela haste e a reação na articulação.',
+    sistemaUnidades: SistemaUnidades.TECNICO_KGF,
+    fluidoMontante: { chave: 'agua', nivel: 3, densidade: 1000, gravidade: 9.81 },
     fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
     comporta: {
       ativa: true,
       forma: FormaComporta.RETANGULAR,
-      largura: 2,
-      altura: 3,
-      profundidadeTopo: 4,
-      angulo: 90,
-      posicaoDobradica: PosicaoDobradica.TOP,
+      largura: 4,
+      altura: 3 / Math.sin((60 * Math.PI) / 180), // L = 3,4641 m
+      profundidadeTopo: 0,
+      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
+      angulo: 60,
+      posicaoDobradica: PosicaoDobradica.BOTTOM,
       temTirante: true,
-      posicaoTiranteRelativa: 1,
-      anguloTirante: 0,
-      pesoProprio: 500,
-      pesoProprioAtivo: false,
-    }
+      // Haste a 1,60 m acima do nível da água, ao longo do prolongamento da comporta:
+      // d_B = L + 1,60  ⇒  rel = -1,60 / L (medido a partir do topo)
+      posicaoTiranteRelativa: -1.6 / (3 / Math.sin((60 * Math.PI) / 180)),
+      anguloTirante: -30, // haste perpendicular à comporta
+      pesoProprio: 10000,
+      pesoProprioAtivo: true,
+      bracoPesoHorizontal: 1.2,
+    },
   },
-  doisFluidos: {
-    title: "Dois Fluidos",
-    subtitle: "Glicerina × Água a 30°",
+  sim3: {
+    title: 'Simulação 3: Comporta Retangular sob Dois Fluidos (Glicerina × Água a 30°)',
+    subtitle: 'b = 3,00 m | H = 4,00 m | θ = 30° | ρ_mont = 1.260 | ρ_jus = 1.000 kg/m³',
+    enunciado:
+      'Uma comporta retangular de largura b = 3,00 m e comprimento H = 4,00 m, inclinada a θ = 30° com a horizontal e articulada na base, separa dois reservatórios: a montante, glicerina (ρ_mont = 1.260 kg/m³, nível 5,00 m, profundidade do topo da comporta h_topo,mont = 2,00 m); a jusante, água (ρ_jus = 1.000 kg/m³, nível 4,00 m, resultando em h_topo,jus = 1,00 m). Determine as forças de montante, jusante e líquida (F_R,líq), a posição do centro de pressão líquido a partir do topo (s_CP,líq) e o momento resultante na articulação da base (M_t).',
+    sistemaUnidades: SistemaUnidades.SI,
     fluidoMontante: { chave: 'glicerina', nivel: 5, densidade: 1260, gravidade: 9.81 },
     fluidoJusante: { chave: 'agua', nivel: 4, densidade: 1000, gravidade: 9.81, ativo: true },
     comporta: {
@@ -56,6 +95,7 @@ export const PRESETS: { [key: string]: ConfiguracaoSimulacaoComporta & { title: 
       largura: 3,
       altura: 4,
       profundidadeTopo: 2,
+      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
       angulo: 30,
       posicaoDobradica: PosicaoDobradica.BOTTOM,
       temTirante: false,
@@ -63,31 +103,38 @@ export const PRESETS: { [key: string]: ConfiguracaoSimulacaoComporta & { title: 
       anguloTirante: 0,
       pesoProprio: 0,
       pesoProprioAtivo: false,
-    }
+    },
   },
-  comportaInclinada45: {
-    title: "Inclinada 45°",
-    subtitle: "Articulada em B",
-    fluidoMontante: { chave: 'agua', nivel: 4, densidade: 1000, gravidade: 9.81 },
+  sim4: {
+    title: 'Simulação 4: Comporta Retangular Inclinada sob Pressão de Óleo',
+    subtitle: 'b = 3,00 m | L = 1,80 m | h_topo = 1,50 m | θ = 60° | d = 0,85',
+    enunciado:
+      'Uma comporta plana retangular AB, com largura de 3,00 m e comprimento inclinado de 1,80 m, está submetida à pressão de óleo cuja densidade relativa é d = 0,85. A comporta encontra-se inclinada a 60° em relação à horizontal, com seu bordo superior a 1,50 m abaixo da superfície livre. Determine o empuxo hidrostático e a localização do centro de pressão.',
+    sistemaUnidades: SistemaUnidades.TECNICO_KGF,
+    fluidoMontante: { chave: 'personalizado', nivel: 3.5, densidade: 850, gravidade: 9.81 },
     fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
     comporta: {
       ativa: true,
       forma: FormaComporta.RETANGULAR,
-      largura: 5,
-      altura: 4.243,
-      profundidadeTopo: 0.5,
-      angulo: 45,
-      posicaoDobradica: PosicaoDobradica.BOTTOM,
+      largura: 3,
+      altura: 1.8,
+      profundidadeTopo: 1.5,
+      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
+      angulo: 60,
+      posicaoDobradica: PosicaoDobradica.NONE,
       temTirante: false,
-      posicaoTiranteRelativa: 0,
+      posicaoTiranteRelativa: 1,
       anguloTirante: 0,
       pesoProprio: 0,
       pesoProprioAtivo: false,
-    }
+    },
   },
-  semicircularFundo: {
-    title: "Semicircular",
-    subtitle: "Vista lateral R = 3m",
+  sim5: {
+    title: 'Simulação 5: Comporta Semicircular Vertical de Fundo',
+    subtitle: 'R = 3,00 m | b = 6,00 m | h_topo = 5,00 m | θ = 90°',
+    enunciado:
+      'Uma comporta plana semicircular de raio R = 3,00 m (largura da base b = 6,00 m) está posicionada verticalmente (θ = 90°) no fundo de um reservatório de água (γ = 9.810 N/m³) com nível total de 8,00 m (profundidade da crista da comporta h_topo = 5,00 m). Determine a área molhada (A), o momento de inércia centroidal (I_xx,CG), a força hidrostática resultante (F_R) e a profundidade do centro de pressão (y_CP).',
+    sistemaUnidades: SistemaUnidades.SI,
     fluidoMontante: { chave: 'agua', nivel: 8, densidade: 1000, gravidade: 9.81 },
     fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
     comporta: {
@@ -96,6 +143,7 @@ export const PRESETS: { [key: string]: ConfiguracaoSimulacaoComporta & { title: 
       largura: 6,
       altura: 3,
       profundidadeTopo: 5,
+      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
       angulo: 90,
       posicaoDobradica: PosicaoDobradica.NONE,
       temTirante: false,
@@ -103,66 +151,6 @@ export const PRESETS: { [key: string]: ConfiguracaoSimulacaoComporta & { title: 
       anguloTirante: 0,
       pesoProprio: 0,
       pesoProprioAtivo: false,
-    }
-  },
-  comportaCircular: {
-    title: "Comporta Circular",
-    subtitle: "Fundo de Reservatório",
-    fluidoMontante: { chave: 'agua', nivel: 18, densidade: 1000, gravidade: 9.81 },
-    fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.CIRCULAR,
-      largura: 2,
-      altura: 2,
-      profundidadeTopo: 15,
-      angulo: 45,
-      posicaoDobradica: PosicaoDobradica.NONE,
-      temTirante: false,
-      posicaoTiranteRelativa: 1,
-      anguloTirante: 0,
-      pesoProprio: 0,
-      pesoProprioAtivo: false,
-    }
-  },
-  comportaDupla: {
-    title: "Dois Lados",
-    subtitle: "Água × Água com jusante",
-    fluidoMontante: { chave: 'agua', nivel: 22, densidade: 1000, gravidade: 9.81 },
-    fluidoJusante: { chave: 'agua', nivel: 5, densidade: 1000, gravidade: 9.81, ativo: true },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.RETANGULAR,
-      largura: 4,
-      altura: 5,
-      profundidadeTopo: 10,
-      angulo: 60,
-      posicaoDobradica: PosicaoDobradica.BOTTOM,
-      temTirante: true,
-      posicaoTiranteRelativa: 0,
-      anguloTirante: 30,
-      pesoProprio: 2000,
-      pesoProprioAtivo: true,
-    }
-  },
-  oleoAgua: {
-    title: "Óleo × Água",
-    subtitle: "Fluidos imiscíveis",
-    fluidoMontante: { chave: 'oleoSAE30', nivel: 6, densidade: 891, gravidade: 9.81 },
-    fluidoJusante: { chave: 'agua', nivel: 5, densidade: 1000, gravidade: 9.81, ativo: true },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.RETANGULAR,
-      largura: 3,
-      altura: 3,
-      profundidadeTopo: 2,
-      angulo: 90,
-      posicaoDobradica: PosicaoDobradica.NONE,
-      temTirante: false,
-      posicaoTiranteRelativa: 1,
-      anguloTirante: 0,
-      pesoProprio: 0,
-      pesoProprioAtivo: false,
-    }
+    },
   },
 };

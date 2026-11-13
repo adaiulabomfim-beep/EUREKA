@@ -41,7 +41,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
   }
 
   return (
-    <div id="tour-resultados" data-tour="painel-resultados" className="lg:col-span-3 flex flex-col gap-4 h-full min-h-0 max-h-[620px]">
+    <div id="tour-resultados" data-tour="painel-resultados" className="lg:col-span-3 flex flex-col gap-4 h-[600px] lg:h-full lg:max-h-full min-h-0 overflow-hidden">
       <ResultsPanel
         footerButton={{
           label: showDetails ? 'Ocultar Memorial' : 'Memorial',

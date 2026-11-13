@@ -368,23 +368,52 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     );
   };
 
+  const getCylinderFaces = (y_from_bot: number, radius: number, h: number, segments: number = 18): FaceDef[] => {
+    const s_y_bot = tankBottomY - y_from_bot;
+    const s_y_top = tankBottomY - (y_from_bot + h);
+    const topPts: Point[] = [];
+    const botPts: Point[] = [];
+    for (let i = 0; i < segments; i++) {
+      const a = (i / segments) * 2 * Math.PI;
+      const cx = radius * Math.cos(a);
+      const cz = radius * Math.sin(a);
+      topPts.push(project(cx, s_y_top, cz));
+      botPts.push(project(cx, s_y_bot, cz));
+    }
+    const cylFaces: FaceDef[] = [];
+    for (let i = 0; i < segments; i++) {
+      const next = (i + 1) % segments;
+      const aMid = ((i + 0.5) / segments) * 2 * Math.PI;
+      cylFaces.push({
+        pts: [topPts[i], topPts[next], botPts[next], botPts[i]],
+        n: { x: Math.cos(aMid), y: 0, z: Math.sin(aMid) },
+      });
+    }
+    cylFaces.push({ pts: topPts, n: { x: 0, y: 1, z: 0 } });
+    cylFaces.push({ pts: [...botPts].reverse(), n: { x: 0, y: -1, z: 0 } });
+    return cylFaces;
+  };
+
   const Object3D = () => {
     const center = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);
     const effectiveYBot = objBottomDistFromTankBottom;
     const objPts = getPoints(0, effectiveYBot, visualWidth, visualHeight, 0, objD_visual);
 
-    const faces: FaceDef[] = [
-      { pts: [objPts.p1, objPts.p2, objPts.p3, objPts.p4], n: { x: 0, y: 0, z: -1 } },
-      { pts: [objPts.p5, objPts.p6, objPts.p7, objPts.p8], n: { x: 0, y: 0, z: 1 } },
-      { pts: [objPts.p1, objPts.p2, objPts.p6, objPts.p5], n: { x: 0, y: 1, z: 0 } },
-      { pts: [objPts.p4, objPts.p3, objPts.p7, objPts.p8], n: { x: 0, y: -1, z: 0 } },
-      { pts: [objPts.p1, objPts.p5, objPts.p8, objPts.p4], n: { x: -1, y: 0, z: 0 } },
-      { pts: [objPts.p2, objPts.p6, objPts.p7, objPts.p3], n: { x: 1, y: 0, z: 0 } },
-    ];
+    const faces: FaceDef[] =
+      shape === ObjectShape.CYLINDER
+        ? getCylinderFaces(effectiveYBot, visualWidth / 2, visualHeight)
+        : [
+            { pts: [objPts.p1, objPts.p2, objPts.p3, objPts.p4], n: { x: 0, y: 0, z: -1 } },
+            { pts: [objPts.p5, objPts.p6, objPts.p7, objPts.p8], n: { x: 0, y: 0, z: 1 } },
+            { pts: [objPts.p1, objPts.p2, objPts.p6, objPts.p5], n: { x: 0, y: 1, z: 0 } },
+            { pts: [objPts.p4, objPts.p3, objPts.p7, objPts.p8], n: { x: 0, y: -1, z: 0 } },
+            { pts: [objPts.p1, objPts.p5, objPts.p8, objPts.p4], n: { x: -1, y: 0, z: 0 } },
+            { pts: [objPts.p2, objPts.p6, objPts.p7, objPts.p3], n: { x: 1, y: 0, z: 0 } },
+          ];
 
     const sortedFaces = faces
       .map((f) => {
-        const z = f.pts.reduce((acc, p) => acc + (p.z || 0), 0) / 4;
+        const z = f.pts.reduce((acc, p) => acc + (p.z || 0), 0) / f.pts.length;
         const rn = rotateVector(f.n);
 
         const lx = -0.5;
@@ -404,18 +433,22 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     const yBot2 = effectiveYBot - cordLength_visual - H2_visual;
     const center2 = project(0, tankBottomY - (yBot2 + H2_visual / 2), 0);
     const obj2Pts = twoBlocks ? getPoints(0, yBot2, w2, H2_visual, 0, w2) : null;
-    const faces2: FaceDef[] = obj2Pts ? [
-      { pts: [obj2Pts.p1, obj2Pts.p2, obj2Pts.p3, obj2Pts.p4], n: { x: 0, y: 0, z: -1 } },
-      { pts: [obj2Pts.p5, obj2Pts.p6, obj2Pts.p7, obj2Pts.p8], n: { x: 0, y: 0, z: 1 } },
-      { pts: [obj2Pts.p1, obj2Pts.p2, obj2Pts.p6, obj2Pts.p5], n: { x: 0, y: 1, z: 0 } },
-      { pts: [obj2Pts.p4, obj2Pts.p3, obj2Pts.p7, obj2Pts.p8], n: { x: 0, y: -1, z: 0 } },
-      { pts: [obj2Pts.p1, obj2Pts.p5, obj2Pts.p8, obj2Pts.p4], n: { x: -1, y: 0, z: 0 } },
-      { pts: [obj2Pts.p2, obj2Pts.p6, obj2Pts.p7, obj2Pts.p3], n: { x: 1, y: 0, z: 0 } },
-    ] : [];
+    const faces2: FaceDef[] = obj2Pts
+      ? shape2 === ObjectShape.CYLINDER
+        ? getCylinderFaces(yBot2, w2 / 2, H2_visual)
+        : [
+            { pts: [obj2Pts.p1, obj2Pts.p2, obj2Pts.p3, obj2Pts.p4], n: { x: 0, y: 0, z: -1 } },
+            { pts: [obj2Pts.p5, obj2Pts.p6, obj2Pts.p7, obj2Pts.p8], n: { x: 0, y: 0, z: 1 } },
+            { pts: [obj2Pts.p1, obj2Pts.p2, obj2Pts.p6, obj2Pts.p5], n: { x: 0, y: 1, z: 0 } },
+            { pts: [obj2Pts.p4, obj2Pts.p3, obj2Pts.p7, obj2Pts.p8], n: { x: 0, y: -1, z: 0 } },
+            { pts: [obj2Pts.p1, obj2Pts.p5, obj2Pts.p8, obj2Pts.p4], n: { x: -1, y: 0, z: 0 } },
+            { pts: [obj2Pts.p2, obj2Pts.p6, obj2Pts.p7, obj2Pts.p3], n: { x: 1, y: 0, z: 0 } },
+          ]
+      : [];
 
     const sortedFaces2 = faces2
       .map((f) => {
-        const z = f.pts.reduce((acc, p) => acc + (p.z || 0), 0) / 4;
+        const z = f.pts.reduce((acc, p) => acc + (p.z || 0), 0) / f.pts.length;
         const rn = rotateVector(f.n);
         const lx = -0.5; const ly = 0.5; const lz = -0.8;
         const mag = Math.sqrt(lx * lx + ly * ly + lz * lz);
@@ -450,7 +483,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         ) : (
           sortedFaces2.map((f, i) => (
             <g key={`b2-${i}`}>
-              <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill={obj2Color} stroke={OBJECT_BORDER_COLOR} strokeWidth="1" />
+              <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill={obj2Color} stroke={OBJECT_BORDER_COLOR} strokeWidth={shape2 === ObjectShape.CYLINDER && f.pts.length === 4 ? "0.4" : "1"} />
               <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="black" fillOpacity={f.shadowOpacity} stroke="none" />
               <path d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`} fill="white" fillOpacity={f.highlightOpacity} stroke="none" />
             </g>
@@ -458,38 +491,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         ))}
 
         {/* Bloco 1 */}
-        {shape === ObjectShape.CUBE ? (
-          sortedFaces.map((f, i) => (
-            <g key={i}>
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill={objColor}
-                stroke="none"
-              />
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill={renderFill}
-                stroke={OBJECT_BORDER_COLOR}
-                strokeWidth="1"
-                strokeLinejoin="round"
-              />
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill="black"
-                fillOpacity={f.shadowOpacity}
-                stroke="none"
-                pointerEvents="none"
-              />
-              <path
-                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
-                fill="white"
-                fillOpacity={f.highlightOpacity}
-                stroke="none"
-                pointerEvents="none"
-              />
-            </g>
-          ))
-        ) : (
+        {shape === ObjectShape.SPHERE ? (
           <g>
             <circle
               cx={center.x}
@@ -515,15 +517,54 @@ export const Vista3D: React.FC<Vista3DProps> = ({
               pointerEvents="none"
             />
           </g>
+        ) : (
+          sortedFaces.map((f, i) => (
+            <g key={i}>
+              <path
+                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+                fill={objColor}
+                stroke="none"
+              />
+              <path
+                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+                fill={renderFill}
+                stroke={OBJECT_BORDER_COLOR}
+                strokeWidth={shape === ObjectShape.CYLINDER && f.pts.length === 4 ? "0.4" : "1"}
+                strokeLinejoin="round"
+              />
+              <path
+                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+                fill="black"
+                fillOpacity={f.shadowOpacity}
+                stroke="none"
+                pointerEvents="none"
+              />
+              <path
+                d={`M${f.pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')} Z`}
+                fill="white"
+                fillOpacity={f.highlightOpacity}
+                stroke="none"
+                pointerEvents="none"
+              />
+            </g>
+          ))
         )}
 
         {/* Peso Extra */}
-        {extraWeight > 0 && (
-          <g transform={`translate(${center.x - 15}, ${project(0, tankBottomY - (effectiveYBot + visualHeight), 0).y - 10})`}>
-            <rect width="30" height="10" fill="#334155" rx="2" />
-            <text x="15" y="8" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">+{extraWeight}N</text>
-          </g>
-        )}
+        {extraWeight > 0 && (() => {
+          const extraWeightHeight = 18;
+          const extraWeightLabel = extraWeight >= 1000 ? `+${(extraWeight / 1000).toFixed(2)} kN` : `+${extraWeight} N`;
+          const extraWeightWidth = Math.max(48, extraWeightLabel.length * 7.5 + 14);
+          const topY = project(0, tankBottomY - (effectiveYBot + visualHeight), 0).y;
+          return (
+            <g transform={`translate(${center.x - extraWeightWidth / 2}, ${topY - extraWeightHeight})`}>
+              <rect width={extraWeightWidth} height={extraWeightHeight} fill="#1e293b" stroke="#f59e0b" strokeWidth="1.5" rx="4" />
+              <text x={extraWeightWidth / 2} y={extraWeightHeight / 2 + 3.5} textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                {extraWeightLabel}
+              </text>
+            </g>
+          );
+        })()}
       </g>
     );
   };
@@ -532,6 +573,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     if (!showFBD) return null;
 
     const centerTop = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+    const pTargetY = centerTop.y - (extraWeight > 0 ? 18 : 0);
     const lowestDistFromBottom = twoBlocks
       ? Math.max(0, objBottomDistFromTankBottom - cordLength_visual - H2_visual)
       : objBottomDistFromTankBottom;
@@ -546,16 +588,16 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         {/* Peso (P) - Acima do bloco apontando para baixo */}
         <line
           x1={centerTop.x}
-          y1={centerTop.y - arrowLenP}
+          y1={pTargetY - arrowLenP}
           x2={centerTop.x}
-          y2={centerTop.y}
+          y2={pTargetY}
           stroke="#ef4444"
           strokeWidth="3"
           markerEnd="url(#arrow-red)"
         />
-        <circle cx={centerTop.x} cy={centerTop.y} r={3} fill="#ef4444" />
-        <g transform={`translate(${centerTop.x + 10}, ${centerTop.y - arrowLenP / 2})`}>
-          <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
+        <circle cx={centerTop.x} cy={pTargetY} r={3} fill="#ef4444" />
+        <g transform={`translate(${centerTop.x + 10}, ${pTargetY - arrowLenP / 2})`}>
+          <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.9" rx="4" />
           <text x="12" y="4" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="bold">
             P
           </text>

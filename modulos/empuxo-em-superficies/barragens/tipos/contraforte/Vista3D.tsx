@@ -42,7 +42,7 @@ export const Vista3D: React.FC<ButtressDam3DViewProps> = (props) => {
         onCalculate={onCalculate}
         onReset={onReset}
       />
-      
+
       <div className="w-full h-full flex items-center justify-center">
         <BarragemCanvas targetY={damHeight / 3}>
           <BarragemContraforteScene
@@ -54,7 +54,14 @@ export const Vista3D: React.FC<ButtressDam3DViewProps> = (props) => {
             channelWidth={CHANNEL_WIDTH}
             upstreamLevel={upstreamLevel}
             downstreamLevel={downstreamLevel}
+            hasMudLayer={props.hasMudLayer}
+            mudHeight={props.mudHeight}
+            mudDensity={props.mudDensity}
+            unitSystem={props.unitSystem}
+            gravity={props.gravity}
             force={props.force}
+            forceH={props.forceH}
+            forceV={props.forceV}
             s_cp={props.s_cp}
             y_cp={props.y_cp}
             up={props.up}

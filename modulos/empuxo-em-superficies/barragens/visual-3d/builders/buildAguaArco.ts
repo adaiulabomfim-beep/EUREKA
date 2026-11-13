@@ -15,19 +15,20 @@ export function buildAguaArcoGeometry(
 ): THREE.BufferGeometry | null {
   if (waterLevelY <= 0) return null;
 
-  const { profile } = construirGeometria(
+  const { profile, actualBaseWidth } = construirGeometria(
     damHeight, damBaseWidth, damCrestWidth, inclinationAngle
   );
 
+  const offsetBase = actualBaseWidth / 2;
   const farExtension = damHeight * 1.5;
   let farX: number, X_front_base: number, X_front_top: number;
 
   if (side === 'UPSTREAM') {
-    farX = profile[0].x - farExtension;
+    farX = (profile[0].x - farExtension) - offsetBase;
     X_front_base = profile[0].x;
     X_front_top = interpolateX(waterLevelY, profile[0], profile[1]);
   } else {
-    farX = profile[3].x + farExtension;
+    farX = (profile[3].x + farExtension) - offsetBase;
     X_front_base = profile[3].x;
     X_front_top = interpolateX(waterLevelY, profile[3], profile[2]);
   }
@@ -35,7 +36,6 @@ export function buildAguaArcoGeometry(
   const thetaMax = channelWidth / archRadius;
   const startAngle = -thetaMax / 2;
   const endAngle = thetaMax / 2;
-  const offsetBase = damBaseWidth / 2;
 
   const frontBasePts: THREE.Vector3[] = [];
   const frontTopPts: THREE.Vector3[] = [];
@@ -61,7 +61,6 @@ export function buildAguaArcoGeometry(
 
   // Back face points: flat along X, interpolando Z para acompanhar os limites
   for (let s = 0; s <= segmentsZ; s++) {
-    // Usando o mesmo Z da frente mas flat no X
     backBasePts.push(new THREE.Vector3(farX, 0, frontBasePts[s].z));
     backTopPts.push(new THREE.Vector3(farX, waterLevelY, frontTopPts[s].z));
   }
@@ -77,13 +76,13 @@ export function buildAguaArcoGeometry(
     vertices.push(frontTopPts[s].x, frontTopPts[s].y, frontTopPts[s].z);
     indexOffset += 2;
   }
-  
+
   for (let s = 0; s < segmentsZ; s++) {
     const b0 = frontStartIndex + s * 2;
     const t0 = frontStartIndex + s * 2 + 1;
     const b1 = frontStartIndex + (s + 1) * 2;
     const t1 = frontStartIndex + (s + 1) * 2 + 1;
-    
+
     if (side === 'UPSTREAM') {
       indices.push(b0, t0, b1);
       indices.push(b1, t0, t1);
@@ -93,29 +92,28 @@ export function buildAguaArcoGeometry(
     }
   }
 
-  // Helper para quad não compartilhado
   const addQuad = (v1: THREE.Vector3, v2: THREE.Vector3, v3: THREE.Vector3, v4: THREE.Vector3) => {
     vertices.push(v1.x, v1.y, v1.z);
     vertices.push(v2.x, v2.y, v2.z);
     vertices.push(v3.x, v3.y, v3.z);
     vertices.push(v4.x, v4.y, v4.z);
-    
+
     indices.push(indexOffset, indexOffset + 1, indexOffset + 2);
     indices.push(indexOffset, indexOffset + 2, indexOffset + 3);
-    
+
     indexOffset += 4;
   };
 
   // 2. Elementos Flat
   for (let s = 0; s < segmentsZ; s++) {
     const fBs = frontBasePts[s];
-    const fBs1 = frontBasePts[s+1];
+    const fBs1 = frontBasePts[s + 1];
     const fTs = frontTopPts[s];
-    const fTs1 = frontTopPts[s+1];
+    const fTs1 = frontTopPts[s + 1];
     const bBs = backBasePts[s];
-    const bBs1 = backBasePts[s+1];
+    const bBs1 = backBasePts[s + 1];
     const bTs = backTopPts[s];
-    const bTs1 = backTopPts[s+1];
+    const bTs1 = backTopPts[s + 1];
 
     if (side === 'UPSTREAM') {
       addQuad(bBs, bBs1, bTs1, bTs);   // Costas
@@ -130,11 +128,11 @@ export function buildAguaArcoGeometry(
 
   // 3. Tampas
   if (side === 'UPSTREAM') {
-    addQuad(frontBasePts[0], backBasePts[0], backTopPts[0], frontTopPts[0]); // Esquerda
-    addQuad(frontBasePts[segmentsZ], frontTopPts[segmentsZ], backTopPts[segmentsZ], backBasePts[segmentsZ]); // Direita
+    addQuad(frontBasePts[0], backBasePts[0], backTopPts[0], frontTopPts[0]);
+    addQuad(frontBasePts[segmentsZ], frontTopPts[segmentsZ], backTopPts[segmentsZ], backBasePts[segmentsZ]);
   } else {
-    addQuad(frontBasePts[0], frontTopPts[0], backTopPts[0], backBasePts[0]); // Esquerda
-    addQuad(frontBasePts[segmentsZ], backBasePts[segmentsZ], backTopPts[segmentsZ], frontTopPts[segmentsZ]); // Direita
+    addQuad(frontBasePts[0], frontTopPts[0], backTopPts[0], backBasePts[0]);
+    addQuad(frontBasePts[segmentsZ], backBasePts[segmentsZ], backTopPts[segmentsZ], frontTopPts[segmentsZ]);
   }
 
   const geometry = new THREE.BufferGeometry();

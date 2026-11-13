@@ -110,25 +110,48 @@ export const simularCorposImersos = (props: any) => {
   const totalVolume = volume + (twoBlocks ? volume2 : 0);
   const equivalentDensity = totalVolume > 0 ? totalMass / totalVolume : objectDensity;
 
+  const maxFluidDensity = enableTwoFluids ? Math.max(rhoA, rhoB) : rhoA;
+  const isShallowTank = status === 'AFUNDADO' && equivalentDensity < maxFluidDensity;
+
+  const deltaH_B_m = enableTwoFluids ? calculateDeltaH(vol_sub_B + vol_sub_B_2, tankBaseArea) : 0;
+  const deltaH_B_cm = deltaH_B_m * 100;
+
+  let cordTension = 0;
+  if (twoBlocks && actualCordLength > 0) {
+    if (z2_eq > 1e-5) {
+      cordTension = Math.max(0, objectWeight2 - E_2);
+    } else {
+      cordTension = Math.max(0, (E_A + E_B) - (objectWeight + extraWeight));
+    }
+  }
+
   return {
     volume,
     baseArea,
     H_cm,
     objectDensity,
     objectWeight: totalWeight,
+    objectWeight1: objectWeight,
     objectMass: totalMass,
+    objectMass1: objectMass,
+    objectMass2,
     equivalentDensity,
     status,
+    isShallowTank,
     h_sub_actual: h_in_A + h_in_B + (twoBlocks ? h_in_A_2 + h_in_B_2 : 0),
-    h_in_A,
-    h_in_B,
+    h_in_A: h_in_A + (twoBlocks ? h_in_A_2 : 0),
+    h_in_B: h_in_B + (twoBlocks ? h_in_B_2 : 0),
     vol_sub_A: vol_sub_A + vol_sub_A_2,
     vol_sub_B: vol_sub_B + vol_sub_B_2,
     vol_deslocado,
     deltaH_cm,
+    deltaH_B_cm,
     tankBaseArea,
     E_A: E_A + E_A_2,
     E_B: E_B + E_B_2,
+    E_1: E_A + E_B,
+    E_2,
+    cordTension,
     buoyancyForce,
     apparentWeight,
     d_eq,
@@ -138,6 +161,9 @@ export const simularCorposImersos = (props: any) => {
     objectWeight2,
     extraWeight,
     actualCordLength,
+    twoBlocks,
+    rhoA,
+    rhoB,
     eqVolDeslocado,
     eqHSubActual,
     eqBuoyancyForce,

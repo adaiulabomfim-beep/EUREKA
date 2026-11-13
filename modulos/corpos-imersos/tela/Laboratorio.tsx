@@ -5,6 +5,7 @@ import {
   RotateCcw,
   ArrowLeftRight,
   Gauge,
+  X,
 } from 'lucide-react';
 import { MATERIALS, FLUIDS } from '../dominio/configuracao';
 import { ObjectShape } from '../dominio/tipos';
@@ -76,7 +77,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const availablePixelWidth = svgWidth - 120;
 
   const fluidTotalDepth = enableTwoFluids ? depthA + depthB : depthA;
-  const autoTankHeight = Math.max(tankHeight, Math.ceil(fluidTotalDepth + 10));
+  const autoTankHeight = Math.max(tankHeight, Math.ceil(fluidTotalDepth * 1.15));
   const scaleHeight = availablePixelHeight / autoTankHeight;
   const scaleWidth = availablePixelWidth / tankWidth;
   const visualScaleFactor = Math.min(scaleHeight, scaleWidth);
@@ -251,9 +252,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
   const maxBlockY = tankBottomY - (twoBlocks ? (visualHeight + H2_cm_visual + initialPhysics.actualCordLength * visualScaleFactor) : visualHeight);
-  const visualBlockY = !physics.status.includes('AFUNDADO')
+  const isFloatingAtFreeSurface =
+    physics.status === 'FLUTUANDO' ||
+    physics.status === 'FLUTUANDO EM A' ||
+    physics.status === 'FLUTUANDO NA INTERFACE A/B';
+  const visualBlockY = isFloatingAtFreeSurface
     ? Math.min(maxBlockY, animBlockY - physics.deltaH_cm * visualScaleFactor)
-    : animBlockY;
+    : Math.min(maxBlockY, animBlockY);
 
   // --- HANDLERS ---
   const handleMaterialChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -265,155 +270,169 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     }
   };
 
+  const handleResetSimulation = () => {
+    setIsSimulating(false);
+    setActiveExerciseId(null);
+    setCurrentEnunciado(null);
+    setTwoBlocks(false);
+    setExtraWeight(0);
+    setSelectedMaterial('Concreto');
+    setCustomObjDensity(2400);
+    setShape(ObjectShape.CUBE);
+    setDim1(100);
+    setDim2(100);
+    setSelectedFluid(FLUIDS[4].name);
+    setCustomFluidDensity(FLUIDS[4].density);
+    setDepthA(300);
+    setEnableTwoFluids(false);
+    setSelectedFluidB(FLUIDS[6].name);
+    setCustomFluidDensityB(FLUIDS[6].density);
+    setDepthB(100);
+    setTankWidth(500);
+    setTankDepth(500);
+    setTankHeight(500);
+    setSelectedMaterial2('Concreto');
+    setDensity2(2400);
+    setDim1_2(100);
+    setDim2_2(100);
+    setCordLength(20);
+    setShape2(ObjectShape.CUBE);
+    setShowCalculations(false);
+    setToastMsg('Estado inicial restaurado!');
+    setTimeout(() => setToastMsg(null), 1500);
+  };
+
   const EXERCISES = [
     {
-      id: 'ex1',
-      title: 'Exercício 1: Bloco Uniforme',
-      subtitle: 'Peso 50N ar, 40N submerso',
-      enunciado: 'Um bloco pesa 50N no ar e 40N quando totalmente submerso em água. Determine o volume e a densidade do bloco.',
+      id: 'sim1',
+      title: 'Simulação 1: Cubo de Carvalho',
+      subtitle: 'Aresta 100 cm em Óleo de Soja (400 cm)',
+      enunciado: 'Um cubo de madeira (Carvalho, ρ = 750 kg/m³) com aresta de 100 cm é colocado em um reservatório contendo Óleo de Soja (ρ = 920 kg/m³) com 400 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.',
       load: () => {
         setIsSimulating(false);
-        setActiveExerciseId('ex1');
-        setCurrentEnunciado('Um bloco pesa 50N no ar e 40N quando totalmente submerso em água. Determine o volume e a densidade do bloco.');
+        setActiveExerciseId('sim1');
+        setCurrentEnunciado('Um cubo de madeira (Carvalho, ρ = 750 kg/m³) com aresta de 100 cm é colocado em um reservatório contendo Óleo de Soja (ρ = 920 kg/m³) com 400 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
         setTwoBlocks(false);
         setExtraWeight(0);
-        setSelectedMaterial('Custom');
-        setCustomObjDensity(5000); // 50N / (10000 N/m3 * V) = 40N aparente? 
-        // W = 50N, E = 10N. E = rho_w * V * g => 10 = 10000 * V => V = 0.001 m3.
-        // rho_b = W / (V*g) = 50 / (0.001 * 10) = 5000 kg/m3.
         setShape(ObjectShape.CUBE);
-        setDim1(10); // 10x10x10 cm = 1000 cm3 = 0.001 m3
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
-        setEnableTwoFluids(false);
-        setDepthA(50);
-        setTankWidth(100);
-        setTankDepth(100);
-        setTankHeight(100);
-        setToastMsg('Exercício 1 Carregado!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'ex2',
-      title: 'Exercício 2: Duas Esferas',
-      subtitle: 'Esferas A e B ligadas',
-      enunciado: 'Duas esferas, A e B, de raios iguais, estão ligadas por um arame de peso e volume desprezíveis e flutuam na água, conforme se apresenta na figura. Sabendo que as massas específicas da água e da esfera A são respectivamente 1,0 g/cm³ e 0,8 g/cm³, calcule a massa específica da esfera B.',
-      load: () => {
-        setIsSimulating(false);
-        setActiveExerciseId('ex2');
-        setCurrentEnunciado('Duas esferas, A e B, de raios iguais, estão ligadas por um arame de peso e volume desprezíveis e flutuam na água, conforme se apresenta na figura. Sabendo que as massas específicas da água e da esfera A são respectivamente 1,0 g/cm³ e 0,8 g/cm³, calcule a massa específica da esfera B.');
-        setTwoBlocks(true);
-        setExtraWeight(0);
-        setShape(ObjectShape.SPHERE);
-        setDim1(10); // raio 10
-        setSelectedMaterial('Custom');
-        setCustomObjDensity(800); // Esfera A: 0.8 g/cm3 = 800 kg/m3
-        
-        setShape2(ObjectShape.SPHERE);
-        setDim1_2(10);
-        setSelectedMaterial2('Custom');
-        setDensity2(700); // Esfera B: 0.7 g/cm3 = 700 kg/m3 (para Esfera A 50% submersa ligada por arame rígido)
-        setCordLength(20);
-
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
-        setEnableTwoFluids(false);
-        setDepthA(100);
-        setTankWidth(200);
-        setTankDepth(200);
-        setTankHeight(200);
-        setToastMsg('Exercício 2 Carregado!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'ex5',
-      title: 'Exercício 5: Dois Cubos',
-      subtitle: 'Conectados por cordão',
-      enunciado: 'Dois cubos conectados por um cordão. O cubo inferior é mais denso, enquanto o superior garante a flutuabilidade do conjunto.',
-      load: () => {
-        setIsSimulating(false);
-        setActiveExerciseId('ex5');
-        setCurrentEnunciado('Dois cubos conectados por um cordão. O cubo inferior é mais denso, enquanto o superior garante a flutuabilidade do conjunto.');
-        setTwoBlocks(true);
-        setExtraWeight(0);
-        setShape(ObjectShape.CUBE);
-        setDim1(100); // 1m3 volume => 100cm aresta
-        setSelectedMaterial('Custom');
-        setCustomObjDensity(800); // d=0.8
-        
-        setShape2(ObjectShape.CUBE);
-        setDim1_2(100);
-        setSelectedMaterial2('Custom');
-        setDensity2(1100); // d=1.1
-        setCordLength(50);
-
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
+        setDim1(100);
+        setSelectedMaterial('Madeira (Carvalho)');
+        setCustomObjDensity(750);
+        setSelectedFluid('Óleo de Soja');
+        setCustomFluidDensity(920);
         setEnableTwoFluids(false);
         setDepthA(400);
         setTankWidth(500);
         setTankDepth(500);
         setTankHeight(500);
-        setToastMsg('Exercício 5 Carregado!');
+        setToastMsg('Simulação 1 Carregada!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     },
     {
-      id: 'ex_extra_weight',
-      title: 'Peso Extra',
-      subtitle: 'Bloco com carga superior',
-      enunciado: 'Um bloco de madeira flutua na água. Uma carga adicional é colocada sobre ele. Determine o novo calado (altura submersa) do bloco.',
+      id: 'sim2',
+      title: 'Simulação 2: Cubo de Ouro',
+      subtitle: 'Aresta 200 cm em Mercúrio (Tanque 600x600 cm)',
+      enunciado: 'Um cubo de Ouro (ρ = 19300 kg/m³) com aresta de 200 cm é imerso em um reservatório de 600 × 600 cm contendo Mercúrio (ρ = 13534 kg/m³) com 600 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o peso aparente e o volume deslocado.',
       load: () => {
         setIsSimulating(false);
-        setActiveExerciseId('ex_extra_weight');
-        setCurrentEnunciado('Um bloco de madeira flutua na água. Uma carga adicional é colocada sobre ele. Determine o novo calado (altura submersa) do bloco.');
+        setActiveExerciseId('sim2');
+        setCurrentEnunciado('Um cubo de Ouro (ρ = 19300 kg/m³) com aresta de 200 cm é imerso em um reservatório de 600 × 600 cm contendo Mercúrio (ρ = 13534 kg/m³) com 600 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o peso aparente e o volume deslocado.');
         setTwoBlocks(false);
-        setExtraWeight(50); // 50N extra
-        setSelectedMaterial('Madeira (Pinho)');
-        setCustomObjDensity(600);
-        setShape(ObjectShape.CUBE);
-        setDim1(30);
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
-        setEnableTwoFluids(false);
-        setDepthA(100);
-        setTankWidth(200);
-        setTankDepth(200);
-        setTankHeight(200);
-        setToastMsg('Simulação com Peso Extra Carregada!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'ex_two_blocks_connected',
-      title: 'Dois Blocos Conectados',
-      subtitle: 'Equilíbrio de dois corpos',
-      enunciado: 'Dois blocos de densidades diferentes estão conectados. Encontre o ponto de equilíbrio do sistema quando imerso em água.',
-      load: () => {
-        setIsSimulating(false);
-        setActiveExerciseId('ex_two_blocks_connected');
-        setCurrentEnunciado('Dois blocos de densidades diferentes estão conectados. Encontre o ponto de equilíbrio do sistema quando imerso em água.');
-        setTwoBlocks(true);
         setExtraWeight(0);
         setShape(ObjectShape.CUBE);
-        setDim1(10); // 1000 cm3
-        setSelectedMaterial('Custom');
-        setCustomObjDensity(500); // 0.5 g/cm3
-        setShape2(ObjectShape.CUBE);
-        setDim1_2(10);
-        setSelectedMaterial2('Custom');
-        setDensity2(1500); // 1.5 g/cm3
-        setCordLength(20);
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
+        setDim1(200);
+        setSelectedMaterial('Ouro');
+        setCustomObjDensity(19300);
+        setSelectedFluid('Mercúrio');
+        setCustomFluidDensity(13534);
         setEnableTwoFluids(false);
-        setDepthA(100);
-        setTankWidth(200);
-        setTankDepth(200);
-        setTankHeight(200);
-        setToastMsg('Exercício Dois Blocos Carregado!');
+        setDepthA(600);
+        setTankWidth(600);
+        setTankDepth(600);
+        setTankHeight(600);
+        setToastMsg('Simulação 2 Carregada!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'sim3',
+      title: 'Simulação 3: Esfera de Isopor',
+      subtitle: 'Raio 50 cm em Óleo de Soja (Tanque 500x500 cm)',
+      enunciado: 'Uma esfera de Isopor (ρ = 30 kg/m³) com raio de 50 cm é colocada em um tanque de 500 × 500 cm contendo Óleo de Soja (ρ = 920 kg/m³). Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.',
+      load: () => {
+        setIsSimulating(false);
+        setActiveExerciseId('sim3');
+        setCurrentEnunciado('Uma esfera de Isopor (ρ = 30 kg/m³) com raio de 50 cm é colocada em um tanque de 500 × 500 cm contendo Óleo de Soja (ρ = 920 kg/m³). Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
+        setTwoBlocks(false);
+        setExtraWeight(0);
+        setShape(ObjectShape.SPHERE);
+        setDim1(50);
+        setSelectedMaterial('Isopor');
+        setCustomObjDensity(30);
+        setSelectedFluid('Óleo de Soja');
+        setCustomFluidDensity(920);
+        setEnableTwoFluids(false);
+        setDepthA(300);
+        setTankWidth(500);
+        setTankDepth(500);
+        setTankHeight(500);
+        setToastMsg('Simulação 3 Carregada!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'sim4',
+      title: 'Simulação 4: Esfera de Pinho',
+      subtitle: 'Raio 150 cm em Água do Mar (Tanque 1000x1000 cm)',
+      enunciado: 'Uma esfera de Madeira (Pinho, ρ = 500 kg/m³) com raio de 150 cm é colocada em um tanque de 1000 × 1000 cm contendo Água do Mar (ρ = 1025 kg/m³) com 500 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.',
+      load: () => {
+        setIsSimulating(false);
+        setActiveExerciseId('sim4');
+        setCurrentEnunciado('Uma esfera de Madeira (Pinho, ρ = 500 kg/m³) com raio de 150 cm é colocada em um tanque de 1000 × 1000 cm contendo Água do Mar (ρ = 1025 kg/m³) com 500 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
+        setTwoBlocks(false);
+        setExtraWeight(0);
+        setShape(ObjectShape.SPHERE);
+        setDim1(150);
+        setSelectedMaterial('Madeira (Pinho)');
+        setCustomObjDensity(500);
+        setSelectedFluid('Água do Mar');
+        setCustomFluidDensity(1025);
+        setEnableTwoFluids(false);
+        setDepthA(500);
+        setTankWidth(1000);
+        setTankDepth(1000);
+        setTankHeight(600);
+        setToastMsg('Simulação 4 Carregada!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'sim5',
+      title: 'Simulação 5: Cubo de Concreto (2 Líquidos)',
+      subtitle: 'Aresta 100 cm em Mel (300 cm) e Mercúrio (100 cm)',
+      enunciado: 'Um cubo de Concreto (ρ = 2400 kg/m³) com aresta de 100 cm é imerso em dois líquidos imiscíveis: Mel (superior, ρ = 1420 kg/m³, 300 cm) e Mercúrio (inferior, ρ = 13534 kg/m³, 100 cm). Determine o equilíbrio na interface e a fração submersa em cada fluido.',
+      load: () => {
+        setIsSimulating(false);
+        setActiveExerciseId('sim5');
+        setCurrentEnunciado('Um cubo de Concreto (ρ = 2400 kg/m³) com aresta de 100 cm é imerso em dois líquidos imiscíveis: Mel (superior, ρ = 1420 kg/m³, 300 cm) e Mercúrio (inferior, ρ = 13534 kg/m³, 100 cm). Determine o equilíbrio na interface e a fração submersa em cada fluido.');
+        setTwoBlocks(false);
+        setExtraWeight(0);
+        setShape(ObjectShape.CUBE);
+        setDim1(100);
+        setSelectedMaterial('Concreto');
+        setCustomObjDensity(2400);
+        setSelectedFluid('Mel');
+        setCustomFluidDensity(1420);
+        setDepthA(300);
+        setEnableTwoFluids(true);
+        setSelectedFluidB('Mercúrio');
+        setCustomFluidDensityB(13534);
+        setDepthB(100);
+        setTankWidth(500);
+        setTankDepth(500);
+        setTankHeight(500);
+        setToastMsg('Simulação 5 Carregada!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     }
@@ -473,26 +492,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const TANK_BORDER_COLOR = '#06b6d4';
   const OBJECT_BORDER_COLOR = '#475569';
   const forceText = isSimulating
-    ? physics.apparentWeight >= 10000
-      ? `${(physics.apparentWeight / 1000).toFixed(1)} kN`
-      : `${physics.apparentWeight.toFixed(1)} N`
+    ? `${(physics.apparentWeight / 1000).toFixed(2)} kN`
     : '?';
 
   const colorA = getFluidColor(selectedFluid);
   const colorB = getFluidColor(selectedFluidB);
 
-  let specialResult: { title: string; value: string; unit?: string; description?: string } | null = null;
-  if (activeExerciseId === 'ex2') {
-    const rho_w = selectedFluid === 'Custom' ? customFluidDensity : (FLUIDS.find(f => f.name === selectedFluid)?.density || 1000);
-    const rho_A = customObjDensity;
-    const rho_B = (1.5 * rho_w) - rho_A;
-    specialResult = {
-      title: 'Massa Específica (Esfera B)',
-      value: isSimulating ? rho_B.toFixed(0) : '???',
-      unit: 'kg/m³',
-      description: 'Calculado p/ Esfera A 50% submersa'
-    };
-  }
+  const specialResult: { title: string; value: string; unit?: string; description?: string } | null = null;
 
   const geom = {
     formula: shape === ObjectShape.CUBE ? 'L³' : shape === ObjectShape.SPHERE ? '4/3 · π · r³' : 'π · r² · h',
@@ -500,28 +506,39 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[620px]">
+    <div className="flex flex-col gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-[minmax(0,1fr)] gap-6 lg:flex-1 lg:h-full lg:min-h-0 lg:overflow-hidden">
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
         <ScrollablePanel
           id="tour-controles"
           dataTour="painel-controles"
-          className="lg:col-span-3 h-[620px] max-h-[620px] min-h-0"
+          className="lg:col-span-3 h-[600px] lg:h-full lg:max-h-full min-h-0 overflow-hidden"
           contentClassName="flex flex-col gap-4 pr-3.5 pb-4"
         >
           {/* SIMULAÇÕES PRONTAS */}
           <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl p-4 shadow-md text-white shrink-0">
-            <div className="flex items-center gap-2 mb-3 text-sm font-bold tracking-wider opacity-90">
-              <BookOpen className="w-4 h-4" />
-              SIMULAÇÕES PRONTAS
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2 text-sm font-bold tracking-wider opacity-90">
+                <BookOpen className="w-4 h-4" />
+                SIMULAÇÕES PRONTAS
+              </div>
+              <button
+                type="button"
+                onClick={handleResetSimulation}
+                title="Fechar simulação e restaurar estado inicial"
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 border border-white/30 text-[10px] font-bold uppercase tracking-wider text-white transition-colors cursor-pointer active:scale-95"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Resetar
+              </button>
             </div>
             <select
               className="w-full bg-white/20 hover:bg-white/30 transition-colors rounded-lg p-3 text-left flex items-center gap-3 border border-white/30 text-white outline-none cursor-pointer text-xs"
+              value={activeExerciseId || ""}
               onChange={(e) => {
                 const ex = EXERCISES.find(x => x.id === e.target.value);
                 if (ex) ex.load();
               }}
-              defaultValue=""
             >
               <option value="" disabled className="text-gray-800">Selecione uma simulação...</option>
               {EXERCISES.map(ex => (
@@ -531,8 +548,18 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
               ))}
             </select>
             {currentEnunciado && (
-              <div className="mt-4 p-3 bg-white/10 rounded-lg border border-white/20 text-xs leading-relaxed text-blue-50">
-                <span className="font-bold block mb-1 text-white">Enunciado:</span>
+              <div className="mt-4 p-3 bg-white/10 rounded-lg border border-white/20 text-xs leading-relaxed text-blue-50 relative">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-white">Enunciado:</span>
+                  <button
+                    type="button"
+                    onClick={handleResetSimulation}
+                    title="Fechar simulação e voltar ao estado inicial"
+                    className="p-0.5 rounded hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 {currentEnunciado}
               </div>
             )}
@@ -590,6 +617,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             onDensity2Change={setDensity2}
             dim1_2={dim1_2}
             onDim1_2Change={setDim1_2}
+            dim2_2={dim2_2}
+            onDim2_2Change={setDim2_2}
             cordLength={cordLength}
             onCordLengthChange={setCordLength}
             shape2={shape2}
@@ -600,7 +629,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         </ScrollablePanel>
 
         {/* --- CENTER: SCENE --- */}
-        <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 flex flex-col h-full bg-white rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20 min-h-[500px]">
+        <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 flex flex-col h-[500px] lg:h-full lg:max-h-full lg:min-h-0 bg-white rounded-3xl border border-blue-100/50 overflow-hidden relative shadow-2xl shadow-blue-200/20">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
           <div className="w-full h-full">
             {is3D ? (
@@ -628,7 +657,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 visualWidth={visualWidth}
                 visualHeight={visualHeight}
                 objBottomDistFromTankBottom={tankBottomY - (visualBlockY + visualHeight)}
-                objD_visual={dim1 * visualScaleFactor}
+                objD_visual={visualWidth}
                 visualTankDepth={tankDepth * visualScaleFactor}
                 showFBD={showFBD}
                 objectWeight={physics.objectWeight}
@@ -653,6 +682,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 tankOffsetX={tankOffsetX}
                 currentTankW={currentTankW}
                 currentTankH={currentTankH}
+                tankWidth={tankWidth}
+                tankDepth={tankDepth}
                 shape={shape}
                 visualWidth={visualWidth}
                 visualHeight={visualHeight}
@@ -758,9 +789,9 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                     },
                     resultados: {
                       empuxo: E_eq,
-                      empuxoFormatado: E_eq >= 10000 ? `${(E_eq / 1000).toFixed(2)} kN` : `${E_eq.toFixed(1)} N`,
+                      empuxoFormatado: `${(E_eq / 1000).toFixed(2)} kN (${E_eq.toFixed(1)} N)`,
                       peso: physics.objectWeight,
-                      pesoFormatado: physics.objectWeight >= 10000 ? `${(physics.objectWeight / 1000).toFixed(2)} kN` : `${physics.objectWeight.toFixed(1)} N`,
+                      pesoFormatado: `${(physics.objectWeight / 1000).toFixed(2)} kN (${physics.objectWeight.toFixed(1)} N)`,
                       volumeDeslocado: `${(V_eq * 1000).toFixed(2)} L (${V_eq.toFixed(4)} m³)`,
                       alturaSubmersa: `${H_eq.toFixed(1)} cm`,
                       segurancaOuStatus: physics.status.includes('AFUNDADO') ? 'Afunda (P > E)' : physics.status.includes('NEUTRO') ? 'Equilíbrio Neutro (E = P)' : 'Flutua (E = P)',
@@ -804,20 +835,24 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
       {/* Comparador de Fluidos */}
       {showFluidComparison && (
-        <PainelComparacaoFluidos
-          shape={shape}
-          dim1={dim1}
-          dim2={dim2}
-          selectedMaterial={selectedMaterial}
-          customObjDensity={customObjDensity}
-          gravity={gravity}
-          extraWeight={extraWeight}
-          onApplyFluid={(fluidName, fluidDensity) => {
-            setSelectedFluid(fluidName);
-            setCustomFluidDensity(fluidDensity);
-          }}
-          onClose={() => setShowFluidComparison(false)}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl">
+            <PainelComparacaoFluidos
+              shape={shape}
+              dim1={dim1}
+              dim2={dim2}
+              selectedMaterial={selectedMaterial}
+              customObjDensity={customObjDensity}
+              gravity={gravity}
+              extraWeight={extraWeight}
+              onApplyFluid={(fluidName, fluidDensity) => {
+                setSelectedFluid(fluidName);
+                setCustomFluidDensity(fluidDensity);
+              }}
+              onClose={() => setShowFluidComparison(false)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Floating Calculation Panel */}
@@ -830,6 +865,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
           tankDepth={tankDepth}
           enableTwoFluids={enableTwoFluids}
           activeExerciseId={activeExerciseId}
+          enunciado={currentEnunciado}
           onClose={() => setShowCalculations(false)}
         />
       )}

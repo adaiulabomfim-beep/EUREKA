@@ -9,9 +9,12 @@ export function buildAguaGravidade(
   inclinationAngle: number,
   channelWidth: number,
   waterLevelY: number,
-  side: "UPSTREAM" | "DOWNSTREAM"
+  side: "UPSTREAM" | "DOWNSTREAM",
+  yStart: number = 0
 ): THREE.BufferGeometry | null {
-  if (waterLevelY <= 0) return null;
+  const y0 = Math.max(0, yStart);
+  const y1 = Math.max(y0, waterLevelY);
+  if (y1 - y0 <= 1e-6) return null;
 
   const { profile, actualBaseWidth } = construirGeometria(
     damHeight,
@@ -23,30 +26,26 @@ export function buildAguaGravidade(
   const shape = new THREE.Shape();
   const offset = actualBaseWidth / 2;
 
-  // Assuming profile indices are:
-  // 0: upstream toe
-  // 1: upstream crest
-  // 2: downstream crest
-  // 3: downstream toe
-
   if (side === 'UPSTREAM') {
-    const farX = profile[0].x - damHeight * 1.5; // matching Vista3D farLeft scaling idea
-    const damXAtWater = interpolateX(waterLevelY, profile[0], profile[1]);
-    
-    shape.moveTo(farX, 0);
-    shape.lineTo(farX, waterLevelY);
-    shape.lineTo(damXAtWater, waterLevelY);
-    shape.lineTo(profile[0].x, 0);
-    shape.lineTo(farX, 0);
+    const farX = profile[0].x - damHeight * 1.5;
+    const damXAtBottom = interpolateX(y0, profile[0], profile[1]);
+    const damXAtTop = interpolateX(y1, profile[0], profile[1]);
+
+    shape.moveTo(farX, y0);
+    shape.lineTo(farX, y1);
+    shape.lineTo(damXAtTop, y1);
+    shape.lineTo(damXAtBottom, y0);
+    shape.lineTo(farX, y0);
   } else {
     const farX = profile[3].x + damHeight * 1.5;
-    const damXAtWater = interpolateX(waterLevelY, profile[3], profile[2]);
+    const damXAtBottom = interpolateX(y0, profile[3], profile[2]);
+    const damXAtTop = interpolateX(y1, profile[3], profile[2]);
 
-    shape.moveTo(profile[3].x, 0);
-    shape.lineTo(damXAtWater, waterLevelY);
-    shape.lineTo(farX, waterLevelY);
-    shape.lineTo(farX, 0);
-    shape.lineTo(profile[3].x, 0);
+    shape.moveTo(damXAtBottom, y0);
+    shape.lineTo(damXAtTop, y1);
+    shape.lineTo(farX, y1);
+    shape.lineTo(farX, y0);
+    shape.lineTo(damXAtBottom, y0);
   }
 
   const extrudeSettings = {

@@ -36,7 +36,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
   };
 
   return (
-    <div id="tour-resultados" data-tour="painel-resultados" className="lg:col-span-3 flex flex-col gap-3 h-full min-h-0 max-h-[620px]">
+    <div id="tour-resultados" data-tour="painel-resultados" className="lg:col-span-3 flex flex-col gap-3 h-[600px] lg:h-full lg:max-h-full min-h-0 overflow-hidden">
       <ResultsPanel
         footerButton={{
           label: showCalculations ? 'Ocultar Memorial' : 'Memorial',
@@ -47,8 +47,9 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
       >
         <ResultsCard
           title="Peso Real (P)"
-          value={physics.objectWeight >= 10000 ? (physics.objectWeight / 1000).toFixed(1) : physics.objectWeight.toFixed(1)}
-          unit={physics.objectWeight >= 10000 ? 'kN' : 'N'}
+          value={(physics.objectWeight / 1000).toFixed(2)}
+          unit="kN"
+          secondaryValue={`${physics.objectWeight.toFixed(1)} N`}
           leftIcon={Weight}
           icon={ArrowDown}
           theme="red"
@@ -56,8 +57,9 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
 
         <ResultsCard
           title="Empuxo Total (E)"
-          value={isSimulating ? (physics.buoyancyForce >= 10000 ? (physics.buoyancyForce / 1000).toFixed(1) : physics.buoyancyForce.toFixed(1)) : '???'}
-          unit={isSimulating ? (physics.buoyancyForce >= 10000 ? 'kN' : 'N') : ''}
+          value={isSimulating ? (physics.buoyancyForce / 1000).toFixed(2) : '???'}
+          unit={isSimulating ? 'kN' : ''}
+          secondaryValue={isSimulating ? `${physics.buoyancyForce.toFixed(1)} N` : undefined}
           leftIcon={Droplets}
           icon={isSimulating ? ArrowUp : EyeOff}
           theme="green"
@@ -65,7 +67,15 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
 
         <ResultsCard
           title="Peso Aparente (Pap)"
-          value={forceText}
+          value={isSimulating ? (physics.apparentWeight / 1000).toFixed(2) : '?'}
+          unit={isSimulating ? 'kN' : ''}
+          secondaryValue={
+            isSimulating
+              ? physics.apparentWeight > 0
+                ? `${physics.apparentWeight.toFixed(1)} N`
+                : '0.0 N (Flutuando / Suspenso)'
+              : undefined
+          }
           leftIcon={Scale}
           theme="blue"
           badge="DINAMÔMETRO"
@@ -77,27 +87,45 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           highlight={true}
           leftIcon={CheckCircle2}
           highlightTheme={getStatusHighlight(physics.status, isSimulating)}
-          secondaryValue={isSimulating && physics.equivalentDensity ? `Densidade Eq.: ${physics.equivalentDensity.toFixed(1)} kg/m³` : undefined}
+          secondaryValue={
+            isSimulating
+              ? physics.isShallowTank
+                ? 'Apoiado no fundo (lâmina líquida insuficiente)'
+                : physics.equivalentDensity
+                ? `Densidade Eq.: ${physics.equivalentDensity.toFixed(1)} kg/m³`
+                : undefined
+              : undefined
+          }
         />
 
         <ResultsCard
           title="Altura Submersa (Hsub)"
-          value={isSimulating ? (physics.h_sub_actual / 100).toFixed(2) : '?'}
-          unit="m"
+          value={isSimulating ? physics.h_sub_actual.toFixed(2) : '?'}
+          unit={isSimulating ? 'cm' : ''}
           leftIcon={Droplets}
           icon={Ruler}
           theme="cyan"
-          secondaryValue={enableTwoFluids && isSimulating ? `A: ${(physics.h_in_A / 100).toFixed(2)}m | B: ${(physics.h_in_B / 100).toFixed(2)}m` : undefined}
+          secondaryValue={
+            isSimulating
+              ? enableTwoFluids
+                ? `${(physics.h_sub_actual / 100).toFixed(4)} m | A: ${physics.h_in_A.toFixed(2)} cm | B: ${physics.h_in_B.toFixed(2)} cm`
+                : `Equivalente: ${(physics.h_sub_actual / 100).toFixed(4)} m`
+              : undefined
+          }
         />
 
         <ResultsCard
           title="Volume Deslocado (Vdesl)"
           value={isSimulating ? physics.vol_deslocado.toFixed(4) : '?'}
-          unit="m³"
+          unit={isSimulating ? 'm³' : ''}
           leftIcon={Box}
           theme="amber"
           badge="Vdesl = Vsub"
-          secondaryValue={`Elevação do Nível (Δh): ${isSimulating ? physics.deltaH_cm.toFixed(2) : '?'} cm`}
+          secondaryValue={
+            isSimulating
+              ? `${(physics.vol_deslocado * 1000).toFixed(2)} L | Δh: ${physics.deltaH_cm.toFixed(2)} cm`
+              : 'Elevação do Nível (Δh): ? cm'
+          }
         />
 
         {specialResult && (

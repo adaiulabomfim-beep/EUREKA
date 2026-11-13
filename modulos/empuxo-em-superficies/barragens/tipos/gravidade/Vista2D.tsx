@@ -1,12 +1,14 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
+import { renderizarEstabilidade2D } from '../../visual/overlayEstabilidade';
 import { RenderizadorBarragensProps } from '../../dominio/tipos';
 import { construirGeometria } from './geometria';
-import { calcularHidrostatica, calcularEstabilidade } from './calculos';
 import {
   getDamXAtYGeneric,
   criarPrisma,
   caixaAgua3D,
+  criarAguaMontanteComLama,
   criarBaseTerra,
+  gerarVetoresBarragem2D,
 } from '../../visual/auxiliaresGeometriaCena';
 import { useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer as ContainerCena } from '../../visual/ContainerCena';
@@ -26,8 +28,12 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     inclinationAngle,
     upstreamLevel,
     downstreamLevel = 0,
+    hasMudLayer = false,
+    mudHeight = 0,
+    mudDensity = 1500,
     force,
-    s_cp,
+    forceH,
+    forceV,
     y_cp,
     up,
     isAnalyzed,
@@ -45,18 +51,15 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
   const ORIGIN_Y = SVG_H * 0.82;
   const CHANNEL_WIDTH = 40;
 
-  const toWorldX = useCallback(
-    (x: number) => x - damBaseWidth / 2,
-    [damBaseWidth]
-  );
-
-  const { worldGeometry, getDamXAtY, profile } = useMemo(() => {
-    const { profile } = construirGeometria(
+  const { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX } = useMemo(() => {
+    const { profile, actualBaseWidth } = construirGeometria(
       damHeight,
       damBaseWidth,
       damCrestWidth,
       inclinationAngle
     );
+
+    const toWorldX = (x: number) => x - actualBaseWidth / 2;
 
     const getDamXAtY = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => {
       return getDamXAtYGeneric(profile, y, side);
@@ -85,16 +88,15 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
 
     if (upstreamLevel > 0) {
       worldGeometry.push(
-        ...caixaAgua3D(
+        ...criarAguaMontanteComLama({
           upstreamLevel,
-          CHANNEL_WIDTH,
-          getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5,
-          'UPSTREAM',
+          hasMudLayer,
+          mudHeight,
+          channelWidth: CHANNEL_WIDTH,
+          farLeft: getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5,
           getDamXAtY,
           toWorldX,
-          undefined,
-          'A'
-        )
+        })
       );
     }
 
@@ -113,25 +115,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       );
     }
 
-    calcularHidrostatica(
-      damHeight,
-      inclinationAngle,
-      upstreamLevel,
-      downstreamLevel,
-      1000 * 9.81
-    );
-
-    calcularEstabilidade(
-      damHeight,
-      damBaseWidth,
-      damCrestWidth,
-      upstreamLevel,
-      downstreamLevel,
-      force,
-      y_cp
-    );
-
-    return { worldGeometry, getDamXAtY, profile };
+    return { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX };
   }, [
     damHeight,
     damBaseWidth,
@@ -139,9 +123,8 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     inclinationAngle,
     upstreamLevel,
     downstreamLevel,
-    toWorldX,
-    force,
-    y_cp,
+    hasMudLayer,
+    mudHeight,
   ]);
 
   const autoFitParams = useMemo(() => {
@@ -179,144 +162,50 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     autoFitParams
   );
 
-  const vectors = useMemo(() => {
-    if (!showVectors || !isAnalyzed) return [];
-
-    const vecs: Array<{
-      start: { x: number; y: number };
-      end: { x: number; y: number };
-      color: string;
-      isResultant: boolean;
-      val: string;
-      opacity: number;
-      strokeWidth: number;
-    }> = [];
-
-    const isInside = (p: { x: number; y: number }) =>
-      p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
-
-    const pushArrow = (
-      x: number,
-      y: number,
-      z: number,
-      nx: number,
-      ny: number,
-      magWorld: number,
-      color: string,
-      isResultant: boolean,
-      val?: string
-    ) => {
-      let finalMag = magWorld;
-      const pEnd = project({ x, y, z });
-      let pStart = project({ x: x + nx * finalMag, y: y + ny * finalMag, z });
-
-      if (!isInside(pStart)) {
-        for (const f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
-          const testMag = magWorld * f;
-          const testStart = project({
-            x: x + nx * testMag,
-            y: y + ny * testMag,
-            z,
-          });
-          if (isInside(testStart)) {
-            finalMag = testMag;
-            pStart = testStart;
-            break;
-          }
-        }
-      }
-
-      vecs.push({
-        start: pStart,
-        end: pEnd,
-        color,
-        isResultant,
-        val: val || '',
-        opacity: isResultant ? 1 : 0.85,
-        strokeWidth: isResultant ? 4 : 1.5,
-      });
-    };
-
-    const localNormal = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => {
-      const dy = 0.05;
-      const y1 = Math.max(0, y - dy);
-      const y2 = Math.min(damHeight, y + dy);
-      const x1 = getDamXAtY(y1, side);
-      const x2 = getDamXAtY(y2, side);
-      const dx = x2 - x1;
-      const dY = y2 - y1;
-
-      let nx = -dY;
-      let ny = dx;
-
-      if (side === 'UPSTREAM') {
-        if (nx > 0) {
-          nx = -nx;
-          ny = -ny;
-        }
-      } else {
-        if (nx < 0) {
-          nx = -nx;
-          ny = -ny;
-        }
-      }
-
-      const mag = Math.sqrt(nx * nx + ny * ny) || 1;
-      return { nx: nx / mag, ny: ny / mag };
-    };
-
-    const Ny = 40;
-
-    if (upstreamLevel > 0) {
-      for (let i = 0; i < Ny; i++) {
-        const d = (i / (Ny - 1)) * upstreamLevel;
-        const y = upstreamLevel - d;
-        const { nx, ny } = localNormal(y, 'UPSTREAM');
-        const Lpx = 10 + (72 - 10) * (d / Math.max(1e-9, upstreamLevel));
-        const Lw = Lpx / SCALE;
-
-        const base = getDamXAtY(y, 'UPSTREAM');
-        const x = toWorldX(base);
-        pushArrow(x, y, 0, nx, ny, Lw, '#2563eb', false);
-      }
-    }
-
-    if (downstreamLevel > 0) {
-      for (let i = 0; i < Ny; i++) {
-        const d = (i / (Ny - 1)) * downstreamLevel;
-        const y = downstreamLevel - d;
-        const { nx, ny } = localNormal(y, 'DOWNSTREAM');
-        const Lpx = 10 + (72 - 10) * (d / Math.max(1e-9, downstreamLevel));
-        const Lw = Lpx / SCALE;
-
-        const base = getDamXAtY(y, 'DOWNSTREAM');
-        const x = toWorldX(base);
-        pushArrow(x, y, 0, nx, ny, Lw, '#3b82f6', false);
-      }
-    }
-
-    if (up && force !== 0 && y_cp > 0) {
-      const { nx, ny } = localNormal(y_cp, 'UPSTREAM');
-      const base = getDamXAtY(y_cp, 'UPSTREAM');
-      const x = toWorldX(base);
-      pushArrow(x, y_cp, 0, nx, ny, 120 / SCALE, '#2563eb', true, 'FR');
-    }
-
-    return vecs;
-  }, [
-    showVectors,
-    isAnalyzed,
-    upstreamLevel,
-    downstreamLevel,
-    force,
-    y_cp,
-    up,
-    damHeight,
-    getDamXAtY,
-    toWorldX,
-    project,
-    SCALE,
-  ]);
+  const vectors = useMemo(
+    () =>
+      gerarVetoresBarragem2D({
+        showVectors,
+        isAnalyzed,
+        upstreamLevel,
+        downstreamLevel,
+        damHeight,
+        force,
+        forceH,
+        forceV,
+        y_cp,
+        up,
+        getDamXAtY,
+        toWorldX,
+        project,
+        SCALE,
+        SVG_W,
+        SVG_H,
+        distributionOpacity: 0.85,
+        hasMudLayer,
+        mudHeight,
+        mudDensity,
+      }),
+    [
+      showVectors,
+      isAnalyzed,
+      upstreamLevel,
+      downstreamLevel,
+      damHeight,
+      force,
+      forceH,
+      forceV,
+      y_cp,
+      up,
+      getDamXAtY,
+      toWorldX,
+      project,
+      SCALE,
+      hasMudLayer,
+      mudHeight,
+      mudDensity,
+    ]
+  );
 
   const originProj = project({ x: 0, y: 0, z: 0 });
 
@@ -331,7 +220,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       const xRight = project({ x: toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM')), y: upstreamLevel, z: 0 }).x;
       const yTop = project({ x: toWorldX(farX), y: upstreamLevel, z: 0 }).y;
       const rippleHeight = Math.min(30, upstreamLevel * SCALE);
-      
+
       dims.push(
         <g key="ripple-up">
           <rect
@@ -361,7 +250,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       const xRight = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).x;
       const yTop = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).y;
       const rippleHeight = Math.min(30, downstreamLevel * SCALE);
-      
+
       dims.push(
         <g key="ripple-down">
           <rect
@@ -400,28 +289,14 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
 
       const cx = (p1Off.x + p2Off.x) / 2 + textOffsetPx.x;
       const cy = (p1Off.y + p2Off.y) / 2 + textOffsetPx.y;
-      
+
       const textW = text.length * 7 + 8;
       const textH = 18;
 
       return (
         <g key={key} stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.9">
-          <line
-            x1={p1.x}
-            y1={p1.y}
-            x2={p1Off.x}
-            y2={p1Off.y}
-            strokeDasharray="3 3"
-            opacity="0.45"
-          />
-          <line
-            x1={p2.x}
-            y1={p2.y}
-            x2={p2Off.x}
-            y2={p2Off.y}
-            strokeDasharray="3 3"
-            opacity="0.45"
-          />
+          <line x1={p1.x} y1={p1.y} x2={p1Off.x} y2={p1Off.y} strokeDasharray="3 3" opacity="0.45" />
+          <line x1={p2.x} y1={p2.y} x2={p2Off.x} y2={p2Off.y} strokeDasharray="3 3" opacity="0.45" />
           <line
             x1={p1Off.x}
             y1={p1Off.y}
@@ -430,15 +305,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
             markerStart="url(#arrow)"
             markerEnd="url(#arrow)"
           />
-          <rect
-            x={cx - textW / 2}
-            y={cy - textH / 2}
-            width={textW}
-            height={textH}
-            fill="white"
-            rx="3"
-            stroke="none"
-          />
+          <rect x={cx - textW / 2} y={cy - textH / 2} width={textW} height={textH} fill="white" rx="3" stroke="none" />
           <text
             x={cx}
             y={cy}
@@ -460,17 +327,19 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       xWorld: number,
       yWorld: number,
       text: string,
-      flipX: boolean = false
+      flipX: boolean = false,
+      screenX?: number
     ) => {
-      const p = project({ x: xWorld, y: yWorld, z: 0 });
+      const p0 = project({ x: xWorld, y: yWorld, z: 0 });
+      const p = screenX !== undefined ? { ...p0, x: screenX } : p0;
       const dir = flipX ? -1 : 1;
       return (
         <g key={key} stroke="#475569" strokeWidth="1.2" opacity="0.9">
-          <polygon points={`${p.x},${p.y} ${p.x-7},${p.y-14} ${p.x},${p.y-14}`} fill="none" />
-          <polygon points={`${p.x},${p.y} ${p.x},${p.y-14} ${p.x+7},${p.y-14}`} fill="#475569" />
-          <polyline points={`${p.x},${p.y-14} ${p.x},${p.y-30} ${p.x + dir * 40},${p.y-30}`} fill="none" />
+          <polygon points={`${p.x},${p.y} ${p.x - 7},${p.y - 14} ${p.x},${p.y - 14}`} fill="none" />
+          <polygon points={`${p.x},${p.y} ${p.x},${p.y - 14} ${p.x + 7},${p.y - 14}`} fill="#475569" />
+          <polyline points={`${p.x},${p.y - 14} ${p.x},${p.y - 30} ${p.x + dir * 56},${p.y - 30}`} fill="none" />
           <text
-            x={p.x + dir * 20}
+            x={p.x + dir * 28}
             y={p.y - 34}
             textAnchor="middle"
             dominantBaseline="alphabetic"
@@ -489,7 +358,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       drawDim(
         'damHeight',
         { x: toWorldX(getDamXAtY(0, 'DOWNSTREAM')), y: 0 },
-        { x: toWorldX(getDamXAtY(damHeight, 'DOWNSTREAM')), y: damHeight },
+        { x: toWorldX(getDamXAtY(0, 'DOWNSTREAM')), y: damHeight },
         `${damHeight.toFixed(1)}m`,
         { x: 58, y: 0 },
         { x: 28, y: 0 }
@@ -501,7 +370,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         'damBase',
         { x: toWorldX(getDamXAtY(0, 'UPSTREAM')), y: 0 },
         { x: toWorldX(getDamXAtY(0, 'DOWNSTREAM')), y: 0 },
-        `${damBaseWidth.toFixed(1)}m`,
+        `${actualBaseWidth.toFixed(1)}m`,
         { x: 0, y: 38 },
         { x: 0, y: 14 }
       )
@@ -520,32 +389,47 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       );
     }
 
-    // Nível de Água a Montante
     if (upstreamLevel > 0) {
-      const xBase = toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM')) - 1; // offset slightly outside
+      const xBase = toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM')) - 1;
+      dims.push(drawLevelSymbol('upstreamLevel', xBase, upstreamLevel, `NA=${upstreamLevel.toFixed(2)}`, true, 82));
+    }
+
+    const effMud = hasMudLayer && mudHeight > 0 ? Math.min(mudHeight, upstreamLevel) : 0;
+    if (effMud > 0) {
+      const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
+      const pL = project({ x: toWorldX(farLeft), y: effMud, z: 0 });
+      const pR = project({ x: toWorldX(getDamXAtY(effMud, 'UPSTREAM')), y: effMud, z: 0 });
       dims.push(
-        drawLevelSymbol(
-          'upstreamLevel',
-          xBase,
-          upstreamLevel,
-          `NA=${upstreamLevel.toFixed(2)}`,
-          true
-        )
+        <g key="mud-interface" pointerEvents="none">
+          <line
+            x1={pL.x}
+            y1={pL.y}
+            x2={pR.x}
+            y2={pR.y}
+            stroke="#fbbf24"
+            strokeWidth="1.3"
+            strokeDasharray="5 3"
+            opacity="0.85"
+          />
+          <text
+            x={pL.x + 8}
+            y={pL.y - 5}
+            fill="#fef3c7"
+            fontSize="10"
+            fontWeight="bold"
+            stroke="#78350f"
+            strokeWidth="2.5"
+            paintOrder="stroke"
+          >
+            Lama = {effMud.toFixed(2)}m (d={(mudDensity / 1000).toFixed(2)})
+          </text>
+        </g>
       );
     }
 
-    // Nível de Água a Jusante
     if (downstreamLevel > 0) {
-      const xBase = toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM')) + 1; // offset slightly outside
-      dims.push(
-        drawLevelSymbol(
-          'downstreamLevel',
-          xBase,
-          downstreamLevel,
-          `NA=${downstreamLevel.toFixed(2)}`,
-          false
-        )
-      );
+      const xBase = toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM')) + 1;
+      dims.push(drawLevelSymbol('downstreamLevel', xBase, downstreamLevel, `NA=${downstreamLevel.toFixed(2)}`, true, SVG_W - 28));
     }
 
     if (isAnalyzed && force !== 0 && y_cp > 0) {
@@ -561,6 +445,19 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         )
       );
     }
+
+    dims.push(
+      ...renderizarEstabilidade2D({
+        stability: props.stability,
+        isAnalyzed: props.isAnalyzed,
+        unitSystem: props.unitSystem,
+        gravity: props.gravity,
+        project,
+        xToeWorld: toWorldX(getDamXAtY(0, 'UPSTREAM')),
+        svgW: SVG_W,
+        showVectors: props.showVectors,
+      })
+    );
 
     return dims;
   };

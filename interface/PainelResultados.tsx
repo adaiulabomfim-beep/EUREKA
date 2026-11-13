@@ -1,6 +1,5 @@
 import React from 'react';
 import { LucideIcon, Info } from 'lucide-react';
-import { ScrollablePanel } from './ScrollablePanel';
 
 export type CardTheme = 'red' | 'green' | 'blue' | 'purple' | 'amber' | 'cyan' | 'slate';
 
@@ -40,13 +39,13 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
 }) => {
 
   const themeStyles = {
-    red: { border: 'border-l-red-500', text: 'text-red-500 dark:text-red-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-red-50 dark:bg-red-950/50' },
-    green: { border: 'border-l-emerald-500', text: 'text-emerald-500 dark:text-emerald-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-emerald-50 dark:bg-emerald-950/50' },
+    red: { border: 'border-l-red-500 dark:border-l-red-500', text: 'text-red-500 dark:text-red-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-red-50 dark:bg-red-950/50' },
+    green: { border: 'border-l-emerald-500 dark:border-l-emerald-500', text: 'text-emerald-500 dark:text-emerald-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-emerald-50 dark:bg-emerald-950/50' },
     blue: { border: 'border-l-blue-600 dark:border-l-blue-500', text: 'text-blue-600 dark:text-blue-400', title: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/50' },
-    purple: { border: 'border-l-purple-400', text: 'text-purple-600 dark:text-purple-400', title: 'text-purple-400 dark:text-purple-300', bg: 'bg-purple-50 dark:bg-purple-950/50' },
-    amber: { border: 'border-l-amber-500', text: 'text-amber-600 dark:text-amber-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-amber-50 dark:bg-amber-950/50' },
-    cyan: { border: 'border-l-cyan-500', text: 'text-cyan-500 dark:text-cyan-400', title: 'text-blue-500 dark:text-blue-400', bg: 'bg-cyan-50 dark:bg-cyan-950/50' },
-    slate: { border: 'border-l-slate-400', text: 'text-slate-500 dark:text-slate-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-900/60' },
+    purple: { border: 'border-l-purple-500 dark:border-l-purple-400', text: 'text-purple-600 dark:text-purple-400', title: 'text-purple-400 dark:text-purple-300', bg: 'bg-purple-50 dark:bg-purple-950/50' },
+    amber: { border: 'border-l-amber-500 dark:border-l-amber-500', text: 'text-amber-600 dark:text-amber-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-amber-50 dark:bg-amber-950/50' },
+    cyan: { border: 'border-l-cyan-500 dark:border-l-cyan-400', text: 'text-cyan-500 dark:text-cyan-400', title: 'text-blue-500 dark:text-blue-400', bg: 'bg-cyan-50 dark:bg-cyan-950/50' },
+    slate: { border: 'border-l-slate-400 dark:border-l-slate-400', text: 'text-slate-500 dark:text-slate-400', title: 'text-slate-400 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-900/60' },
   };
 
   const currentTheme = themeStyles[theme];
@@ -79,8 +78,8 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
   return (
     <div
       className={`
-        relative rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/90 py-3 px-3.5
-        shadow-sm flex items-center gap-3.5 border-l-[4px] ${currentTheme.border} transition-colors duration-200
+        relative rounded-xl border-y border-r border-l-[4px] border-slate-100 dark:border-slate-800 ${currentTheme.border} bg-white dark:bg-slate-900/90 py-3 px-3.5
+        shadow-sm flex items-center gap-3.5 transition-colors duration-200
       `}
     >
       {/* Left Icon (Colored Circle) */}
@@ -151,10 +150,10 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
 }) => {
 
   return (
-    <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col h-full min-h-0 max-h-[620px] transition-colors duration-200">
+    <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col h-full max-h-full min-h-0 overflow-hidden transition-colors duration-200">
 
       {/* Header */}
-      <div className="flex items-center gap-2 px-3.5 py-3 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex items-center gap-2 px-3.5 py-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
 
         <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center">
           <Info className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
@@ -168,12 +167,9 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
 
 
       {/* Cards */}
-      <ScrollablePanel
-        className="flex-1 min-h-0"
-        contentClassName="p-3 pr-3.5 space-y-2.5"
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto no-native-scrollbar p-3 space-y-2.5">
         {children}
-      </ScrollablePanel>
+      </div>
 
 
       {/* Footer Button */}

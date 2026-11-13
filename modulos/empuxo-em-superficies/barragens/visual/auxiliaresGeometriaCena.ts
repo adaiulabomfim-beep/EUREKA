@@ -332,30 +332,36 @@ export const caixaAgua3D = (
   offsetFn?: (z: number, x: number) => number,
   fillId: "A" | "B" = "A",
   stepsZ?: number,
+  yStart: number = 0,
+  fillOverride?: string,
 ): WorldFace[] => {
+  const y0 = Math.max(0, yStart);
+  const y1 = Math.max(y0, waterLevelY);
+  if (y1 - y0 <= 1e-6) return [];
+
   const getWaterProfile = (): { x: number; y: number }[] => {
-    const xDamBottom = getDamXAtY(0, damFaceSide);
-    const xDamTop = getDamXAtY(waterLevelY, damFaceSide);
+    const xDamBottom = getDamXAtY(y0, damFaceSide);
+    const xDamTop = getDamXAtY(y1, damFaceSide);
 
     if (damFaceSide === "UPSTREAM") {
       return [
-        { x: farX, y: 0 },
-        { x: farX, y: waterLevelY },
-        { x: xDamTop, y: waterLevelY },
-        { x: xDamBottom, y: 0 },
+        { x: farX, y: y0 },
+        { x: farX, y: y1 },
+        { x: xDamTop, y: y1 },
+        { x: xDamBottom, y: y0 },
       ];
     } else {
       return [
-        { x: xDamBottom, y: 0 },
-        { x: xDamTop, y: waterLevelY },
-        { x: farX, y: waterLevelY },
-        { x: farX, y: 0 },
+        { x: xDamBottom, y: y0 },
+        { x: xDamTop, y: y1 },
+        { x: farX, y: y1 },
+        { x: farX, y: y0 },
       ];
     }
   };
 
-  const fill = fillId === "A" ? "url(#fluidDepthA)" : "url(#fluidDepthB)";
-  const ripplePattern = "url(#ripplePattern)";
+  const fill = fillOverride || (fillId === "A" ? "url(#fluidDepthA)" : "url(#fluidDepthB)");
+  const ripplePattern = fillOverride ? undefined : "url(#ripplePattern)";
 
   const waterFaces = criarPrisma(
     getWaterProfile(),
@@ -451,5 +457,268 @@ export const poligonoAgua2D = (
 
   // Omit the ripplePattern face to keep the 2D water clean and prevent visual artifacts.
 
+  return faces;
+};
+
+
+export interface VetorHidrostática2D {
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  color: string;
+  isResultant: boolean;
+  val: string;
+  opacity: number;
+  strokeWidth: number;
+}
+
+export interface GerarVetores2DParams {
+  showVectors: boolean;
+  isAnalyzed: boolean;
+  upstreamLevel: number;
+  downstreamLevel: number;
+  damHeight: number;
+  force: number;
+  forceH?: number;
+  forceV?: number;
+  y_cp: number;
+  up?: { FR: number };
+  getDamXAtY: (y: number, side: "UPSTREAM" | "DOWNSTREAM") => number;
+  toWorldX: (x: number) => number;
+  project: (p: Point3D) => { x: number; y: number; zDepth: number };
+  SCALE: number;
+  SVG_W: number;
+  SVG_H: number;
+  distributionOpacity?: number;
+  hasMudLayer?: boolean;
+  mudHeight?: number;
+  mudDensity?: number;
+  density?: number;
+}
+
+export function gerarVetoresBarragem2D({
+  showVectors,
+  isAnalyzed,
+  upstreamLevel,
+  downstreamLevel,
+  damHeight,
+  force,
+  forceH,
+  forceV,
+  y_cp,
+  up,
+  getDamXAtY,
+  toWorldX,
+  project,
+  SCALE,
+  SVG_W,
+  SVG_H,
+  distributionOpacity = 0.4,
+  hasMudLayer = false,
+  mudHeight = 0,
+  mudDensity = 1500,
+  density = 1000,
+}: GerarVetores2DParams): VetorHidrostática2D[] {
+  if (!showVectors || !isAnalyzed) return [];
+
+  const vecs: VetorHidrostática2D[] = [];
+  const isInside = (p: { x: number; y: number }) =>
+    p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
+
+  const pushArrow = (
+    x: number,
+    y: number,
+    z: number,
+    nx: number,
+    ny: number,
+    magWorld: number,
+    color: string,
+    isResultant: boolean,
+    val?: string
+  ) => {
+    let finalMag = magWorld;
+    const pEnd = project({ x, y, z });
+    let pStart = project({ x: x + nx * finalMag, y: y + ny * finalMag, z });
+
+    if (!isInside(pStart)) {
+      for (const f of [0.8, 0.6, 0.4, 0.2, 0.1, 0.05]) {
+        const testMag = magWorld * f;
+        const testStart = project({ x: x + nx * testMag, y: y + ny * testMag, z });
+        if (isInside(testStart)) {
+          finalMag = testMag;
+          pStart = testStart;
+          break;
+        }
+      }
+    }
+
+    vecs.push({
+      start: pStart,
+      end: pEnd,
+      color,
+      isResultant,
+      val: val || "",
+      opacity: isResultant ? 1 : distributionOpacity,
+      strokeWidth: isResultant ? 3.5 : 1.35,
+    });
+  };
+
+  const localNormal = (y: number, side: "UPSTREAM" | "DOWNSTREAM") => {
+    const dy = 0.05;
+    const y1 = Math.max(0, y - dy);
+    const y2 = Math.min(damHeight, y + dy);
+    const x1 = getDamXAtY(y1, side);
+    const x2 = getDamXAtY(y2, side);
+    const dx = x2 - x1;
+    const dY = y2 - y1;
+
+    let nx = -dY;
+    let ny = dx;
+
+    if (side === "UPSTREAM") {
+      if (nx > 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+    } else {
+      if (nx < 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+    }
+
+    const mag = Math.sqrt(nx * nx + ny * ny) || 1;
+    return { nx: nx / mag, ny: ny / mag };
+  };
+
+  const Ny = 40;
+  const effMud = hasMudLayer && mudHeight > 0 ? Math.min(mudHeight, upstreamLevel) : 0;
+  const mudRatio = Math.max(0.1, mudDensity / Math.max(1e-6, density));
+  const maxUpEffHead = effMud > 0 ? (upstreamLevel - effMud) + mudRatio * effMud : upstreamLevel;
+  // Escala comum entre montante (incluindo lama) e jusante proporcional à pressão máxima real
+  const maxHead = Math.max(maxUpEffHead, downstreamLevel, 1e-9);
+
+  if (upstreamLevel > 0) {
+    for (let i = 0; i < Ny; i++) {
+      const y = upstreamLevel - (i / (Ny - 1)) * upstreamLevel;
+      const inMud = effMud > 0 && y < effMud - 1e-6;
+      const effDepth = inMud
+        ? (upstreamLevel - effMud) + mudRatio * (effMud - y)
+        : upstreamLevel - y;
+      const { nx, ny } = localNormal(y, "UPSTREAM");
+      const Lpx = 10 + (72 - 10) * (effDepth / maxHead);
+      const Lw = Lpx / SCALE;
+
+      const base = getDamXAtY(y, "UPSTREAM");
+      const x = toWorldX(base);
+      pushArrow(x, y, 0, nx, ny, Lw, inMud ? "#b45309" : "#2563eb", false);
+    }
+  }
+
+  if (downstreamLevel > 0) {
+    for (let i = 0; i < Ny; i++) {
+      const d = (i / (Ny - 1)) * downstreamLevel;
+      const y = downstreamLevel - d;
+      const { nx, ny } = localNormal(y, "DOWNSTREAM");
+      const Lpx = 10 + (72 - 10) * (d / maxHead);
+      const Lw = Lpx / SCALE;
+
+      const base = getDamXAtY(y, "DOWNSTREAM");
+      const x = toWorldX(base);
+      pushArrow(x, y, 0, nx, ny, Lw, "#3b82f6", false);
+    }
+  }
+
+  if (up && Math.abs(force) > 1e-3) {
+    const fH = forceH !== undefined ? forceH : force;
+    const fV = forceV !== undefined ? forceV : 0;
+    const isUpDominant = fH >= 0;
+    const yPos = Math.max(0, Math.min(damHeight, y_cp > 0 ? y_cp : 0));
+    const side = isUpDominant ? "UPSTREAM" : "DOWNSTREAM";
+    const base = getDamXAtY(yPos, side);
+    const x = toWorldX(base);
+
+    const vecMag = Math.hypot(fH, fV);
+    let nx: number;
+    let ny: number;
+    if (vecMag > 1e-6) {
+      // Seta aponta para (+fH, -fV), portanto a origem (tail) fica na direção (-fH, +fV)
+      nx = -fH / vecMag;
+      ny = fV / vecMag;
+    } else {
+      const normal = localNormal(yPos, side);
+      nx = normal.nx;
+      ny = normal.ny;
+    }
+
+    pushArrow(
+      x,
+      yPos,
+      0,
+      nx,
+      ny,
+      120 / SCALE,
+      isUpDominant ? "#2563eb" : "#f59e0b",
+      true,
+      "FR"
+    );
+  }
+
+  return vecs;
+}
+
+export const criarAguaMontanteComLama = ({
+  upstreamLevel,
+  hasMudLayer = false,
+  mudHeight = 0,
+  channelWidth,
+  farLeft,
+  getDamXAtY,
+  toWorldX,
+}: {
+  upstreamLevel: number;
+  hasMudLayer?: boolean;
+  mudHeight?: number;
+  channelWidth: number;
+  farLeft: number;
+  getDamXAtY: (y: number, side: "UPSTREAM" | "DOWNSTREAM") => number;
+  toWorldX: (x: number) => number;
+}): WorldFace[] => {
+  if (upstreamLevel <= 0) return [];
+  const effMud = hasMudLayer && mudHeight > 0 ? Math.min(mudHeight, upstreamLevel) : 0;
+  const faces: WorldFace[] = [];
+
+  if (effMud > 1e-6) {
+    faces.push(
+      ...caixaAgua3D(
+        effMud,
+        channelWidth,
+        farLeft,
+        "UPSTREAM",
+        getDamXAtY,
+        toWorldX,
+        undefined,
+        "A",
+        undefined,
+        0,
+        "url(#mudPattern)",
+      ),
+    );
+  }
+  if (upstreamLevel - effMud > 1e-6) {
+    faces.push(
+      ...caixaAgua3D(
+        upstreamLevel,
+        channelWidth,
+        farLeft,
+        "UPSTREAM",
+        getDamXAtY,
+        toWorldX,
+        undefined,
+        "A",
+        undefined,
+        effMud,
+      ),
+    );
+  }
   return faces;
 };

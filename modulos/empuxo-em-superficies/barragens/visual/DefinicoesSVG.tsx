@@ -198,6 +198,16 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
       <stop offset="50%" stopColor="#f59e0b" />
       <stop offset="100%" stopColor="#b45309" />
     </linearGradient>
+    {/* Camada de Lama / Sedimentos no Fundo */}
+    <pattern id="mudPattern" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform={trans}>
+      <rect width="24" height="24" fill="#92400e" fillOpacity="0.88" />
+      <circle cx="4" cy="6" r="0.9" fill="#451a03" opacity="0.55" />
+      <circle cx="15" cy="4" r="0.7" fill="#fef3c7" opacity="0.2" />
+      <circle cx="11" cy="14" r="1.1" fill="#451a03" opacity="0.5" />
+      <circle cx="20" cy="17" r="0.8" fill="#451a03" opacity="0.45" />
+      <circle cx="6" cy="20" r="0.7" fill="#fef3c7" opacity="0.18" />
+      <path d="M0,12 Q6,10 12,12 T24,12" stroke="#78350f" strokeWidth="0.8" fill="none" opacity="0.4" />
+    </pattern>
   </defs>
   );
 };

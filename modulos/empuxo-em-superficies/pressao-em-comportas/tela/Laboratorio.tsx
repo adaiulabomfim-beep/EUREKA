@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { Maximize, AlertCircle, AlertTriangle } from 'lucide-react';
 import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from '../dominio/tipos';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
 import { simularComportas } from '../calculos/simulador';
 import { getGateYBarTotal } from '../calculos/hidrostatica';
 import { CenaPressaoComporta } from '../visual/CenaPressaoComporta';
-import { PRESETS } from '../dominio/presets';
+import { PRESETS, CONFIG_PADRAO_COMPORTA } from '../dominio/presets';
 import { PainelResultados } from './PainelResultados';
 import { Memorial } from './Memorial';
 import { PainelControles } from './PainelControles';
@@ -17,7 +17,8 @@ interface GatePressureLabProps {
 
 export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate }) => {
   // STATE
-  const [config, setConfig] = useState<ConfiguracaoSimulacaoComporta>(PRESETS.exercicioCircular60);
+  const [config, setConfig] = useState<ConfiguracaoSimulacaoComporta>(CONFIG_PADRAO_COMPORTA);
+  const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [analyzedResults, setAnalyzedResults] = useState<any | null>(null);
@@ -44,7 +45,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       pesoProprioAtivo: gateWeightEnabled 
   } = comporta;
   
-  const setHasDownstream = (val: boolean) => setConfig(prev => ({ 
+  const setHasDownstream = (val: boolean) => setConfigManual(prev => ({ 
     ...prev, 
     fluidoJusante: { 
       ...prev.fluidoJusante, 
@@ -61,7 +62,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
 
   // Handler for toggling gate
   const toggleGate = (active: boolean) => {
-      setConfig(prev => ({ 
+      setConfigManual(prev => ({ 
           ...prev, 
           comporta: { ...prev.comporta, ativa: active },
           // Se ativar a comporta e a jusante estiver em 0, dá um nível inicial pra facilitar a visualização
@@ -76,7 +77,19 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       const preset = PRESETS[key];
       if (preset) {
           setConfig(preset);
+          setActivePresetKey(key);
       }
+  };
+
+  const resetDefaults = () => {
+      setConfig(CONFIG_PADRAO_COMPORTA);
+      setActivePresetKey(null);
+  };
+
+  // Qualquer edição manual desvincula a simulação ativa
+  const setConfigManual: React.Dispatch<React.SetStateAction<ConfiguracaoSimulacaoComporta>> = (action) => {
+      setActivePresetKey(null);
+      setConfig(action);
   };
   
   const liveResults = useMemo(() => simularComportas(config), [config]);
@@ -120,7 +133,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
 
   // Handle Dimensions based on shape
   const handleHeightChange = (val: number) => {
-      setConfig(prev => {
+      setConfigManual(prev => {
           let newWidth = prev.comporta.largura;
           if (prev.comporta.forma === FormaComporta.CIRCULAR) { newWidth = val; }
           if (prev.comporta.forma === FormaComporta.SEMI_CIRCULAR) { newWidth = val * 2; }
@@ -129,7 +142,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   };
 
   const handleShapeChange = (newShape: FormaComporta) => {
-      setConfig(prev => {
+      setConfigManual(prev => {
           let newWidth = prev.comporta.largura;
           if (newShape === FormaComporta.CIRCULAR) { newWidth = prev.comporta.altura; }
           if (newShape === FormaComporta.SEMI_CIRCULAR) { newWidth = prev.comporta.altura * 2; }
@@ -178,13 +191,13 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[620px]">
+    <div className="flex flex-col gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-[minmax(0,1fr)] gap-6 lg:flex-1 lg:h-full lg:min-h-0 lg:overflow-hidden">
         
         {/* --- LEFT SIDEBAR: CONTROLS --- */}
         <PainelControles 
             config={config} 
-            setConfig={setConfig} 
+            setConfig={setConfigManual} 
             hasDownstream={hasDownstream} 
             setHasDownstream={setHasDownstream} 
             maxGateHeight={maxGateHeight} 
@@ -192,6 +205,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
             toggleGate={toggleGate} 
             loadPreset={loadPreset} 
             presets={PRESETS}
+            activePresetKey={activePresetKey}
+            onResetDefaults={resetDefaults}
             handleHeightChange={handleHeightChange} 
             handleShapeChange={handleShapeChange} 
             wallDims={wallDims}
@@ -199,7 +214,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
         />
 
         {/* --- CENTER: SCENE --- */}
-        <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-full min-h-[500px]">
+        <div id="areaSimulacao" data-simulacao={JSON.stringify(exportData)} className="lg:col-span-6 relative bg-white rounded-3xl border border-blue-100/50 shadow-2xl shadow-blue-200/20 overflow-hidden flex flex-col h-[500px] lg:h-full lg:max-h-full lg:min-h-0">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 z-20"></div>
 
           {/* Banner de Validações e Alertas Visuais (Item 6) */}

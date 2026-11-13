@@ -5,9 +5,9 @@ import { ObjectShape } from '../dominio/tipos';
 import { NumberInput } from './components/NumberInput';
 
 export const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon, title }) => (
-    <div className="flex items-center gap-2 mb-5 pb-3 border-b border-blue-50">
-        <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">{icon}</div>
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h3>
+    <div className="flex items-center gap-2 mb-5 pb-3 border-b border-blue-50 dark:border-slate-800/80">
+        <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-lg">{icon}</div>
+        <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">{title}</h3>
     </div>
 );
 
@@ -51,6 +51,8 @@ interface PainelControlesProps {
   onDensity2Change: (val: number) => void;
   dim1_2: number;
   onDim1_2Change: (val: number) => void;
+  dim2_2?: number;
+  onDim2_2Change?: (val: number) => void;
   cordLength: number;
   onCordLengthChange: (val: number) => void;
   shape2: ObjectShape;
@@ -99,6 +101,8 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   onDensity2Change,
   dim1_2,
   onDim1_2Change,
+  dim2_2 = 100,
+  onDim2_2Change,
   cordLength,
   onCordLengthChange,
   shape2,
@@ -107,18 +111,18 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   onToggleFluidComparison,
 }) => {
   const inputGroupClass = 'space-y-1.5';
-  const labelClass = "block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5";
+  const labelClass = "block text-[9px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest mb-1.5";
   const inputClass =
-    "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-white text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm placeholder:text-slate-300";
+    "w-full h-9 px-3 border border-slate-200 dark:border-slate-700/80 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all shadow-sm placeholder:text-slate-400";
   const selectClass =
-    "w-full h-9 px-3 border border-blue-100 rounded-lg text-sm bg-blue-50/30 text-slate-800 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm cursor-pointer hover:bg-white";
+    "w-full h-9 px-3 border border-slate-200 dark:border-slate-700/80 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/60";
 
   const isObjectTooWide = (shape === ObjectShape.CUBE ? dim1 : dim1 * 2) > tankWidth;
 
   return (
     <div className="flex flex-col gap-4 shrink-0">
       {/* Object Properties */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
         <SectionHeader icon={<Box className="w-4 h-4" />} title="Propriedades do Objeto" />
         <div className="space-y-4">
           <div className={inputGroupClass}>
@@ -126,37 +130,30 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <select className={selectClass} value={shape} onChange={(e) => onShapeChange(e.target.value as ObjectShape)}>
               <option value={ObjectShape.CUBE}>Cubo</option>
               <option value={ObjectShape.SPHERE}>Esfera</option>
-              <option value={ObjectShape.CYLINDER}>Cilindro</option>
             </select>
           </div>
 
-          <div className="bg-slate-50/40 p-3 rounded-xl border border-slate-100/60 space-y-3">
+          <div className="bg-slate-50/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className={`${shape === ObjectShape.CYLINDER ? 'col-span-1' : 'col-span-2'} ${inputGroupClass}`}>
+              <div className={`col-span-2 ${inputGroupClass}`}>
                 <label className={labelClass}>{shape === ObjectShape.CUBE ? 'Aresta (cm)' : 'Raio (cm)'}</label>
                 <NumberInput value={dim1} min={1} onChange={onDim1Change} />
               </div>
-              {shape === ObjectShape.CYLINDER && onDim2Change && (
-                <div className={`col-span-1 ${inputGroupClass}`}>
-                  <label className={labelClass}>Altura (cm)</label>
-                  <NumberInput value={dim2} min={1} onChange={onDim2Change} />
-                </div>
-              )}
             </div>
 
             {isObjectTooWide && (
-              <div className="flex items-start gap-2 text-[10px] text-amber-600 bg-amber-50/30 p-2.5 rounded-lg border border-amber-200/30">
+              <div className="flex items-start gap-2 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
                 <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span className="font-medium leading-tight">Atenção: Objeto excede a largura do tanque.</span>
               </div>
             )}
 
             <div className="flex justify-between items-center pt-1">
-              <span className="text-[10px] font-medium text-slate-400">
-                Área Base: <span className="text-slate-600 font-bold">{physics.baseArea.toFixed(3)} m²</span>
+              <span className="text-[10px] font-medium text-slate-400 dark:text-slate-400">
+                Área Base: <span className="text-slate-600 dark:text-slate-200 font-bold">{physics.baseArea.toFixed(3)} m²</span>
               </span>
-              <span className="text-[10px] font-medium text-slate-400">
-                Volume: <span className="text-blue-500 font-bold">{physics.volume.toFixed(3)} m³</span>
+              <span className="text-[10px] font-medium text-slate-400 dark:text-slate-400">
+                Volume: <span className="text-blue-500 dark:text-blue-400 font-bold">{physics.volume.toFixed(3)} m³</span>
               </span>
             </div>
           </div>
@@ -178,21 +175,21 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <NumberInput value={customObjDensity} onChange={onCustomObjDensityChange} />
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
             <div className={inputGroupClass}>
               <label className={labelClass}>Peso Extra (N)</label>
               <NumberInput value={extraWeight} min={0} onChange={onExtraWeightChange} />
-              <p className="text-[9px] text-slate-400 italic">Simula uma carga aplicada sobre o corpo.</p>
+              <p className="text-[9px] text-slate-400 dark:text-slate-400 italic">Simula uma carga aplicada sobre o corpo.</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Fluids */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
         <SectionHeader icon={<Droplets className="w-4 h-4" />} title="Fluidos" />
         <div className="space-y-4">
-          <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 rounded-xl border border-slate-200/60 hover:bg-slate-50 transition-colors">
+          <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/90 transition-colors">
             <input
               type="checkbox"
               checked={enableTwoFluids}
@@ -202,11 +199,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             />
             <label
               htmlFor="two-fluids"
-              className="text-[10px] font-bold text-slate-700 cursor-pointer select-none uppercase tracking-widest flex-1"
+              className="text-[10px] font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none uppercase tracking-widest flex-1"
             >
               Modo Dois Líquidos
             </label>
-            {enableTwoFluids && <Layers className="w-4 h-4 text-cyan-500" />}
+            {enableTwoFluids && <Layers className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />}
           </div>
 
           <div className="space-y-3 relative">
@@ -227,11 +224,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
 
               <div className="flex gap-3 mt-2">
                 <div className="flex-1">
-                  <label className="text-[10px] font-medium text-slate-400 mb-1 block">Densidade (kg/m³)</label>
+                  <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Densidade (kg/m³)</label>
                   <NumberInput value={customFluidDensity} onChange={onCustomFluidDensityChange} />
                 </div>
                 <div className="w-24">
-                  <label className="text-[10px] font-medium text-slate-400 mb-1 block">Profund. (cm)</label>
+                  <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
                   <NumberInput value={depthA} min={1} max={1000} step="1" onChange={onDepthAChange} />
                 </div>
               </div>
@@ -239,28 +236,28 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
               {/* Toggle Comparador de Fluidos */}
               <div className={`mt-3 p-2.5 rounded-xl border transition-all ${
                 showFluidComparison 
-                  ? 'bg-blue-50/80 border-blue-200 shadow-sm' 
-                  : 'bg-slate-50/70 border-slate-200/60 hover:bg-slate-50'
+                  ? 'bg-blue-50/80 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800/70 shadow-sm' 
+                  : 'bg-slate-50/70 dark:bg-slate-800/60 border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className={`p-1.5 rounded-lg transition-colors shrink-0 ${
-                      showFluidComparison ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-200 text-slate-500'
+                      showFluidComparison ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                     }`}>
                       <FlaskConical className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[10px] font-bold text-slate-800 flex items-center gap-1.5">
+                      <div className="text-[10px] font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                         <span className="truncate">Comparador</span>
                         <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${
                           showFluidComparison 
-                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
-                            : 'bg-slate-200 text-slate-500'
+                            ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                         }`}>
                           {showFluidComparison ? 'Ativado' : 'Off'}
                         </span>
                       </div>
-                      <p className="text-[9px] text-slate-400 truncate">Óleo, Água e Glicerina</p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-400 truncate">Óleo, Água e Glicerina</p>
                     </div>
                   </div>
 
@@ -268,7 +265,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                     type="button"
                     onClick={onToggleFluidComparison}
                     className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      showFluidComparison ? 'bg-blue-600' : 'bg-slate-300'
+                      showFluidComparison ? 'bg-blue-600 dark:bg-blue-500' : 'bg-slate-300 dark:bg-slate-700'
                     }`}
                     title={showFluidComparison ? 'Desativar comparador de fluidos' : 'Ativar comparador de fluidos'}
                     aria-label={showFluidComparison ? 'Desativar comparador de fluidos' : 'Ativar comparador de fluidos'}
@@ -285,7 +282,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
           </div>
 
           {enableTwoFluids && (
-            <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100">
+            <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
               <div className={inputGroupClass}>
                 <label className={labelClass}>Líquido Inferior (B)</label>
                 <select
@@ -303,11 +300,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
 
                 <div className="flex gap-3 mt-2">
                   <div className="flex-1">
-                    <label className="text-[10px] font-medium text-slate-400 mb-1 block">Densidade (kg/m³)</label>
+                    <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Densidade (kg/m³)</label>
                     <NumberInput value={customFluidDensityB} onChange={onCustomFluidDensityBChange} />
                   </div>
                   <div className="w-24">
-                    <label className="text-[10px] font-medium text-slate-400 mb-1 block">Profund. (cm)</label>
+                    <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
                     <NumberInput value={depthB} min={1} max={1000} step="1" onChange={onDepthBChange} />
                   </div>
                 </div>
@@ -318,7 +315,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
       </div>
 
       {/* Tank Properties */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
+      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
         <SectionHeader icon={<Settings2 className="w-4 h-4" />} title="Tanque" />
         <div className="grid grid-cols-2 gap-3">
           <div className={inputGroupClass}>
@@ -333,8 +330,8 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
       </div>
 
       {/* Two Blocks Mode */}
-      <div className="bg-white/75 backdrop-blur-md border border-blue-100/70 p-5 rounded-2xl shadow-xl shadow-blue-200/20">
-        <div className="flex items-center gap-2.5 mb-3 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100/50">
+      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
+        <div className="flex items-center gap-2.5 mb-3 p-2.5 bg-blue-50/50 dark:bg-blue-950/40 rounded-xl border border-blue-100/50 dark:border-blue-900/50">
           <input
             type="checkbox"
             checked={twoBlocks}
@@ -344,11 +341,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
           />
           <label
             htmlFor="two-blocks"
-            className="text-[10px] font-bold text-blue-700 cursor-pointer select-none uppercase tracking-widest flex-1"
+            className="text-[10px] font-bold text-blue-700 dark:text-blue-300 cursor-pointer select-none uppercase tracking-widest flex-1"
           >
             Dois Blocos Ligados
           </label>
-          <Layers className={`w-4 h-4 ${twoBlocks ? 'text-blue-500' : 'text-slate-300'}`} />
+          <Layers className={`w-4 h-4 ${twoBlocks ? 'text-blue-500 dark:text-blue-400' : 'text-slate-300 dark:text-slate-600'}`} />
         </div>
 
         {twoBlocks && (

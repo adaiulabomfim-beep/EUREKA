@@ -26,6 +26,8 @@ export interface ConfiguracaoSimulacaoComporta {
     anguloTirante: number;
     pesoProprio: number;
     pesoProprioAtivo: boolean;
+    /** Braço horizontal (m) do peso próprio até a articulação. Se definido, M_peso = W · braço. */
+    bracoPesoHorizontal?: number;
   };
 }
 

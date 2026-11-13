@@ -10,7 +10,7 @@ export function buildBarragemArcoGeometry(
   channelWidth: number,
   segmentsZ: number = 32
 ): THREE.BufferGeometry {
-  const { profile } = construirGeometria(
+  const { profile, actualBaseWidth } = construirGeometria(
     damHeight,
     damBaseWidth,
     damCrestWidth,
@@ -25,7 +25,7 @@ export function buildBarragemArcoGeometry(
   const startAngle = -thetaMax / 2;
   const endAngle = thetaMax / 2;
 
-  const offsetBase = damBaseWidth / 2;
+  const offsetBase = actualBaseWidth / 2;
 
   const pts = profile.length;
   const vertices = [];
@@ -65,7 +65,7 @@ export function buildBarragemArcoGeometry(
       indices.push(v1, v3, v2);
       indices.push(v2, v3, v4);
     }
-    
+
     vertexOffset += (segmentsZ + 1) * 2;
   }
 

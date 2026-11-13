@@ -546,12 +546,12 @@ export const RelatorioProvaEureka = ({
                 )}
                 {dados.tipo === 'barragens' && (
                   <>
-                    <AnswerLine letter="a">W = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.weight / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN</AnswerLine>
-                    <AnswerLine letter="b">F<sub>H</sub> = {dados.analyzedResults ? (dados.analyzedResults.forceData.FR_net / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN, y<sub>cp</sub> = {dados.analyzedResults ? (dados.analyzedResults.forceData.y_cp_net).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} m</AnswerLine>
-                    <AnswerLine letter="c">F<sub>V</sub> = -</AnswerLine>
-                    <AnswerLine letter="d">U = -</AnswerLine>
-                    <AnswerLine letter="e">FS<sub>desliz</sub> = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.fs_desl).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</AnswerLine>
-                    <AnswerLine letter="f">FS<sub>tomba</sub> = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.fs_tomb).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</AnswerLine>
+                    <AnswerLine letter="a">W = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.weight / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN/m</AnswerLine>
+                    <AnswerLine letter="b">F<sub>H</sub> = {dados.analyzedResults ? ((dados.analyzedResults.forceData.FH_net ?? dados.analyzedResults.forceData.FR_net) / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN/m, y<sub>cp</sub> = {dados.analyzedResults ? (dados.analyzedResults.forceData.y_cp_net).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} m</AnswerLine>
+                    <AnswerLine letter="c">F<sub>V</sub> = {dados.analyzedResults && dados.analyzedResults.forceData.FV_net !== undefined ? (dados.analyzedResults.forceData.FV_net / 1000).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'} kN/m</AnswerLine>
+                    <AnswerLine letter="d">U = 0,00 kN/m (desconsiderada)</AnswerLine>
+                    <AnswerLine letter="e">FS<sub>desliz</sub> = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.isArchDam ? 'N/A (Arco)' : (dados.analyzedResults.stabilityData.fs_desl).toLocaleString('pt-BR', {minimumFractionDigits: 2})) : '-'}</AnswerLine>
+                    <AnswerLine letter="f">FS<sub>tomba</sub> = {dados.analyzedResults && dados.analyzedResults.stabilityData ? (dados.analyzedResults.stabilityData.isArchDam ? 'N/A (Arco)' : (dados.analyzedResults.stabilityData.fs_tomb).toLocaleString('pt-BR', {minimumFractionDigits: 2})) : '-'}</AnswerLine>
                   </>
                 )}
               </div>

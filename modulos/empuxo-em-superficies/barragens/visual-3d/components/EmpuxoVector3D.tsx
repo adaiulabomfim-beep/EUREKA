@@ -4,9 +4,12 @@ import { Sphere, Html, Cylinder, Cone } from '@react-three/drei';
 
 interface EmpuxoVectorProps {
   force: number;
+  forceH?: number;
+  forceV?: number;
   y_cp: number;
   s_cp?: number;
   inclinationAngle: number;
+  downstreamAngle?: number;
   damHeight: number;
   offsetX: number;
   color?: string;
@@ -14,76 +17,32 @@ interface EmpuxoVectorProps {
   actualBaseWidth?: number;
   isUpstream?: boolean;
   zOffset?: number;
+  unitSystem?: 'SI' | 'TECNICO_KGF';
+  gravity?: number;
 }
 
 export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
   force,
+  forceH,
+  forceV,
   y_cp,
-  s_cp,
   inclinationAngle,
-  damHeight,
+  downstreamAngle = 90,
   offsetX,
   color = '#ef4444',
   label,
   actualBaseWidth = 0,
   isUpstream = true,
-  zOffset = 0
+  zOffset = 0,
+  unitSystem = 'SI',
+  gravity = 9.81,
 }) => {
-  if (Math.abs(force) <= 1e-3) return null;
-
-  const absForce = Math.abs(force);
-
-  const angleRad = (inclinationAngle * Math.PI) / 180;
-  
-  let x_3d = 0;
-  let forceDir = new THREE.Vector3();
-  let faceOutwardNormal = new THREE.Vector3();
-
-  if (isUpstream) {
-    const dx = inclinationAngle === 90 ? 0 : y_cp / Math.tan(angleRad);
-    x_3d = dx - offsetX;
-    forceDir = new THREE.Vector3(Math.sin(angleRad), -Math.cos(angleRad), 0).normalize();
-    faceOutwardNormal = forceDir.clone().negate();
-  } else {
-    const dx = actualBaseWidth;
-    x_3d = dx - offsetX;
-    forceDir = new THREE.Vector3(-1, 0, 0);
-    faceOutwardNormal = new THREE.Vector3(1, 0, 0);
-  }
-
-  // Point on the dam face
-  const facePoint = new THREE.Vector3(x_3d, y_cp, zOffset);
-  
-  // Offset outward from the dam face (into the water) so the vector is visible
-  const faceOffset = 0.8;
-  const cpPosition = facePoint.clone().add(faceOutwardNormal.clone().multiplyScalar(faceOffset));
-
-  const visualLength = Math.max(6, Math.min(15, Math.log10(absForce) * 1.8));
-  
-  const headLength = 1.4;
-  const headRadius = 0.40; // reduced from 0.75 for better aesthetics
-  const shaftRadius = 0.16; // reduced from 0.30 for better aesthetics
-  const shaftLength = Math.max(0.5, visualLength - headLength);
-  
-  // Arrow goes from water INTO the dam face:
-  const arrowOrigin = cpPosition.clone().sub(forceDir.clone().multiplyScalar(visualLength));
-  const arrowHeadStart = cpPosition.clone().sub(forceDir.clone().multiplyScalar(headLength));
-  
-  const midShaft = arrowOrigin.clone().add(arrowHeadStart).multiplyScalar(0.5);
-  const midHead = arrowHeadStart.clone().add(forceDir.clone().multiplyScalar(headLength / 2));
-
-  const quaternion = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    forceDir
-  );
-
-  // Materials with PROPER depth testing and bright glow
   const { arrowMat, markerMat } = useMemo(() => {
     return {
       arrowMat: new THREE.MeshStandardMaterial({
         color: color,
         emissive: color,
-        emissiveIntensity: 1.2, // increased from 0.3 for bright visibility
+        emissiveIntensity: 1.2,
         depthTest: true,
         depthWrite: true,
         transparent: false,
@@ -92,7 +51,7 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
       markerMat: new THREE.MeshStandardMaterial({
         color: color,
         emissive: '#ffffff',
-        emissiveIntensity: 0.8, // increased from 0.4 for glowing center of pressure
+        emissiveIntensity: 0.8,
         depthTest: true,
         depthWrite: true,
         transparent: false,
@@ -101,20 +60,64 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
     };
   }, [color]);
 
+  if (Math.abs(force) <= 1e-3) return null;
+
+  const absForce = Math.abs(force);
+  const angleRad = (inclinationAngle * Math.PI) / 180;
+  const downRad = (downstreamAngle * Math.PI) / 180;
+
+  let x_3d = 0;
+  let faceOutwardNormal = new THREE.Vector3();
+
+  if (isUpstream) {
+    const dx = Math.abs(inclinationAngle - 90) < 1e-4 ? 0 : y_cp / Math.tan(angleRad);
+    x_3d = dx - offsetX;
+    faceOutwardNormal = new THREE.Vector3(-Math.sin(angleRad), Math.cos(angleRad), 0).normalize();
+  } else {
+    const dx = Math.abs(downstreamAngle - 90) < 1e-4
+      ? actualBaseWidth
+      : actualBaseWidth - y_cp / Math.tan(downRad);
+    x_3d = dx - offsetX;
+    faceOutwardNormal = new THREE.Vector3(Math.sin(downRad), Math.cos(downRad), 0).normalize();
+  }
+
+  let forceDir = faceOutwardNormal.clone().negate();
+  if (forceH !== undefined && forceV !== undefined && (Math.abs(forceH) > 1e-6 || Math.abs(forceV) > 1e-6)) {
+    forceDir = new THREE.Vector3(forceH, -forceV, 0).normalize();
+  }
+
+  const facePoint = new THREE.Vector3(x_3d, y_cp, zOffset);
+  const faceOffset = 0.8;
+  const cpPosition = facePoint.clone().add(faceOutwardNormal.clone().multiplyScalar(faceOffset));
+
+  const visualLength = Math.max(6, Math.min(15, Math.log10(absForce) * 1.8));
+  const headLength = 1.4;
+  const headRadius = 0.40;
+  const shaftRadius = 0.16;
+  const shaftLength = Math.max(0.5, visualLength - headLength);
+
+  const arrowOrigin = cpPosition.clone().sub(forceDir.clone().multiplyScalar(visualLength));
+  const arrowHeadStart = cpPosition.clone().sub(forceDir.clone().multiplyScalar(headLength));
+
+  const midShaft = arrowOrigin.clone().add(arrowHeadStart).multiplyScalar(0.5);
+  const midHead = arrowHeadStart.clone().add(forceDir.clone().multiplyScalar(headLength / 2));
+
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    forceDir
+  );
+
   return (
     <group>
-      {/* Center of Pressure Marker on the dam face */}
       <Sphere args={[0.25, 16, 16]} position={cpPosition} material={markerMat} />
 
-      {/* Force Vector Shaft */}
-      <Cylinder 
-        args={[shaftRadius, shaftRadius, shaftLength, 12]} 
-        position={midShaft} 
+      <Cylinder
+        args={[shaftRadius, shaftRadius, shaftLength, 12]}
+        position={midShaft}
         quaternion={quaternion}
         material={arrowMat}
       />
-      
-      {/* Force Vector Arrow Head */}
+
       <Cone
         args={[headRadius, headLength, 12]}
         position={midHead}
@@ -122,12 +125,19 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
         material={arrowMat}
       />
 
-      {/* Label */}
       {label && (
         <Html position={arrowOrigin.clone().add(new THREE.Vector3(0, 0.8, 0))} center style={{ pointerEvents: 'none' }}>
-          <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-red-600 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border border-red-200/80 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-            <span>E = {(absForce / 1000).toFixed(1)} kN</span>
+          <div
+            className="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border whitespace-nowrap"
+            style={{ color, borderColor: `${color}55` }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
+            <span>
+              E ={' '}
+              {unitSystem === 'TECNICO_KGF'
+                ? `${(absForce / gravity).toFixed(0)} kgf/m`
+                : `${(absForce / 1000).toFixed(1)} kN/m`}
+            </span>
           </div>
         </Html>
       )}

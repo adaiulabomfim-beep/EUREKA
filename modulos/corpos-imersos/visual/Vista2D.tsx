@@ -17,6 +17,8 @@ interface Vista2DProps {
   tankOffsetX: number;
   currentTankW: number;
   currentTankH: number;
+  tankWidth?: number;
+  tankDepth?: number;
 
   shape: ObjectShape;
   visualWidth: number;
@@ -158,6 +160,8 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   tankOffsetX,
   currentTankW,
   currentTankH,
+  tankWidth,
+  tankDepth,
   tankBottomY,
   shape,
   visualWidth,
@@ -228,11 +232,24 @@ export const Vista2D: React.FC<Vista2DProps> = ({
     [cx, centerOfBuoyancyY_visual, pan.y]
   );
 
-  const maxArrowP = Math.max(25, cy - 16);
+  const extraWeightHeight = extraWeight > 0 ? 18 : 0;
+  const extraWeightLabel =
+    extraWeight >= 1000 ? `+${(extraWeight / 1000).toFixed(2)} kN` : `+${extraWeight} N`;
+  const extraWeightWidth = Math.max(48, extraWeightLabel.length * 7.5 + 14);
+  const pTargetY = cy - extraWeightHeight;
+
+  const maxArrowP = Math.max(25, pTargetY - 16);
   const arrowLenP = Math.min(maxArrowP, Math.min(110, Math.max(30, objectWeight * 0.005)));
-  const arrowLenE = Math.min(120, Math.max(30, buoyancyForce * 0.005));
+  const blockBottomY = cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0);
+  const maxArrowE = Math.max(30, (tankBottomY + pan.y + 34) - blockBottomY);
+  const arrowLenE = Math.min(maxArrowE, Math.min(120, Math.max(30, buoyancyForce * 0.005)));
 
   const showBuoyancyVector = isSimulating && h_sub_actual > 0.001;
+  const eVectorTailY = showFBD && showBuoyancyVector ? blockBottomY + arrowLenE : 0;
+  const baseDimY =
+    eVectorTailY > tankBottomY + pan.y + 8
+      ? Math.max(tankBottomY + pan.y + 22, eVectorTailY + 18)
+      : tankBottomY + pan.y + 22;
 
   return (
     <div className="relative w-full h-full">
@@ -353,14 +370,6 @@ export const Vista2D: React.FC<Vista2DProps> = ({
         </g>
       )}
 
-      {/* Peso Extra (Visualizado como um pequeno bloco em cima) */}
-      {extraWeight > 0 && (
-        <g transform={`translate(${cx - 15}, ${cy - 10})`}>
-          <rect width="30" height="10" fill="#334155" rx="2" />
-          <text x="15" y="8" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">+{extraWeight}N</text>
-        </g>
-      )}
-
       {/* Parte submersa do objeto */}
       <g clipPath={`url(#${clipUnderWaterId})`}>
         {shape === ObjectShape.SPHERE ? (
@@ -418,6 +427,28 @@ export const Vista2D: React.FC<Vista2DProps> = ({
               opacity="0.3"
               pointerEvents="none"
             />
+            {shape === ObjectShape.CYLINDER && (
+              <>
+                <ellipse
+                  cx={cx}
+                  cy={cy + 4}
+                  rx={visualWidth / 2}
+                  ry={Math.min(6, visualHeight * 0.08)}
+                  fill="rgba(255,255,255,0.22)"
+                  stroke={OBJECT_BORDER_COLOR}
+                  strokeWidth="0.9"
+                />
+                <line
+                  x1={cx}
+                  y1={cy + 2}
+                  x2={cx}
+                  y2={cy + visualHeight - 2}
+                  stroke="rgba(255,255,255,0.45)"
+                  strokeWidth="1"
+                  strokeDasharray="4,3"
+                />
+              </>
+            )}
           </>
         )}
       </g>
@@ -480,54 +511,31 @@ export const Vista2D: React.FC<Vista2DProps> = ({
               opacity="0.3"
               pointerEvents="none"
             />
+            {shape === ObjectShape.CYLINDER && (
+              <>
+                <ellipse
+                  cx={cx}
+                  cy={cy + 4}
+                  rx={visualWidth / 2}
+                  ry={Math.min(6, visualHeight * 0.08)}
+                  fill="rgba(255,255,255,0.22)"
+                  stroke={OBJECT_BORDER_COLOR}
+                  strokeWidth="0.9"
+                />
+                <line
+                  x1={cx}
+                  y1={cy + 2}
+                  x2={cx}
+                  y2={cy + visualHeight - 2}
+                  stroke="rgba(255,255,255,0.45)"
+                  strokeWidth="1"
+                  strokeDasharray="4,3"
+                />
+              </>
+            )}
           </>
         )}
       </g>
-
-      {/* Vetores */}
-      {showFBD && (
-        <g pointerEvents="none">
-          {/* Peso (P) - Acima do bloco apontando para baixo */}
-          <line
-            x1={cx}
-            y1={cy - arrowLenP}
-            x2={cx}
-            y2={cy}
-            stroke="#ef4444"
-            strokeWidth="3"
-            markerEnd={`url(#${arrowRedId})`}
-          />
-          <circle cx={cx} cy={cy} r={3} fill="#ef4444" />
-          <g transform={`translate(${cx + 10}, ${cy - arrowLenP / 2})`}>
-            <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
-            <text x="12" y="4" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="bold">
-              P
-            </text>
-          </g>
-
-          {showBuoyancyVector && (
-            <>
-              {/* Empuxo (E) - Abaixo do bloco (ou do bloco 2) apontando para cima */}
-              <line
-                x1={cx}
-                y1={cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0) + arrowLenE}
-                x2={cx}
-                y2={cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0)}
-                stroke="#16a34a"
-                strokeWidth="3"
-                markerEnd={`url(#${arrowGreenId})`}
-              />
-              <circle cx={cx} cy={cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0)} r={3} fill="#16a34a" />
-              <g transform={`translate(${cx + 10}, ${cy + visualHeight + (twoBlocks ? cordLength_visual + H2_visual : 0) + arrowLenE / 2})`}>
-                <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.8" rx="4" />
-                <text x="12" y="4" textAnchor="middle" fill="#16a34a" fontSize="12" fontWeight="bold">
-                  E
-                </text>
-              </g>
-            </>
-          )}
-        </g>
-      )}
 
       {/* Fluidos */}
       <g pointerEvents="none">
@@ -609,6 +617,128 @@ export const Vista2D: React.FC<Vista2DProps> = ({
           `hA = ${depthA.toFixed(1)}cm`,
           colorA
         )
+      )}
+
+      {/* Cota horizontal da base do tanque */}
+      {tankWidth !== undefined && (
+        <g>
+          <line
+            x1={tankLeft}
+            y1={baseDimY}
+            x2={tankLeft + currentTankW}
+            y2={baseDimY}
+            stroke={TANK_BORDER_COLOR}
+            strokeWidth="1"
+          />
+          <path
+            d={`M${tankLeft},${baseDimY} L${tankLeft + 8},${baseDimY - 3} L${tankLeft + 8},${baseDimY + 3} Z`}
+            fill={TANK_BORDER_COLOR}
+          />
+          <line
+            x1={tankLeft}
+            y1={baseDimY - 8}
+            x2={tankLeft}
+            y2={baseDimY + 8}
+            stroke={TANK_BORDER_COLOR}
+            strokeWidth="1"
+          />
+          <path
+            d={`M${tankLeft + currentTankW},${baseDimY} L${tankLeft + currentTankW - 8},${baseDimY - 3} L${tankLeft + currentTankW - 8},${baseDimY + 3} Z`}
+            fill={TANK_BORDER_COLOR}
+          />
+          <line
+            x1={tankLeft + currentTankW}
+            y1={baseDimY - 8}
+            x2={tankLeft + currentTankW}
+            y2={baseDimY + 8}
+            stroke={TANK_BORDER_COLOR}
+            strokeWidth="1"
+          />
+          <g transform={`translate(${tankLeft + currentTankW / 2}, ${baseDimY})`}>
+            <rect x="-85" y="-10" width="170" height="20" fill="white" opacity="0.9" rx="4" />
+            <text
+              x="0"
+              y="4"
+              textAnchor="middle"
+              fontSize="12"
+              fontWeight="bold"
+              fill={TANK_BORDER_COLOR}
+              fontFamily="monospace"
+            >
+              {tankDepth !== undefined ? `${tankWidth} × ${tankDepth} cm` : `${tankWidth} cm`}
+            </text>
+          </g>
+        </g>
+      )}
+
+      {/* Peso Extra (renderizado acima do fluido para máxima nitidez e sem sobreposição da seta P) */}
+      {extraWeight > 0 && (
+        <g transform={`translate(${cx - extraWeightWidth / 2}, ${cy - extraWeightHeight})`} pointerEvents="none">
+          <rect
+            width={extraWeightWidth}
+            height={extraWeightHeight}
+            fill="#1e293b"
+            stroke="#f59e0b"
+            strokeWidth="1.5"
+            rx="4"
+          />
+          <text
+            x={extraWeightWidth / 2}
+            y={extraWeightHeight / 2 + 3.5}
+            textAnchor="middle"
+            fill="#ffffff"
+            fontSize="10"
+            fontWeight="bold"
+            fontFamily="monospace"
+          >
+            {extraWeightLabel}
+          </text>
+        </g>
+      )}
+
+      {/* Vetores (renderizados no topo para nunca ficarem encobertos) */}
+      {showFBD && (
+        <g pointerEvents="none">
+          {/* Peso (P) - Acima do bloco (ou do peso extra) apontando para baixo */}
+          <line
+            x1={cx}
+            y1={pTargetY - arrowLenP}
+            x2={cx}
+            y2={pTargetY}
+            stroke="#ef4444"
+            strokeWidth="3"
+            markerEnd={`url(#${arrowRedId})`}
+          />
+          <circle cx={cx} cy={pTargetY} r={3} fill="#ef4444" />
+          <g transform={`translate(${cx + 10}, ${pTargetY - arrowLenP / 2})`}>
+            <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.9" rx="4" />
+            <text x="12" y="4" textAnchor="middle" fill="#ef4444" fontSize="12" fontWeight="bold">
+              P
+            </text>
+          </g>
+
+          {showBuoyancyVector && (
+            <>
+              {/* Empuxo (E) - Abaixo do bloco (ou do bloco 2) apontando para cima */}
+              <line
+                x1={cx}
+                y1={blockBottomY + arrowLenE}
+                x2={cx}
+                y2={blockBottomY}
+                stroke="#16a34a"
+                strokeWidth="3"
+                markerEnd={`url(#${arrowGreenId})`}
+              />
+              <circle cx={cx} cy={blockBottomY} r={3} fill="#16a34a" />
+              <g transform={`translate(${cx + 10}, ${blockBottomY + arrowLenE / 2})`}>
+                <rect x="0" y="-10" width="24" height="20" fill="white" opacity="0.9" rx="4" />
+                <text x="12" y="4" textAnchor="middle" fill="#16a34a" fontSize="12" fontWeight="bold">
+                  E
+                </text>
+              </g>
+            </>
+          )}
+        </g>
       )}
     </svg>
     </div>

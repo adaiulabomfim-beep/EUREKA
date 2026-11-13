@@ -45,10 +45,15 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
       // In textbook convention where TOP-hinged gate opens outwards to the right (water on left pushing right),
       // gravity pulls vertically down, producing a restoring (closing, -) moment about TOP hinge and an opening (+) moment about BOTTOM hinge!
       const rad = ((comporta.angulo || 90) * Math.PI) / 180;
-      const W_perp = W * Math.cos(rad);
       const signW = comporta.posicaoDobradica === PosicaoDobradica.TOP ? -1 : 1;
-      
-      M_hinge += signW * W_perp * d_cg;
+
+      if (comporta.bracoPesoHorizontal !== undefined && comporta.bracoPesoHorizontal > 0) {
+        // Braço horizontal informado diretamente no enunciado: M = W · d_P
+        M_hinge += signW * W * comporta.bracoPesoHorizontal;
+      } else {
+        const W_perp = W * Math.cos(rad);
+        M_hinge += signW * W_perp * d_cg;
+      }
     }
 
     // Calculate tie rod force if present

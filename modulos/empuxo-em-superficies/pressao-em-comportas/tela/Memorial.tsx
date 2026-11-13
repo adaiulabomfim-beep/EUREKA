@@ -33,29 +33,93 @@ export const CalculationLine: React.FC<{
   };
 
   const t = {
-    slate: { text: 'text-slate-600', bg: 'bg-slate-100 text-slate-800', border: 'border-slate-100', subBg: 'bg-slate-700 text-white', unitText: 'text-slate-500', unitSub: 'text-slate-200', subHeaderWrap: 'bg-slate-50/80' },
-    blue: { text: 'text-blue-600', bg: 'bg-blue-50 text-blue-900', border: 'border-blue-50', subBg: 'bg-blue-600 text-white', unitText: 'text-blue-500', unitSub: 'text-blue-200', subHeaderWrap: 'bg-blue-50/50' },
-    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50 text-cyan-900', border: 'border-cyan-50', subBg: 'bg-cyan-600 text-white', unitText: 'text-cyan-500', unitSub: 'text-cyan-200', subHeaderWrap: 'bg-cyan-50/50' },
-    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50 text-emerald-900', border: 'border-emerald-50', subBg: 'bg-emerald-600 text-white', unitText: 'text-emerald-500', unitSub: 'text-emerald-200', subHeaderWrap: 'bg-emerald-50/50' },
-    amber: { text: 'text-amber-600', bg: 'bg-amber-50 text-amber-900', border: 'border-amber-50', subBg: 'bg-amber-500 text-white', unitText: 'text-amber-500', unitSub: 'text-amber-100', subHeaderWrap: 'bg-amber-50/50' },
-    red: { text: 'text-red-600', bg: 'bg-red-50 text-red-900', border: 'border-red-50', subBg: 'bg-red-600 text-white', unitText: 'text-red-500', unitSub: 'text-red-200', subHeaderWrap: 'bg-red-50/50' },
-    purple: { text: 'text-purple-600', bg: 'bg-purple-50 text-purple-900', border: 'border-purple-50', subBg: 'bg-purple-600 text-white', unitText: 'text-purple-500', unitSub: 'text-purple-200', subHeaderWrap: 'bg-purple-50/50' },
-    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50 text-indigo-900', border: 'border-indigo-50', subBg: 'bg-indigo-600 text-white', unitText: 'text-indigo-500', unitSub: 'text-indigo-200', subHeaderWrap: 'bg-indigo-50/50' },
+    slate: { 
+      text: 'text-slate-600 dark:text-slate-300', 
+      bg: 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100', 
+      border: 'border-slate-100 dark:border-slate-800', 
+      subBg: 'bg-slate-700 dark:bg-slate-700 text-white', 
+      unitText: 'text-slate-500 dark:text-slate-400', 
+      unitSub: 'text-slate-200', 
+      subHeaderWrap: 'bg-slate-50/80 dark:bg-slate-800/60' 
+    },
+    blue: { 
+      text: 'text-blue-600 dark:text-blue-400', 
+      bg: 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200', 
+      border: 'border-blue-50 dark:border-slate-800', 
+      subBg: 'bg-blue-600 dark:bg-blue-600 text-white', 
+      unitText: 'text-blue-500 dark:text-blue-400', 
+      unitSub: 'text-blue-200', 
+      subHeaderWrap: 'bg-blue-50/50 dark:bg-blue-950/40' 
+    },
+    cyan: { 
+      text: 'text-cyan-600 dark:text-cyan-400', 
+      bg: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-900 dark:text-cyan-200', 
+      border: 'border-cyan-50 dark:border-slate-800', 
+      subBg: 'bg-cyan-600 dark:bg-cyan-600 text-white', 
+      unitText: 'text-cyan-500 dark:text-cyan-400', 
+      unitSub: 'text-cyan-200', 
+      subHeaderWrap: 'bg-cyan-50/50 dark:bg-cyan-950/40' 
+    },
+    emerald: { 
+      text: 'text-emerald-600 dark:text-emerald-400', 
+      bg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200', 
+      border: 'border-emerald-50 dark:border-slate-800', 
+      subBg: 'bg-emerald-600 dark:bg-emerald-600 text-white', 
+      unitText: 'text-emerald-500 dark:text-emerald-400', 
+      unitSub: 'text-emerald-200', 
+      subHeaderWrap: 'bg-emerald-50/50 dark:bg-emerald-950/40' 
+    },
+    amber: { 
+      text: 'text-amber-600 dark:text-amber-400', 
+      bg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200', 
+      border: 'border-amber-50 dark:border-slate-800', 
+      subBg: 'bg-amber-500 dark:bg-amber-600 text-white', 
+      unitText: 'text-amber-500 dark:text-amber-400', 
+      unitSub: 'text-amber-100', 
+      subHeaderWrap: 'bg-amber-50/50 dark:bg-amber-950/40' 
+    },
+    red: { 
+      text: 'text-red-600 dark:text-red-400', 
+      bg: 'bg-red-50 dark:bg-red-950/60 text-red-900 dark:text-red-200', 
+      border: 'border-red-50 dark:border-slate-800', 
+      subBg: 'bg-red-600 dark:bg-red-600 text-white', 
+      unitText: 'text-red-500 dark:text-red-400', 
+      unitSub: 'text-red-200', 
+      subHeaderWrap: 'bg-red-50/50 dark:bg-red-950/40' 
+    },
+    purple: { 
+      text: 'text-purple-600 dark:text-purple-400', 
+      bg: 'bg-purple-50 dark:bg-purple-950/60 text-purple-900 dark:text-purple-200', 
+      border: 'border-purple-50 dark:border-slate-800', 
+      subBg: 'bg-purple-600 dark:bg-purple-600 text-white', 
+      unitText: 'text-purple-500 dark:text-purple-400', 
+      unitSub: 'text-purple-200', 
+      subHeaderWrap: 'bg-purple-50/50 dark:bg-purple-950/40' 
+    },
+    indigo: { 
+      text: 'text-indigo-600 dark:text-indigo-400', 
+      bg: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200', 
+      border: 'border-indigo-50 dark:border-slate-800', 
+      subBg: 'bg-indigo-600 dark:bg-indigo-600 text-white', 
+      unitText: 'text-indigo-500 dark:text-indigo-400', 
+      unitSub: 'text-indigo-200', 
+      subHeaderWrap: 'bg-indigo-50/50 dark:bg-indigo-950/40' 
+    },
   }[theme];
 
   return (
     <div
       className={`flex flex-col sm:flex-row sm:items-baseline justify-between py-3 border-b ${t.border} last:border-0 ${
-        isSubHeader ? `${t.subHeaderWrap} -mx-6 px-6 font-bold text-slate-800 mt-4 mb-2 py-4 shadow-sm rounded-xl` : ''
+        isSubHeader ? `${t.subHeaderWrap} -mx-6 px-6 font-bold text-slate-800 dark:text-slate-100 mt-4 mb-2 py-4 shadow-sm rounded-xl` : ''
       }`}
     >
-      <div className={`font-bold uppercase tracking-widest ${isSubHeader ? 'text-sm text-slate-700' : 'text-xs text-slate-500'}`}>
+      <div className={`font-bold uppercase tracking-widest ${isSubHeader ? 'text-sm text-slate-700 dark:text-slate-200' : 'text-xs text-slate-500 dark:text-slate-400'}`}>
         {label}
       </div>
-      <div className="flex flex-wrap items-center gap-2.5 text-[13px] sm:text-sm font-mono text-slate-700 mt-2 sm:mt-0">
+      <div className="flex flex-wrap items-center gap-2.5 text-[13px] sm:text-sm font-mono text-slate-700 dark:text-slate-300 mt-2 sm:mt-0">
         <span className={`font-bold ${t.text}`}>{parseSub(symbol)}</span>
-        {formula && <span className="text-slate-400 hidden lg:inline">= {parseSub(formula)}</span>}
-        {substitution && <span className="text-slate-500">= {parseSub(substitution)}</span>}
+        {formula && <span className="text-slate-400 dark:text-slate-500 hidden lg:inline">= {parseSub(formula)}</span>}
+        {substitution && <span className="text-slate-500 dark:text-slate-400">= {parseSub(substitution)}</span>}
         <span className={`font-bold px-3 py-1.5 rounded-lg ml-auto ${isSubHeader ? t.subBg : t.bg}`}>
           = {result} {unit && <span className={`text-[11px] font-sans ml-1 font-semibold ${isSubHeader ? t.unitSub : t.unitText}`}>{unit}</span>}
         </span>
@@ -131,19 +195,19 @@ export const Memorial: React.FC<MemorialProps> = ({
   const FR_disp = isKgf ? Math.round(FR_N / g).toLocaleString('pt-BR') : (FR_N / 1000).toFixed(2);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/30 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white/95 backdrop-blur-xl w-[95vw] lg:w-[80vw] h-[95vh] lg:h-[82vh] overflow-y-auto rounded-3xl shadow-2xl border border-blue-100 animate-in slide-in-from-bottom-10 zoom-in-95 duration-300 relative flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl w-[95vw] lg:w-[80vw] h-[95vh] lg:h-[82vh] overflow-y-auto rounded-3xl shadow-2xl border border-blue-100 dark:border-slate-800 animate-in slide-in-from-bottom-10 zoom-in-95 duration-300 relative flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-blue-100 p-5 px-8 flex items-center justify-between z-20">
+        <div className="sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-blue-100 dark:border-slate-800 p-5 px-8 flex items-center justify-between z-20 transition-colors">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-blue-600 to-cyan-600 p-2.5 rounded-2xl text-white shadow-lg shadow-blue-200">
+            <div className="bg-gradient-to-br from-blue-600 to-cyan-600 p-2.5 rounded-2xl text-white shadow-lg shadow-blue-200 dark:shadow-none">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-800 tracking-tight leading-tight">
+              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight leading-tight">
                 Memorial de Cálculo Hidrostático
               </h3>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+              <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 tracking-widest">
                 Passo a passo com equações e deduções didáticas
               </p>
             </div>
@@ -151,12 +215,12 @@ export const Memorial: React.FC<MemorialProps> = ({
 
           <div className="flex items-center gap-3">
             {/* Unit Toggle in Memorial */}
-            <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 text-[10px] font-bold">
+            <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center gap-1 text-[10px] font-bold">
               <button
                 type="button"
                 onClick={() => setUnitSystem(SistemaUnidades.SI)}
                 className={`px-3 py-1 rounded-lg transition-all ${
-                  !isKgf ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  !isKgf ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 SI (kN, kPa)
@@ -165,7 +229,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                 type="button"
                 onClick={() => setUnitSystem(SistemaUnidades.TECNICO_KGF)}
                 className={`px-3 py-1 rounded-lg transition-all ${
-                  isKgf ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  isKgf ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 Técnico (kgf)
@@ -174,7 +238,7 @@ export const Memorial: React.FC<MemorialProps> = ({
 
             <button
               onClick={onClose}
-              className="text-[11px] font-black text-slate-400 hover:text-blue-600 px-4 py-2 hover:bg-blue-50 rounded-xl transition-all uppercase tracking-widest border border-slate-200/60"
+              className="text-[11px] font-black text-slate-400 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-xl transition-all uppercase tracking-widest border border-slate-200/60 dark:border-slate-700 cursor-pointer"
             >
               Fechar
             </button>
@@ -182,46 +246,46 @@ export const Memorial: React.FC<MemorialProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1 bg-white">
+        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1 bg-white dark:bg-slate-950/60">
           {/* 1. DADOS DE ENTRADA */}
           <section>
-            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <div className="w-6 h-px bg-slate-300"></div> 1. Dados de Entrada do Problema <div className="flex-1 h-px bg-slate-100"></div>
+            <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 1. Dados de Entrada do Problema <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/60 text-xs text-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50/70 dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
               <div>
-                <span className="text-slate-400 block font-medium">Formato da Comporta:</span>
-                <span className="font-bold text-slate-800 text-sm">
+                <span className="text-slate-400 dark:text-slate-400 block font-medium">Formato da Comporta:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                   {isCircular ? 'Circular' : isRect ? 'Retangular' : 'Semicircular'}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Dimensões:</span>
-                <span className="font-bold text-slate-800 font-mono text-sm">
+                <span className="text-slate-400 dark:text-slate-400 block font-medium">Dimensões:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100 font-mono text-sm">
                   {isCircular ? `Diâmetro Ø = ${H.toFixed(2)} m` : `H = ${H.toFixed(2)} m, B = ${W.toFixed(2)} m`}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Ângulo de Inclinação:</span>
-                <span className="font-bold text-slate-800 font-mono text-sm">θ = {gateInclination}°</span>
+                <span className="text-slate-400 dark:text-slate-400 block font-medium">Ângulo de Inclinação:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100 font-mono text-sm">θ = {gateInclination}°</span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Fluido & Peso Específico (γ):</span>
-                <span className="font-bold text-slate-800 font-mono text-sm">
+                <span className="text-slate-400 dark:text-slate-400 block font-medium">Fluido & Peso Específico (γ):</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100 font-mono text-sm">
                   γ = {isKgf ? `${gamma_kgf} kgf/m³` : `${gamma_N.toFixed(0)} N/m³ (${(gamma_N / 1000).toFixed(2)} kN/m³)`}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Modo de Posicionamento:</span>
-                <span className="font-bold text-slate-800 text-sm">
+                <span className="text-slate-400 dark:text-slate-400 block font-medium">Modo de Posicionamento:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                   {config?.comporta?.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO
                     ? `Modo Y_CG Direto (${Y_CG.toFixed(2)} m)`
                     : `Modo Padrão h₁ (${config?.comporta?.profundidadeTopo.toFixed(2)} m)`}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Sistema de Unidades:</span>
-                <span className="font-bold text-blue-600 font-mono text-sm">
+                <span className="text-slate-400 dark:text-slate-400 block font-medium">Sistema de Unidades:</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-sm">
                   {isKgf ? 'Técnico (kgf, kgf/m²)' : 'SI (kN, kPa)'}
                 </span>
               </div>
@@ -230,10 +294,10 @@ export const Memorial: React.FC<MemorialProps> = ({
 
           {/* 2. GEOMETRIA DA SEÇÃO TRANSVERSAL */}
           <section>
-            <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <div className="w-6 h-px bg-slate-300"></div> 2. Propriedades Geométricas da Área Molhada <div className="flex-1 h-px bg-slate-100"></div>
+            <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 2. Propriedades Geométricas da Área Molhada <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
             </h4>
-            <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
+            <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
               <CalculationLine
                 theme="slate"
                 label="Área da Comporta (A)"
@@ -269,10 +333,10 @@ export const Memorial: React.FC<MemorialProps> = ({
 
           {/* 3. CENTRÓIDE E PRESSÃO NO CENTRÓIDE */}
           <section>
-            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <div className="w-6 h-px bg-blue-300"></div> 3. Centróide e Pressão Hidrostática <div className="flex-1 h-px bg-slate-100"></div>
+            <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <div className="w-6 h-px bg-blue-300 dark:bg-blue-700"></div> 3. Centróide e Pressão Hidrostática <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
             </h4>
-            <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
+            <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
               <CalculationLine
                 theme="blue"
                 label="Distância Inclinada da NA ao Centróide (Y_CG)"
@@ -316,10 +380,10 @@ export const Memorial: React.FC<MemorialProps> = ({
 
           {/* 4. FORÇA RESULTANTE (EMPUXO) */}
           <section>
-            <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <div className="w-6 h-px bg-indigo-300"></div> 4. Força Hidrostática Resultante (Empuxo F_R) <div className="flex-1 h-px bg-slate-100"></div>
+            <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <div className="w-6 h-px bg-indigo-300 dark:bg-indigo-700"></div> 4. Força Hidrostática Resultante (Empuxo F_R) <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
             </h4>
-            <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
+            <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
               {hasDownForce ? (
                 <>
                   <CalculationLine
@@ -375,10 +439,10 @@ export const Memorial: React.FC<MemorialProps> = ({
 
           {/* 5. CENTRO DE PRESSÃO (CP) */}
           <section>
-            <h4 className="text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <div className="w-6 h-px bg-cyan-300"></div> 5. Ponto de Aplicação e Centro de Pressão (CP) <div className="flex-1 h-px bg-slate-100"></div>
+            <h4 className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <div className="w-6 h-px bg-cyan-300 dark:bg-cyan-700"></div> 5. Ponto de Aplicação e Centro de Pressão (CP) <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
             </h4>
-            <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
+            <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
               <CalculationLine
                 theme="cyan"
                 label="Excentricidade do CP ao longo do plano (Δy)"
@@ -414,10 +478,10 @@ export const Memorial: React.FC<MemorialProps> = ({
           {/* 6. EQUILÍBRIO (SE HOUVER DOBRADIÇA OU TIRANTE) */}
           {(Math.abs(analyzedResults.equilibrium.M_hinge) > 1e-6 || Math.abs(analyzedResults.equilibrium.F_tie) > 1e-6) && (
             <section>
-              <h4 className="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <div className="w-6 h-px bg-purple-200"></div> 6. Equilíbrio Estático de Momentos <div className="flex-1 h-px bg-slate-100"></div>
+              <h4 className="text-[10px] font-black text-purple-500 dark:text-purple-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div className="w-6 h-px bg-purple-200 dark:bg-purple-800"></div> 6. Equilíbrio Estático de Momentos <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
               </h4>
-              <div className="flex flex-col gap-0 bg-white shadow-sm p-6 rounded-2xl border border-slate-100">
+              <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
                 {Math.abs(analyzedResults.equilibrium.M_hinge) > 1e-6 && (
                   <CalculationLine
                     theme="purple"
