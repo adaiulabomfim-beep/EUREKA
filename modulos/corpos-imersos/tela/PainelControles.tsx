@@ -53,6 +53,30 @@ interface PainelControlesProps {
   onRealWeightChange?: (val: number) => void;
   onApparentWeightChange?: (val: number) => void;
   onFluidSpecificWeightChange?: (val: number) => void;
+  floatingEquilibriumMode?: boolean;
+  cylinderDiameterCm?: number;
+  cylinderHeightCm?: number;
+  submergedHeightCm?: number;
+  onCylinderDiameterChange?: (val: number) => void;
+  onCylinderHeightChange?: (val: number) => void;
+  onSubmergedHeightChange?: (val: number) => void;
+  interfaceEquilibriumMode?: boolean;
+  isSimulating?: boolean;
+  bodyRelativeDensity?: number;
+  upperFluidRelativeDensity?: number;
+  lowerFluidRelativeDensity?: number;
+  illustrativeWidthCm?: number;
+  illustrativeHeightCm?: number;
+  onBodyRelativeDensityChange?: (val: number) => void;
+  onUpperFluidRelativeDensityChange?: (val: number) => void;
+  onLowerFluidRelativeDensityChange?: (val: number) => void;
+  onIllustrativeWidthChange?: (val: number) => void;
+  onIllustrativeHeightChange?: (val: number) => void;
+  anchoredBuoyMode?: boolean;
+  buoyDiameterM?: number;
+  buoyWeightKN?: number;
+  onBuoyDiameterChange?: (val: number) => void;
+  onBuoyWeightChange?: (val: number) => void;
 }
 
 export const PainelControles: React.FC<PainelControlesProps> = ({
@@ -97,6 +121,30 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   onRealWeightChange,
   onApparentWeightChange,
   onFluidSpecificWeightChange,
+  floatingEquilibriumMode = false,
+  cylinderDiameterCm = 9,
+  cylinderHeightCm = 11,
+  submergedHeightCm = 8,
+  onCylinderDiameterChange,
+  onCylinderHeightChange,
+  onSubmergedHeightChange,
+  interfaceEquilibriumMode = false,
+  isSimulating = false,
+  bodyRelativeDensity = 7.85,
+  upperFluidRelativeDensity = 1.0,
+  lowerFluidRelativeDensity = 13.56,
+  illustrativeWidthCm = 80,
+  illustrativeHeightCm = 90,
+  onBodyRelativeDensityChange,
+  onUpperFluidRelativeDensityChange,
+  onLowerFluidRelativeDensityChange,
+  onIllustrativeWidthChange,
+  onIllustrativeHeightChange,
+  anchoredBuoyMode = false,
+  buoyDiameterM = 1.5,
+  buoyWeightKN = 8.5,
+  onBuoyDiameterChange,
+  onBuoyWeightChange,
 }) => {
   const inputGroupClass = 'space-y-1.5';
   const labelClass = "block text-[9px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest mb-1.5";
@@ -105,17 +153,270 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   const selectClass =
     "w-full h-9 px-3 border border-slate-200 dark:border-slate-700/80 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/60";
 
-  const effectiveObjWidthCm = inverseSpecificWeightMode
+  const effectiveObjWidthCm = anchoredBuoyMode
+    ? buoyDiameterM * 100
+    : interfaceEquilibriumMode
+    ? illustrativeWidthCm
+    : floatingEquilibriumMode
+    ? cylinderDiameterCm
+    : inverseSpecificWeightMode
     ? (physics?.illustrativeSideCm ?? 26.3)
     : (shape === ObjectShape.CUBE ? dim1 : dim1 * 2);
   const isObjectTooWide = effectiveObjWidthCm > tankWidth;
+  const emergedHeightCm = Math.max(0, cylinderHeightCm - submergedHeightCm);
 
   return (
     <div className="flex flex-col gap-4 shrink-0">
       {/* Object Properties */}
       <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
         <SectionHeader icon={<Box className="w-4 h-4" />} title="Propriedades do Objeto" />
-        {inverseSpecificWeightMode ? (
+        {anchoredBuoyMode ? (
+          <div className="space-y-4">
+            <div className="p-2.5 rounded-xl bg-cyan-50/80 dark:bg-cyan-950/40 border border-cyan-200/70 dark:border-cyan-800/60 text-[10px] text-cyan-900 dark:text-cyan-200 leading-relaxed">
+              <span className="font-bold block mb-0.5">Boia Esférica Submersa Ancorada por Cabo</span>
+              Configure o diâmetro <span className="font-bold">D</span> e o peso próprio <span className="font-bold">W</span> da boia. Clique em <span className="font-bold">ANALISAR</span> para determinar o empuxo e a força de tração <span className="font-bold">T</span> no cabo.
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Objeto / Condição</label>
+              <div className="h-9 px-3 flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/80 text-xs font-bold text-slate-700 dark:text-slate-200">
+                <span>Boia Esférica</span>
+                <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">Totalmente Submersa (Cabo)</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className={inputGroupClass}>
+                <label className={labelClass}>Diâmetro D (m)</label>
+                <NumberInput
+                  value={buoyDiameterM}
+                  min={0.1}
+                  step="0.05"
+                  onChange={(v) => onBuoyDiameterChange?.(v)}
+                />
+              </div>
+              <div className={inputGroupClass}>
+                <label className={labelClass}>Raio R = D/2 (m)</label>
+                <div className="h-9 px-3 flex items-center rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {(buoyDiameterM / 2).toFixed(2).replace('.', ',')} m
+                </div>
+              </div>
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Peso Próprio da Boia — W (kN)</label>
+              <NumberInput
+                value={buoyWeightKN}
+                min={0.05}
+                step="0.1"
+                onChange={(v) => onBuoyWeightChange?.(v)}
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-400">
+                W = <span className="font-semibold text-slate-600 dark:text-slate-300">{(buoyWeightKN * 1000).toFixed(0)} N</span> | Ancoragem: cabo vertical preso ao fundo
+              </p>
+            </div>
+
+            {isSimulating && (
+              <div className="bg-slate-50/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1.5 text-[10px]">
+                <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                  <span>Volume total V = πD³/6:</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200">
+                    {(physics.volume ?? 0).toFixed(4).replace('.', ',')} m³
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                  <span>Empuxo E = γ·V:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {((physics.buoyancyForce ?? 0) / 1000).toFixed(2).replace('.', ',')} kN
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                  <span>Tração no cabo T = E − W:</span>
+                  <span className="font-bold text-purple-600 dark:text-purple-400">
+                    {((physics.cordTension ?? 0) / 1000).toFixed(2).replace('.', ',')} kN
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : interfaceEquilibriumMode ? (
+          <div className="space-y-4">
+            <div className="p-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 text-[10px] text-indigo-900 dark:text-indigo-200 leading-relaxed">
+              <span className="font-bold block mb-0.5">Bloco na Interface Água-Mercúrio</span>
+              Configure as densidades relativas do bloco e dos dois fluidos imiscíveis. Clique em <span className="font-bold">ANALISAR</span> para calcular o equilíbrio e a razão <span className="font-bold">a/b</span>.
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Objeto / Material</label>
+              <select className={selectClass} value={selectedMaterial} onChange={onMaterialChange}>
+                {MATERIALS.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+                <option value="Custom">Personalizado...</option>
+              </select>
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Densidade Relativa do Bloco — d_s</label>
+              <NumberInput
+                value={bodyRelativeDensity}
+                min={0.1}
+                step="0.05"
+                onChange={(v) => onBodyRelativeDensityChange?.(v)}
+              />
+              {isSimulating && (
+                <p className="text-[10px] text-slate-400 dark:text-slate-400">
+                  ρ_s = <span className="font-semibold text-slate-600 dark:text-slate-300">{(bodyRelativeDensity * 1000).toFixed(0)} kg/m³</span> | γ_s = <span className="font-semibold text-slate-600 dark:text-slate-300">{(bodyRelativeDensity * 1000 * gravity).toFixed(1).replace('.', ',')} N/m³</span>
+                </p>
+              )}
+            </div>
+
+            {!(bodyRelativeDensity > upperFluidRelativeDensity && bodyRelativeDensity < lowerFluidRelativeDensity) && (
+              <div className="flex items-start gap-2 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span className="font-medium leading-tight">
+                  Para equilíbrio na interface, a densidade relativa do bloco deve estar entre a do fluido superior e a do fluido inferior (d_a &lt; d_s &lt; d_m).
+                </span>
+              </div>
+            )}
+
+            <div className="bg-slate-50/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-3">
+              <div className="text-[9px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">
+                Geometria Ilustrativa do Bloco
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className={inputGroupClass}>
+                  <label className={labelClass}>Largura L (cm)</label>
+                  <NumberInput
+                    value={illustrativeWidthCm}
+                    min={10}
+                    step="5"
+                    onChange={(v) => onIllustrativeWidthChange?.(v)}
+                  />
+                </div>
+                <div className={inputGroupClass}>
+                  <label className={labelClass}>Altura H (cm)</label>
+                  <NumberInput
+                    value={illustrativeHeightCm}
+                    min={10}
+                    step="5"
+                    onChange={(v) => onIllustrativeHeightChange?.(v)}
+                  />
+                </div>
+              </div>
+
+              {isSimulating && (
+                <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px]">
+                  <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span>Altura a (na Água):</span>
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                      {(physics.heightA_cm ?? 0).toFixed(2).replace('.', ',')} cm ({((physics.fractionA ?? 0) * 100).toFixed(1).replace('.', ',')}%)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span>Altura b (no Mercúrio):</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                      {(physics.heightB_cm ?? 0).toFixed(2).replace('.', ',')} cm ({((physics.fractionB ?? 0) * 100).toFixed(1).replace('.', ',')}%)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span>Razão a/b (invariante):</span>
+                    <span className="font-bold text-purple-600 dark:text-purple-400">
+                      {(physics.ratioAtoB ?? 0).toFixed(3).replace('.', ',')}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : floatingEquilibriumMode ? (
+          <div className="space-y-4">
+            <div className="p-2.5 rounded-xl bg-cyan-50/80 dark:bg-cyan-950/40 border border-cyan-200/70 dark:border-cyan-800/60 text-[10px] text-cyan-900 dark:text-cyan-200 leading-relaxed">
+              <span className="font-bold block mb-0.5">Equilíbrio de Lata Cilíndrica Flutuante (P = E)</span>
+              Determina o peso próprio <span className="font-semibold">P</span> da lata a partir da geometria submersa e do Princípio de Arquimedes.
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Objeto / Geometria</label>
+              <div className="h-9 px-3 flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/80 text-xs font-bold text-slate-700 dark:text-slate-200">
+                <span>Lata Cilíndrica Vertical</span>
+                <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">Flutuando</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className={inputGroupClass}>
+                  <label className={labelClass}>Diâmetro D (cm)</label>
+                  <NumberInput
+                    value={cylinderDiameterCm}
+                    min={0.5}
+                    step="0.5"
+                    onChange={(v) => onCylinderDiameterChange?.(v)}
+                  />
+                </div>
+                <div className={inputGroupClass}>
+                  <label className={labelClass}>Altura Total H (cm)</label>
+                  <NumberInput
+                    value={cylinderHeightCm}
+                    min={1}
+                    step="0.5"
+                    onChange={(v) => onCylinderHeightChange?.(v)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className={inputGroupClass}>
+                  <label className={labelClass}>Altura Submersa h_sub (cm)</label>
+                  <NumberInput
+                    value={submergedHeightCm}
+                    min={0.1}
+                    max={cylinderHeightCm}
+                    step="0.5"
+                    onChange={(v) => onSubmergedHeightChange?.(Math.min(cylinderHeightCm, Math.max(0.1, v)))}
+                  />
+                </div>
+                <div className={inputGroupClass}>
+                  <label className={labelClass}>Altura Emersa h_em (cm)</label>
+                  <div className="h-9 px-3 flex items-center rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-slate-100/80 dark:bg-slate-800/90 text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {emergedHeightCm.toFixed(1).replace('.', ',')} cm
+                  </div>
+                </div>
+              </div>
+
+              {submergedHeightCm > cylinderHeightCm && (
+                <div className="flex items-start gap-2 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span className="font-medium leading-tight">A altura submersa não pode exceder a altura total da lata.</span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px]">
+                <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                  <span>Área da Seção (A):</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200">
+                    {physics.baseArea.toFixed(6).replace('.', ',')} m² ({(physics.baseArea * 10000).toFixed(2).replace('.', ',')} cm²)
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                  <span>Volume Total (V_total):</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                    {physics.volume.toFixed(6).replace('.', ',')} m³ ({(physics.volume * 1000000).toFixed(2).replace('.', ',')} cm³)
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                  <span>Volume Submerso (V_sub):</span>
+                  <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                    {physics.vol_deslocado.toFixed(6).replace('.', ',')} m³ ({(physics.vol_deslocado * 1000000).toFixed(2).replace('.', ',')} cm³)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : inverseSpecificWeightMode ? (
           <div className="space-y-4">
             <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-800/60 text-[10px] text-blue-800 dark:text-blue-200 leading-relaxed">
               <span className="font-bold block mb-0.5">Ensaio de Imersão Total (Bloco Suspenso)</span>
@@ -168,15 +469,22 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <select className={selectClass} value={shape} onChange={(e) => onShapeChange(e.target.value as ObjectShape)}>
               <option value={ObjectShape.CUBE}>Cubo</option>
               <option value={ObjectShape.SPHERE}>Esfera</option>
+              <option value={ObjectShape.CYLINDER}>Cilindro</option>
             </select>
           </div>
 
           <div className="bg-slate-50/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className={`col-span-2 ${inputGroupClass}`}>
+              <div className={shape === ObjectShape.CYLINDER ? inputGroupClass : `col-span-2 ${inputGroupClass}`}>
                 <label className={labelClass}>{shape === ObjectShape.CUBE ? 'Aresta (cm)' : 'Raio (cm)'}</label>
                 <NumberInput value={dim1} min={1} onChange={onDim1Change} />
               </div>
+              {shape === ObjectShape.CYLINDER && (
+                <div className={inputGroupClass}>
+                  <label className={labelClass}>Altura (cm)</label>
+                  <NumberInput value={dim2} min={1} onChange={(v) => onDim2Change?.(v)} />
+                </div>
+              )}
             </div>
 
             {isObjectTooWide && (
@@ -228,7 +536,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
       <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
         <SectionHeader icon={<Droplets className="w-4 h-4" />} title="Fluidos" />
         <div className="space-y-4">
-          {!inverseSpecificWeightMode && (
+        {!inverseSpecificWeightMode && !floatingEquilibriumMode && !interfaceEquilibriumMode && !anchoredBuoyMode && (
           <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/90 transition-colors">
             <input
               type="checkbox"
@@ -247,9 +555,16 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
           </div>
           )}
 
+          {interfaceEquilibriumMode && (
+            <div className="flex items-center gap-2 p-2.5 bg-cyan-50/70 dark:bg-cyan-950/40 rounded-xl border border-cyan-200/60 dark:border-cyan-800/60 text-[10px] font-bold text-cyan-900 dark:text-cyan-200">
+              <Layers className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+              <span>Dois Fluidos Imiscíveis (Interface Água-Mercúrio)</span>
+            </div>
+          )}
+
           <div className="space-y-3 relative">
             <div className={inputGroupClass}>
-              <label className={labelClass}>{enableTwoFluids && !inverseSpecificWeightMode ? 'Líquido Superior (A)' : 'Líquido Principal'}</label>
+              <label className={labelClass}>{(enableTwoFluids || interfaceEquilibriumMode) && !inverseSpecificWeightMode && !anchoredBuoyMode ? 'Fluido Superior (A)' : 'Líquido Principal'}</label>
               <select
                 className={selectClass}
                 value={selectedFluid}
@@ -263,7 +578,30 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                 <option value="Custom">Personalizado...</option>
               </select>
 
-              {inverseSpecificWeightMode ? (
+              {interfaceEquilibriumMode ? (
+                <div className="space-y-2 mt-2">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Dens. Relativa d_a</label>
+                      <NumberInput
+                        value={upperFluidRelativeDensity}
+                        min={0.05}
+                        step="0.05"
+                        onChange={(v) => onUpperFluidRelativeDensityChange?.(v)}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Camada (cm)</label>
+                      <NumberInput value={depthA} min={20} max={1000} step="5" onChange={onDepthAChange} />
+                    </div>
+                  </div>
+                  {isSimulating && (
+                    <p className="text-[10px] text-slate-400 dark:text-slate-400">
+                      ρ_a = <span className="font-semibold text-slate-600 dark:text-slate-300">{(upperFluidRelativeDensity * 1000).toFixed(0)} kg/m³</span> | γ_a = <span className="font-semibold text-slate-600 dark:text-slate-300">{(upperFluidRelativeDensity * 1000 * gravity).toFixed(1).replace('.', ',')} N/m³</span>
+                    </p>
+                  )}
+                </div>
+              ) : inverseSpecificWeightMode ? (
                 <div className="space-y-2 mt-2">
                   <div className="flex gap-3">
                     <div className="flex-1">
@@ -285,20 +623,27 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                   </p>
                 </div>
               ) : (
-              <div className="flex gap-3 mt-2">
-                <div className="flex-1">
-                  <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Densidade (kg/m³)</label>
-                  <NumberInput value={customFluidDensity} onChange={onCustomFluidDensityChange} />
+              <div className="space-y-2 mt-2">
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Densidade (kg/m³)</label>
+                    <NumberInput value={customFluidDensity} onChange={onCustomFluidDensityChange} />
+                  </div>
+                  <div className="w-24">
+                    <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
+                    <NumberInput value={depthA} min={1} max={1000} step="1" onChange={onDepthAChange} />
+                  </div>
                 </div>
-                <div className="w-24">
-                  <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
-                  <NumberInput value={depthA} min={1} max={1000} step="1" onChange={onDepthAChange} />
-                </div>
+                {(floatingEquilibriumMode || (anchoredBuoyMode && isSimulating)) && (
+                  <p className="text-[10px] text-slate-400 dark:text-slate-400">
+                    Peso específico γ: <span className="font-semibold text-slate-600 dark:text-slate-300">{((customFluidDensity * gravity) / 1000).toFixed(2).replace('.', ',')} kN/m³ ({(customFluidDensity * gravity).toFixed(1).replace('.', ',')} N/m³)</span>
+                  </p>
+                )}
               </div>
               )}
 
               {/* Toggle Comparador de Fluidos */}
-              {!inverseSpecificWeightMode && (
+              {!inverseSpecificWeightMode && !floatingEquilibriumMode && !interfaceEquilibriumMode && !anchoredBuoyMode && (
               <div className={`mt-3 p-2.5 rounded-xl border transition-all ${
                 showFluidComparison 
                   ? 'bg-blue-50/80 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800/70 shadow-sm' 
@@ -347,10 +692,10 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             </div>
           </div>
 
-          {enableTwoFluids && !inverseSpecificWeightMode && (
+          {(enableTwoFluids || interfaceEquilibriumMode) && !inverseSpecificWeightMode && !floatingEquilibriumMode && (
             <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
               <div className={inputGroupClass}>
-                <label className={labelClass}>Líquido Inferior (B)</label>
+                <label className={labelClass}>{interfaceEquilibriumMode ? 'Fluido Inferior (B)' : 'Líquido Inferior (B)'}</label>
                 <select
                   className={selectClass}
                   value={selectedFluidB}
@@ -364,16 +709,41 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                   <option value="Custom">Personalizado...</option>
                 </select>
 
-                <div className="flex gap-3 mt-2">
-                  <div className="flex-1">
-                    <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Densidade (kg/m³)</label>
-                    <NumberInput value={customFluidDensityB} onChange={onCustomFluidDensityBChange} />
+                {interfaceEquilibriumMode ? (
+                  <div className="space-y-2 mt-2">
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Dens. Relativa d_m</label>
+                        <NumberInput
+                          value={lowerFluidRelativeDensity}
+                          min={0.1}
+                          step="0.05"
+                          onChange={(v) => onLowerFluidRelativeDensityChange?.(v)}
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Camada (cm)</label>
+                        <NumberInput value={depthB} min={20} max={1000} step="5" onChange={onDepthBChange} />
+                      </div>
+                    </div>
+                    {isSimulating && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-400">
+                        ρ_m = <span className="font-semibold text-slate-600 dark:text-slate-300">{(lowerFluidRelativeDensity * 1000).toFixed(0)} kg/m³</span> | γ_m = <span className="font-semibold text-slate-600 dark:text-slate-300">{(lowerFluidRelativeDensity * 1000 * gravity).toFixed(1).replace('.', ',')} N/m³</span>
+                      </p>
+                    )}
                   </div>
-                  <div className="w-24">
-                    <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
-                    <NumberInput value={depthB} min={1} max={1000} step="1" onChange={onDepthBChange} />
+                ) : (
+                  <div className="flex gap-3 mt-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Densidade (kg/m³)</label>
+                      <NumberInput value={customFluidDensityB} onChange={onCustomFluidDensityBChange} />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
+                      <NumberInput value={depthB} min={1} max={1000} step="1" onChange={onDepthBChange} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -386,7 +756,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div className={inputGroupClass}>
             <label className={labelClass}>Largura (cm)</label>
-            <NumberInput value={tankWidth} min={50} max={2000} onChange={onTankWidthChange} />
+            <NumberInput value={tankWidth} min={10} max={2000} onChange={onTankWidthChange} />
           </div>
           <div className={inputGroupClass}>
             <label className={labelClass}>Profund. (cm)</label>

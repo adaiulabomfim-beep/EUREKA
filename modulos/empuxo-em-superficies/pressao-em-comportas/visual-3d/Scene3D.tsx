@@ -104,6 +104,7 @@ interface Scene3DProps {
   hingePosition?: PosicaoDobradica;
   hasTieRod?: boolean;
   hasSmoothWallSupport?: boolean;
+  hasVerticalWallHingeA?: boolean;
   tieRodPosRel?: number;
   tieRodAngle?: number;
   gateWeight?: number;
@@ -154,6 +155,11 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     modoPosicionamento,
     y_cg_direto,
   } = props;
+
+  const hasVerticalWallHingeA = Boolean(
+    props.hasVerticalWallHingeA || props.liveResults?.equilibrium?.articulacaoParedeVerticalA
+  );
+  const hasVerticalWallAboveA = hasSmoothWallSupport || hasVerticalWallHingeA;
 
   const [showExerciseDims, setShowExerciseDims] = useState<boolean>(true);
   const cameraControlRef = useRef<Camera3DHandle | null>(null);
@@ -249,6 +255,8 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
 
   const force_disp = isKgf
     ? `${Math.round(F_resultant_kgf).toLocaleString('pt-BR')} kgf`
+    : hasVerticalWallHingeA
+    ? `${F_resultant_kN.toFixed(2).replace('.', ',')} kN`
     : `${F_resultant_kN.toFixed(1)} kN`;
   const force_sec_disp = isKgf
     ? `${F_resultant_kN.toFixed(1)} kN`
@@ -263,14 +271,14 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const n_out = { x: sinTheta, y: -cosTheta };
 
   const marginVertical = Math.max(0.65, H * 0.35);
-  const Y_bed_dist = Math.max(0, Y_top + H) + (hasSmoothWallSupport ? 0 : marginVertical / sinTheta);
-  const waterSurfaceY = hasSmoothWallSupport
+  const Y_bed_dist = Math.max(0, Y_top + H) + (hasVerticalWallAboveA ? 0 : marginVertical / sinTheta);
+  const waterSurfaceY = hasVerticalWallAboveA
     ? Math.max(h_bot, upstreamLevel || 0)
     : Y_bed_dist * sinTheta;
   const P_surf = { x: 0, y: waterSurfaceY };
 
   const getInclinePt = (Y_dist: number) => {
-    if (hasSmoothWallSupport) {
+    if (hasVerticalWallAboveA) {
       const sDist = Y_dist - Y_top;
       return {
         x: P_surf.x + u_down.x * sDist,
@@ -289,13 +297,13 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const P_mid = getInclinePt(Y_top + H / 2);
   const P_CG = getInclinePt(Y_CG);
   const P_CP = getInclinePt(Y_CP);
-  const P_crest = hasSmoothWallSupport
+  const P_crest = hasVerticalWallAboveA
     ? { x: P_top.x, y: waterSurfaceY + marginVertical }
     : {
         x: P_surf.x - u_down.x * Y_crest_above,
         y: P_surf.y - u_down.y * Y_crest_above,
       };
-  const P_bed_inc = hasSmoothWallSupport
+  const P_bed_inc = hasVerticalWallAboveA
     ? { x: P_bot.x, y: 0 }
     : getInclinePt(Y_bed_dist); // y = 0
 
@@ -311,7 +319,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const rightBoundaryX = Math.max(
     P_crest.x + n_out.x * wallThick + Math.max(2.6, sceneSpan * 1.15),
     P_bed_inc.x + wallThick / sinTheta + Math.max(2.6, sceneSpan * 1.15),
-    hasSmoothWallSupport ? P_top.x + wallThick + 2.4 : -Infinity
+    hasVerticalWallAboveA ? P_top.x + wallThick + 2.4 : -Infinity
   );
   const groundThick = Math.max(0.75, sceneSpan * 0.25);
 
@@ -333,11 +341,11 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   }, [cosTheta, sinTheta]);
 
   // 3. PARAMENTO DE ALVENARIA COM ABERTURA (BURACO) DA COMPORTA
-  const wallHorizThick = hasSmoothWallSupport ? wallThick : wallThick / sinTheta;
+  const wallHorizThick = hasVerticalWallAboveA ? wallThick : wallThick / sinTheta;
   const rightSlabX =
     downstreamLevel > 0
       ? rightBoundaryX
-      : hasSmoothWallSupport
+      : hasVerticalWallAboveA
       ? P_top.x + wallThick + 0.85
       : P_bed_inc.x + wallHorizThick;
 
@@ -490,7 +498,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const upstreamWaterGeometry = useMemo(() => {
     if (upstreamLevel <= 0) return null;
     const shape = new THREE.Shape();
-    if (hasSmoothWallSupport) {
+    if (hasVerticalWallAboveA) {
       shape.moveTo(leftBoundaryX, waterSurfaceY);
       shape.lineTo(P_top.x, waterSurfaceY);
       shape.lineTo(P_top.x, P_top.y);
@@ -512,7 +520,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     });
     geo.translate(0, 0, -(channelWidth - 0.02) / 2);
     return geo;
-  }, [upstreamLevel, hasSmoothWallSupport, leftBoundaryX, waterSurfaceY, P_surf.x, P_surf.y, P_top.x, P_top.y, P_bot.x, P_bot.y, P_bed_inc.x, P_bed_inc.y, channelWidth]);
+  }, [upstreamLevel, hasVerticalWallAboveA, leftBoundaryX, waterSurfaceY, P_surf.x, P_surf.y, P_top.x, P_top.y, P_bot.x, P_bot.y, P_bed_inc.x, P_bed_inc.y, channelWidth]);
 
   // 6. CORPO DE ÁGUA DE JUSANTE (water-downstream-body idêntico ao 2D, apoiado na laje de alvenaria e na face traseira da rampa)
   const canalBedSurfaceY = P_bed_inc.y; // 0
@@ -1075,31 +1083,35 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
             <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
             <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
           </mesh>
-          {hasSmoothWallSupport ? (() => {
-            const wallBottomY = P_top.y - 0.22;
+          {hasVerticalWallAboveA ? (() => {
+            const wallBottomY = hasVerticalWallHingeA ? P_top.y : P_top.y - 0.22;
             const wallH = Math.max(0.4, P_crest.y - wallBottomY);
             const wallCenterY = (P_crest.y + wallBottomY) / 2;
             const wallCenterX = P_top.x + wallThick / 2;
             return (
               <group>
-                {/* Parede vertical lisa à direita apoiando o topo A */}
+                {/* Parede vertical à direita apoiando ou articulando o topo A */}
                 <mesh position={[wallCenterX, wallCenterY, 0]} castShadow receiveShadow>
                   <boxGeometry args={[wallThick, wallH, channelWidth]} />
                   <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
                   <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
                 </mesh>
-                {/* Placa lisa de contato + roletes no ponto A */}
-                <mesh position={[P_top.x - 0.02, P_top.y, 0]}>
-                  <boxGeometry args={[0.04, 0.26, Math.min(W, channelWidth * 0.92) + 0.1]} />
-                  <meshStandardMaterial color="#0f766e" roughness={0.25} metalness={0.6} />
-                </mesh>
-                <group position={[P_top.x - 0.06, P_top.y, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                  <mesh>
-                    <cylinderGeometry args={[0.055, 0.055, Math.min(W, channelWidth * 0.92) + 0.08, 20]} />
-                    <meshStandardMaterial color="#10b981" roughness={0.3} metalness={0.6} />
-                    <Edges color="#065f46" threshold={15} />
-                  </mesh>
-                </group>
+                {hasSmoothWallSupport && (
+                  <>
+                    {/* Placa lisa de contato + roletes no ponto A */}
+                    <mesh position={[P_top.x - 0.02, P_top.y, 0]}>
+                      <boxGeometry args={[0.04, 0.26, Math.min(W, channelWidth * 0.92) + 0.1]} />
+                      <meshStandardMaterial color="#0f766e" roughness={0.25} metalness={0.6} />
+                    </mesh>
+                    <group position={[P_top.x - 0.06, P_top.y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                      <mesh>
+                        <cylinderGeometry args={[0.055, 0.055, Math.min(W, channelWidth * 0.92) + 0.08, 20]} />
+                        <meshStandardMaterial color="#10b981" roughness={0.3} metalness={0.6} />
+                        <Edges color="#065f46" threshold={15} />
+                      </mesh>
+                    </group>
+                  </>
+                )}
               </group>
             );
           })() : (
@@ -1323,7 +1335,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
                       className="w-1.5 h-1.5 rounded-full"
                       style={{ backgroundColor: ESTILOS_VETOR_3D.resultantColor }}
                     ></span>
-                    <span>E = {force_disp}</span>
+                    <span>{hasVerticalWallHingeA ? `F_R = ${force_disp}` : `E = ${force_disp}`}</span>
                   </div>
                 </Html>
               </group>
@@ -1331,6 +1343,13 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           )}
 
           {/* ── 9b. Rótulos A/B e Vetores de Reação 3D (P, Bx, By) para Parede Lisa + Articulação ── */}
+          {hasVerticalWallHingeA && !hasSmoothWallSupport && (
+            <Html position={[P_top.x + wallThick / 2, P_top.y - 0.22, frontZ * 0.6]} center style={{ pointerEvents: 'none' }}>
+              <div className="w-6 h-6 rounded-full bg-amber-600 text-white text-[11px] font-black flex items-center justify-center border-2 border-white shadow">
+                A
+              </div>
+            </Html>
+          )}
           {hasSmoothWallSupport && (
             <group>
               <Html position={[P_top.x - 0.18, P_top.y + 0.25, frontZ * 0.6]} center style={{ pointerEvents: 'none' }}>

@@ -30,6 +30,12 @@ export interface ConfiguracaoSimulacaoComporta {
     apoioFundoLiso?: boolean;
     /** Quando ativo com apoioFundoLiso, calcula automaticamente a profundidade h de jusante para a qual R_B = 0. */
     resolverProfundidadeRbZero?: boolean;
+    /** Eixo físico horizontal de rotação passando pelo centroide (diâmetro horizontal) da comporta. */
+    eixoRotacaoCentral?: boolean;
+    /** Profundidade vertical do eixo central em relação à superfície livre (m). */
+    profundidadeEixo?: number;
+    /** Parede vertical superior de retenção até a articulação A no topo da comporta inclinada totalmente submersa (Exemplo 3.5). */
+    articulacaoParedeVerticalA?: boolean;
     posicaoTiranteRelativa: number;
     anguloTirante: number;
     pesoProprio: number;

@@ -82,7 +82,831 @@ export const Memorial: React.FC<MemorialProps> = ({
             </div>
           )}
 
-          {physics.inverseSpecificWeightMode ? (
+          {physics.anchoredBuoyMode ? (
+            <>
+              <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-800/60 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                <strong className="text-slate-800 dark:text-slate-100">Condição Física (Exemplo 2.10):</strong> A boia esférica encontra-se completamente submersa na Água do Mar e ancorada ao fundo por um cabo vertical. Como o empuxo hidrostático (<MathTex tex="E" />) supera o peso próprio da boia (<MathTex tex="W" />), o cabo permanece tracionado para baixo com força <MathTex tex="T = E - W" />, mantendo o equilíbrio estático vertical.
+              </div>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 1 – Identificação dos Dados{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="amber"
+                    label="Diâmetro e Raio da Boia Esférica"
+                    symbol={<MathTex tex="D,\; R" />}
+                    formula={<MathTex tex="R = \frac{D}{2}" />}
+                    substitution={<MathTex tex={`R = \\frac{${texNum(physics.diameterM.toFixed(2))}\\text{ m}}{2}`} />}
+                    result={<MathTex tex={`D = ${texNum(physics.diameterM.toFixed(2))}\\text{ m},\\; R = ${texNum(physics.radiusM.toFixed(2))}\\text{ m}`} />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="red"
+                    label="Peso Próprio da Boia"
+                    symbol={<MathTex tex="W" />}
+                    formula={<MathTex tex="W = \text{dado do enunciado}" />}
+                    substitution={<MathTex tex={`${texNum(physics.weightKN.toFixed(2))}\\text{ kN}`} />}
+                    result={<MathTex tex={`${texNum(physics.weightKN.toFixed(2))}\\text{ kN}\\;\\left(${texNum(physics.weightN.toFixed(1))}\\text{ N}\\right)`} />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="cyan"
+                    label="Fluido — Água do Mar (Biblioteca de Fluidos do EUREKA)"
+                    symbol={<MathTex tex="\rho_{\text{mar}},\; T_{\text{pad}}" />}
+                    formula={<MathTex tex="\rho_{\text{mar}} \text{ na temperatura padrão } T_{\text{pad}} = 15\,^\circ\text{C}" />}
+                    substitution={<MathTex tex={`\\rho_{\\text{mar}} = ${texNum(physics.fluidDensity.toFixed(0))}\\text{ kg/m}^3,\\; g = ${texNum(gravity.toFixed(2))}\\text{ m/s}^2`} />}
+                    result={<MathTex tex={`\\rho_{\\text{mar}} = ${texNum(physics.fluidDensity.toFixed(0))}\\text{ kg/m}^3\\;\\left(T_{\\text{pad}} = ${physics.standardTemperatureC}\\,^\\circ\\text{C}\\right)`} />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="blue"
+                    label="Peso Específico da Água do Mar"
+                    symbol={<MathTex tex="\gamma_{\text{mar}}" />}
+                    formula={<MathTex tex="\gamma_{\text{mar}} = \rho_{\text{mar}} \cdot g" />}
+                    substitution={<MathTex tex={`${texNum(physics.fluidDensity.toFixed(0))} \\cdot ${texNum(gravity.toFixed(2))}`} />}
+                    result={<MathTex tex={`${texNum(physics.specificWeightKNm3.toFixed(3))}\\text{ kN/m}^3\\;\\left(${texNum(physics.specificWeightNm3.toFixed(2))}\\text{ N/m}^3\\right)`} />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 2 – Determinação do Volume da Esfera{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="amber"
+                    label="Volume Total da Boia Esférica"
+                    symbol={<MathTex tex="V" />}
+                    formula={<MathTex tex="V = \frac{\pi \cdot D^3}{6} = \frac{4}{3}\pi R^3" />}
+                    substitution={<MathTex tex={`\\frac{\\pi \\cdot (${texNum(physics.diameterM.toFixed(2))})^3}{6}`} />}
+                    result={<MathTex tex={`${texNum(physics.volume.toFixed(4))}`} />}
+                    unit="m³"
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 3 – Determinação do Volume Deslocado{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="cyan"
+                    label="Condição de Imersão Total (100% Submersa)"
+                    symbol={<MathTex tex="V_{\text{sub}}" />}
+                    formula={<MathTex tex="V_{\text{sub}} = V" />}
+                    substitution={<MathTex tex={`V_{\\text{sub}} = ${texNum(physics.volume.toFixed(4))}\\text{ m}^3`} />}
+                    result={<MathTex tex={`${texNum(physics.submergedVolume.toFixed(4))}`} />}
+                    unit="m³"
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 4 – Cálculo do Empuxo{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="emerald"
+                    label="Força de Empuxo Hidrostático (Princípio de Arquimedes)"
+                    symbol={<MathTex tex="E" />}
+                    formula={<MathTex tex="E = \gamma_{\text{mar}} \cdot V_{\text{sub}}" />}
+                    substitution={<MathTex tex={`${texNum(physics.specificWeightKNm3.toFixed(3))}\\text{ kN/m}^3 \\cdot ${texNum(physics.submergedVolume.toFixed(4))}\\text{ m}^3`} />}
+                    result={<MathTex tex={`${texNum(physics.buoyancyKN.toFixed(2))}\\text{ kN}\\;\\left(${texNum(physics.buoyancy.toFixed(1))}\\text{ N}\\right)`} />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 5 – Diagrama de Corpo Livre{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="emerald"
+                    label="Força Ascendente (+y): Empuxo Hidrostático"
+                    symbol={<MathTex tex="+E" />}
+                    formula={<MathTex tex="\text{Atua verticalmente para cima no Centro de Empuxo (CE)}" />}
+                    substitution={<MathTex tex={`+${texNum(physics.buoyancyKN.toFixed(2))}\\text{ kN}`} />}
+                    result={<MathTex tex={`E = ${texNum(physics.buoyancyKN.toFixed(2))}\\text{ kN}\\;(\\uparrow)`} />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="red"
+                    label="Força Descendente (-y): Peso Próprio da Boia"
+                    symbol={<MathTex tex="-W" />}
+                    formula={<MathTex tex="\text{Atua verticalmente para baixo no Centro de Gravidade (CG)}" />}
+                    substitution={<MathTex tex={`-${texNum(physics.weightKN.toFixed(2))}\\text{ kN}`} />}
+                    result={<MathTex tex={`W = ${texNum(physics.weightKN.toFixed(2))}\\text{ kN}\\;(\\downarrow)`} />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="amber"
+                    label="Força Descendente (-y): Tração no Cabo de Ancoragem"
+                    symbol={<MathTex tex="-T" />}
+                    formula={<MathTex tex="\text{Atua verticalmente para baixo no ponto inferior de fixação da boia}" />}
+                    substitution={<MathTex tex="\text{Incógnita de reação no cabo}" />}
+                    result={<MathTex tex="T\;(\downarrow)" />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 6 – Aplicação do Equilíbrio Vertical{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="blue"
+                    label="Equação de Equilíbrio Estático Vertical"
+                    symbol={<MathTex tex="\sum F_y = 0" />}
+                    formula={<MathTex tex="E - W - T = 0" />}
+                    substitution={<MathTex tex={`${texNum(physics.buoyancyKN.toFixed(2))} - ${texNum(physics.weightKN.toFixed(2))} - T = 0`} />}
+                    result={<MathTex tex="T = E - W" />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 7 – Determinação da Tração no Cabo{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="amber"
+                    label="Força de Tração no Cabo de Ancoragem"
+                    symbol={<MathTex tex="T" />}
+                    formula={<MathTex tex="T = E - W" />}
+                    substitution={<MathTex tex={`${texNum(physics.buoyancyKN.toFixed(2))}\\text{ kN} - ${texNum(physics.weightKN.toFixed(2))}\\text{ kN}`} />}
+                    result={<MathTex tex={`${texNum(physics.cableTensionKN.toFixed(2))}\\text{ kN}\\;\\left(${texNum(physics.cableTension.toFixed(1))}\\text{ N}\\right)`} />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 8 – Verificação do Equilíbrio{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="emerald"
+                    label="Balanço Resultante das Forças Verticais"
+                    symbol={<MathTex tex="R_y" />}
+                    formula={<MathTex tex="R_y = E - W - T" />}
+                    substitution={<MathTex tex={`${texNum(physics.buoyancyKN.toFixed(2))} - ${texNum(physics.weightKN.toFixed(2))} - ${texNum(physics.cableTensionKN.toFixed(2))}`} />}
+                    result={<MathTex tex="0,00\text{ kN}\;\text{(Equilíbrio Confirmado)}" />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="slate"
+                    label="Referência Bibliográfica (Munson, γ = 10,05 kN/m³)"
+                    symbol={<MathTex tex="T_{\text{ref}}" />}
+                    formula={<MathTex tex="E_{\text{ref}} = 10,05 \cdot 1,7671 = 17,76\text{ kN}" />}
+                    substitution={<MathTex tex="T_{\text{ref}} = 17,76 - 8,50" />}
+                    result={<MathTex tex="9,26\text{ kN}\;\left(\Delta < 0,1\%\right)" />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+            </>
+          ) : physics.interfaceEquilibriumMode ? (
+            <>
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                <strong className="text-slate-800 dark:text-slate-100">Observação sobre a geometria:</strong> o enunciado não fornece as dimensões absolutas do bloco. Como o bloco é prismático e uniforme (área transversal <MathTex tex="A" /> constante), a área <MathTex tex="A" /> cancela-se algebricamente na equação de equilíbrio vertical, tornando a razão <MathTex tex="a/b" /> dependente apenas das densidades relativas. As dimensões (<MathTex tex={`L = ${texNum(physics.illustrativeWidthCm.toFixed(0))}\\text{ cm}`} />, <MathTex tex={`H = a + b = ${texNum(physics.illustrativeHeightCm.toFixed(0))}\\text{ cm}`} />) são ilustrativas e editáveis.
+              </div>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 1 – Identificação das Propriedades dos Materiais e Fluidos{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="amber"
+                    label={<>Bloco Uniforme de Aço (<MathTex tex="d_s,\;\gamma_s" />)</>}
+                    symbol={<MathTex tex="d_s" />}
+                    formula={<MathTex tex="\gamma_s = d_s \cdot \gamma_{\text{água,ref}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.bodyRelativeDensity.toFixed(2))} \\cdot ${texNum(physics.waterRefSpecificWeight.toFixed(0))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`d_s = ${texNum(physics.bodyRelativeDensity.toFixed(2))}\\;\\left(\\gamma_s = ${texNum(physics.bodySpecificWeight.toFixed(1))}\\text{ N/m}^3\\right)`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="cyan"
+                    label={<>Fluido Superior — Água (<MathTex tex="d_a,\;\gamma_a" />)</>}
+                    symbol={<MathTex tex="d_a" />}
+                    formula={<MathTex tex="\gamma_a = d_a \cdot \gamma_{\text{água,ref}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.upperFluidRelativeDensity.toFixed(2))} \\cdot ${texNum(physics.waterRefSpecificWeight.toFixed(0))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`d_a = ${texNum(physics.upperFluidRelativeDensity.toFixed(2))}\\;\\left(\\gamma_a = ${texNum(physics.upperFluidSpecificWeight.toFixed(0))}\\text{ N/m}^3\\right)`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="blue"
+                    label={<>Fluido Inferior — Mercúrio (<MathTex tex="d_m,\;\gamma_m" />)</>}
+                    symbol={<MathTex tex="d_m" />}
+                    formula={<MathTex tex="\gamma_m = d_m \cdot \gamma_{\text{água,ref}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.lowerFluidRelativeDensity.toFixed(2))} \\cdot ${texNum(physics.waterRefSpecificWeight.toFixed(0))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`d_m = ${texNum(physics.lowerFluidRelativeDensity.toFixed(2))}\\;\\left(\\gamma_m = ${texNum(physics.lowerFluidSpecificWeight.toFixed(1))}\\text{ N/m}^3\\right)`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-cyan-200 dark:bg-cyan-800"></div> ETAPA 2 – Identificação das Regiões Submersas{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="cyan"
+                    label={<>Volume Submerso na Camada de Água (<MathTex tex="V_a" />)</>}
+                    symbol={<MathTex tex="V_a" />}
+                    formula={<MathTex tex="A \cdot a" />}
+                    result={<MathTex tex="\text{Região superior do bloco com altura } a" />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="slate"
+                    label={<>Volume Submerso na Camada de Mercúrio (<MathTex tex="V_m" />)</>}
+                    symbol={<MathTex tex="V_m" />}
+                    formula={<MathTex tex="A \cdot b" />}
+                    result={<MathTex tex="\text{Região inferior do bloco com altura } b" />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="blue"
+                    label={<>Volume Total do Bloco de Aço (<MathTex tex="V_{\text{total}}" />)</>}
+                    symbol={<MathTex tex="V_{\text{total}}" />}
+                    formula={<MathTex tex="V_a + V_m = A \cdot (a + b)" />}
+                    result={<MathTex tex="\text{Altura total imersa } H = a + b" />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-emerald-200 dark:bg-emerald-800"></div> ETAPA 3 – Aplicação do Princípio de Arquimedes{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="cyan"
+                    label={<>Empuxo Exercido pela Água (<MathTex tex="E_{\text{água}}" />)</>}
+                    symbol={<MathTex tex="E_{\text{água}}" />}
+                    formula={<MathTex tex="\gamma_a \cdot V_a = \gamma_a \cdot A \cdot a" />}
+                    result={<MathTex tex="\text{Vertical para cima (camada superior)}" />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="emerald"
+                    label={<>Empuxo Exercido pelo Mercúrio (<MathTex tex="E_{\text{mercúrio}}" />)</>}
+                    symbol={<MathTex tex="E_{\text{mercúrio}}" />}
+                    formula={<MathTex tex="\gamma_m \cdot V_m = \gamma_m \cdot A \cdot b" />}
+                    result={<MathTex tex="\text{Vertical para cima (camada inferior)}" />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="red"
+                    label={<>Peso Próprio do Bloco de Aço (<MathTex tex="P" />)</>}
+                    symbol={<MathTex tex="P" />}
+                    formula={<MathTex tex="\gamma_s \cdot V_{\text{total}} = \gamma_s \cdot A \cdot (a + b)" />}
+                    result={<MathTex tex="\text{Vertical para baixo}" />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-blue-200 dark:bg-blue-800"></div> ETAPA 4 – Equação de Equilíbrio Vertical{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="blue"
+                    label={<>Balanço de Forças Verticais (<MathTex tex="\sum F_y = 0" />)</>}
+                    symbol={<MathTex tex="P" />}
+                    formula={<MathTex tex="E_{\text{água}} + E_{\text{mercúrio}} = P" />}
+                    result={
+                      <MathTex
+                        tex="\gamma_a \cdot A \cdot a + \gamma_m \cdot A \cdot b = \gamma_s \cdot A \cdot (a + b)"
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-amber-200 dark:bg-amber-800"></div> ETAPA 5 – Substituição das Densidades Relativas{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="amber"
+                    label={<>Dividindo ambos os membros por <MathTex tex="\gamma_{\text{água,ref}} \cdot A" /></>}
+                    symbol={<MathTex tex="d_a a + d_m b" />}
+                    formula={<MathTex tex="d_a \cdot a + d_m \cdot b = d_s \cdot (a + b)" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.upperFluidRelativeDensity.toFixed(2))} \\cdot a + ${texNum(physics.lowerFluidRelativeDensity.toFixed(2))} \\cdot b = ${texNum(physics.bodyRelativeDensity.toFixed(2))} \\cdot (a + b)`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.upperFluidRelativeDensity.toFixed(2))}\\,a + ${texNum(physics.lowerFluidRelativeDensity.toFixed(2))}\\,b = ${texNum(physics.bodyRelativeDensity.toFixed(2))}\\,a + ${texNum(physics.bodyRelativeDensity.toFixed(2))}\\,b`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 6 – Simplificação Algébrica{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="slate"
+                    label={<>Agrupando os termos em <MathTex tex="a" /> e <MathTex tex="b" /></>}
+                    symbol={<MathTex tex="(d_s - d_a)\,a" />}
+                    formula={<MathTex tex="(d_s - d_a) \cdot a = (d_m - d_s) \cdot b" />}
+                    substitution={
+                      <MathTex
+                        tex={`(${texNum(physics.bodyRelativeDensity.toFixed(2))} - ${texNum(physics.upperFluidRelativeDensity.toFixed(2))}) \\cdot a = (${texNum(physics.lowerFluidRelativeDensity.toFixed(2))} - ${texNum(physics.bodyRelativeDensity.toFixed(2))}) \\cdot b`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.denominatorDiff.toFixed(2))} \\cdot a = ${texNum(physics.numeratorDiff.toFixed(2))} \\cdot b`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-purple-200 dark:bg-purple-800"></div> ETAPA 7 – Determinação da Razão entre as Alturas a e b{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="purple"
+                    label={<>Razão Adimensional (<MathTex tex="a / b" />)</>}
+                    symbol={<MathTex tex="\frac{a}{b}" />}
+                    formula={<MathTex tex="\frac{d_m - d_s}{d_s - d_a}" />}
+                    substitution={
+                      <MathTex
+                        tex={`\\frac{${texNum(physics.numeratorDiff.toFixed(2))}}{${texNum(physics.denominatorDiff.toFixed(2))}}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.ratioAtoB.toFixed(4))} \\approx ${texNum(physics.ratioAtoB.toFixed(3))}`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                  <CalculationLine
+                    theme="cyan"
+                    label={<>Altura Ilustrativa em Água (<MathTex tex="a" /> para <MathTex tex={`H = ${texNum(physics.illustrativeHeightCm.toFixed(0))}\\text{ cm}`} />)</>}
+                    symbol={<MathTex tex="a" />}
+                    formula={<MathTex tex="H \cdot \frac{d_m - d_s}{d_m - d_a}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.illustrativeHeightCm.toFixed(0))} \\cdot \\frac{${texNum(physics.numeratorDiff.toFixed(2))}}{${texNum(physics.totalDensitySpan.toFixed(2))}}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.heightA_cm.toFixed(2))}\\text{ cm}\\;(${texNum((physics.fractionA * 100).toFixed(2))}\\%)`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="slate"
+                    label={<>Altura Ilustrativa em Mercúrio (<MathTex tex="b" /> para <MathTex tex={`H = ${texNum(physics.illustrativeHeightCm.toFixed(0))}\\text{ cm}`} />)</>}
+                    symbol={<MathTex tex="b" />}
+                    formula={<MathTex tex="H \cdot \frac{d_s - d_a}{d_m - d_a}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.illustrativeHeightCm.toFixed(0))} \\cdot \\frac{${texNum(physics.denominatorDiff.toFixed(2))}}{${texNum(physics.totalDensitySpan.toFixed(2))}}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.heightB_cm.toFixed(2))}\\text{ cm}\\;(${texNum((physics.fractionB * 100).toFixed(2))}\\%)`}
+                      />
+                    }
+                    unit=""
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-emerald-200 dark:bg-emerald-800"></div> ETAPA 8 – Verificação do Equilíbrio (Geometria Ilustrativa){' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="cyan"
+                    label={<>Empuxo da Água (<MathTex tex="E_{\text{água}}" />)</>}
+                    symbol={<MathTex tex="E_{\text{água}}" />}
+                    formula={<MathTex tex="\gamma_a \cdot A \cdot a" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.upperFluidSpecificWeight.toFixed(0))} \\cdot ${texNum(physics.baseArea.toFixed(4))} \\cdot ${texNum(physics.heightA_m.toFixed(4))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.E_A.toFixed(1))}\\text{ N}\\;(${texNum((physics.E_A / 1000).toFixed(3))}\\text{ kN})`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="emerald"
+                    label={<>Empuxo do Mercúrio (<MathTex tex="E_{\text{mercúrio}}" />)</>}
+                    symbol={<MathTex tex="E_{\text{mercúrio}}" />}
+                    formula={<MathTex tex="\gamma_m \cdot A \cdot b" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.lowerFluidSpecificWeight.toFixed(1))} \\cdot ${texNum(physics.baseArea.toFixed(4))} \\cdot ${texNum(physics.heightB_m.toFixed(4))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.E_B.toFixed(1))}\\text{ N}\\;(${texNum((physics.E_B / 1000).toFixed(3))}\\text{ kN})`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="red"
+                    label={<>Verificação: <MathTex tex="E_{\text{água}} + E_{\text{mercúrio}} = P" /></>}
+                    symbol={<MathTex tex="E_{\text{total}} = P" />}
+                    formula={<MathTex tex="E_{\text{água}} + E_{\text{mercúrio}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.E_A.toFixed(1))} + ${texNum(physics.E_B.toFixed(1))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.buoyancyForce.toFixed(1))}\\text{ N} = P\\;(${texNum((physics.objectWeight / 1000).toFixed(3))}\\text{ kN})`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+            </>
+          ) : physics.floatingEquilibriumMode ? (
+            <>
+              <section>
+                <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> ETAPA 1 – Identificação dos Dados{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="slate"
+                    label={<>Diâmetro da Lata Cilíndrica (<MathTex tex="D" />)</>}
+                    symbol={<MathTex tex="D" />}
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.diameterCm.toFixed(1))}\\text{ cm} = ${texNum((physics.diameterCm / 100).toFixed(2))}\\text{ m}`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="slate"
+                    label={<>Altura Total da Lata (<MathTex tex="H" />)</>}
+                    symbol={<MathTex tex="H" />}
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.totalHeightCm.toFixed(1))}\\text{ cm} = ${texNum((physics.totalHeightCm / 100).toFixed(2))}\\text{ m}`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="cyan"
+                    label={<>Altura Submersa (<MathTex tex="h_{\text{sub}}" />)</>}
+                    symbol={<MathTex tex="h_{\text{sub}}" />}
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.submergedHeightCm.toFixed(1))}\\text{ cm} = ${texNum((physics.submergedHeightCm / 100).toFixed(2))}\\text{ m}`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="amber"
+                    label={<>Altura Emersa (<MathTex tex="h_{\text{em}}" />)</>}
+                    symbol={<MathTex tex="h_{\text{em}}" />}
+                    formula={<MathTex tex="H - h_{\text{sub}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.totalHeightCm.toFixed(1))} - ${texNum(physics.submergedHeightCm.toFixed(1))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.emergedHeightCm.toFixed(1))}\\text{ cm} = ${texNum((physics.emergedHeightCm / 100).toFixed(2))}\\text{ m}`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="blue"
+                    label={<>Peso Específico do Fluido (<MathTex tex="\gamma_{\text{água}}" />)</>}
+                    symbol={<MathTex tex="\gamma_{\text{água}}" />}
+                    formula={<MathTex tex="\rho_{\text{água}} \cdot g" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.rhoA.toFixed(0))} \\cdot ${texNum(gravity.toFixed(2))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum((physics.fluidSpecificWeight ?? 9810).toFixed(0))}\\text{ N/m}^3`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-blue-200 dark:bg-blue-800"></div> ETAPA 2 – Determinação da Área da Seção Transversal{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="blue"
+                    label={<>Área da Seção Circular da Lata (<MathTex tex="A" />)</>}
+                    symbol={<MathTex tex="A" />}
+                    formula={<MathTex tex="\frac{\pi \cdot D^2}{4}" />}
+                    substitution={
+                      <MathTex
+                        tex={`\\frac{\\pi \\cdot (${texNum((physics.diameterCm / 100).toFixed(2))})^2}{4}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.baseArea.toFixed(6))}\\text{ m}^2\\;(${texNum((physics.baseArea * 10000).toFixed(2))}\\text{ cm}^2)`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-cyan-200 dark:bg-cyan-800"></div> ETAPA 3 – Cálculo do Volume Submerso{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="cyan"
+                    label={<>Volume Submerso Deslocado (<MathTex tex="V_{\text{sub}}" />)</>}
+                    symbol={<MathTex tex="V_{\text{sub}}" />}
+                    formula={<MathTex tex="A \cdot h_{\text{sub}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.baseArea.toFixed(6))} \\cdot ${texNum((physics.submergedHeightCm / 100).toFixed(2))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.vol_deslocado.toFixed(6))}\\text{ m}^3\\;(${texNum((physics.vol_deslocado * 1e6).toFixed(2))}\\text{ cm}^3)`}
+                      />
+                    }
+                    unit=""
+                    isSubHeader
+                  />
+                  <CalculationLine
+                    theme="slate"
+                    label={<>Volume Total da Lata (<MathTex tex="V_{\text{total}}" />)</>}
+                    symbol={<MathTex tex="V_{\text{total}}" />}
+                    formula={<MathTex tex="A \cdot H" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.baseArea.toFixed(6))} \\cdot ${texNum((physics.totalHeightCm / 100).toFixed(2))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.volume.toFixed(6))}\\text{ m}^3\\;(${texNum((physics.volume * 1e6).toFixed(2))}\\text{ cm}^3)`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="amber"
+                    label={<>Volume Emerso (<MathTex tex="V_{\text{em}}" />)</>}
+                    symbol={<MathTex tex="V_{\text{em}}" />}
+                    formula={<MathTex tex="V_{\text{total}} - V_{\text{sub}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum(physics.volume.toFixed(6))} - ${texNum(physics.vol_deslocado.toFixed(6))}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.vol_emerso.toFixed(6))}\\text{ m}^3\\;(${texNum((physics.vol_emerso * 1e6).toFixed(2))}\\text{ cm}^3)`}
+                      />
+                    }
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="purple"
+                    label={<>Fração Submersa (<MathTex tex="f_{\text{sub}}" />)</>}
+                    symbol={<MathTex tex="f_{\text{sub}}" />}
+                    formula={<MathTex tex="\frac{h_{\text{sub}}}{H}" />}
+                    substitution={
+                      <MathTex
+                        tex={`\\frac{${texNum(physics.submergedHeightCm.toFixed(1))}}{${texNum(physics.totalHeightCm.toFixed(1))}}`}
+                      />
+                    }
+                    result={<MathTex tex={`${texNum(physics.submergedPercentage.toFixed(2))}\\%`} />}
+                    unit=""
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-emerald-200 dark:bg-emerald-800"></div> ETAPA 4 – Aplicação do Princípio de Arquimedes{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="emerald"
+                    label={<>Expressão Geral do Empuxo Hidrostático (<MathTex tex="E" />)</>}
+                    symbol={<MathTex tex="E" />}
+                    formula={<MathTex tex="\gamma_{\text{água}} \cdot V_{\text{sub}}" />}
+                    result={<MathTex tex="\text{Peso do volume de água deslocado pela parte submersa}" />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-emerald-200 dark:bg-emerald-800"></div> ETAPA 5 – Determinação do Empuxo{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="emerald"
+                    label={<>Força de Empuxo Vertical (<MathTex tex="E" />)</>}
+                    symbol={<MathTex tex="E" />}
+                    formula={<MathTex tex="\gamma_{\text{água}} \cdot V_{\text{sub}}" />}
+                    substitution={
+                      <MathTex
+                        tex={`${texNum((physics.fluidSpecificWeight ?? 9810).toFixed(0))} \\cdot ${texNum(physics.vol_deslocado.toFixed(6))}`}
+                      />
+                    }
+                    result={<MathTex tex={`${texNum(physics.buoyancyForce.toFixed(2))}\\text{ N}`} />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-amber-200 dark:bg-amber-800"></div> ETAPA 6 – Aplicação da Condição de Equilíbrio{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="amber"
+                    label={<>Equilíbrio Vertical na Flutuação Livre</>}
+                    symbol={<MathTex tex="\sum F_y = 0" />}
+                    formula={<MathTex tex="E - P = 0 \;\Rightarrow\; P = E" />}
+                    result={<MathTex tex="\text{O peso próprio da lata iguala o empuxo hidrostático}" />}
+                    unit=""
+                    isSubHeader
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-6 h-px bg-purple-200 dark:bg-purple-800"></div> ETAPA 7 – Determinação do Peso da Lata{' '}
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                </h4>
+                <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <CalculationLine
+                    theme="purple"
+                    label={<>Peso da Lata Flutuante (<MathTex tex="P" />)</>}
+                    symbol={<MathTex tex="P" />}
+                    formula={<MathTex tex="P = E" />}
+                    substitution={
+                      <MathTex
+                        tex={`P = ${texNum(physics.buoyancyForce.toFixed(3))}\\text{ N}`}
+                      />
+                    }
+                    result={<MathTex tex={`${texNum(physics.objectWeight.toFixed(2))}\\text{ N}`} />}
+                    unit=""
+                    isSubHeader
+                  />
+                  <CalculationLine
+                    theme="slate"
+                    label={<>Massa Equivalente da Lata (<MathTex tex="m" /> — complementar)</>}
+                    symbol={<MathTex tex="m" />}
+                    formula={<MathTex tex="\frac{P}{g}" />}
+                    substitution={
+                      <MathTex
+                        tex={`\\frac{${texNum(physics.objectWeight.toFixed(3))}}{${texNum(gravity.toFixed(2))}}`}
+                      />
+                    }
+                    result={
+                      <MathTex
+                        tex={`${texNum(physics.objectMass.toFixed(4))}\\text{ kg}\\;(${texNum((physics.objectMass * 1000).toFixed(1))}\\text{ g})`}
+                      />
+                    }
+                    unit=""
+                  />
+                </div>
+              </section>
+            </>
+          ) : physics.inverseSpecificWeightMode ? (
             <>
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 <strong className="text-slate-800 dark:text-slate-100">Observação sobre a geometria:</strong> o enunciado não fornece as dimensões geométricas do bloco. O sólido exibido na cena é apenas uma representação ilustrativa de volume equivalente ao volume deslocado calculado (<MathTex tex={`V = ${texNum(physics.vol_deslocado.toFixed(5))}\\text{ m}^3`} />), mantido totalmente imerso sem contato com o fundo ou com as paredes.

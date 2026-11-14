@@ -35,6 +35,7 @@ interface PainelResultadosProps {
   hasTieRod: boolean;
   hasSmoothWallSupport?: boolean;
   hasSmoothFloorSupport?: boolean;
+  hasVerticalWallHingeA?: boolean;
 }
 
 const SectionLabel: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
@@ -59,8 +60,15 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
   hasTieRod,
   hasSmoothWallSupport = false,
   hasSmoothFloorSupport = false,
+  hasVerticalWallHingeA = false,
 }) => {
   const isFloorSupport = Boolean(hasSmoothFloorSupport || analyzedResults?.equilibrium?.apoioFundoAtivo);
+  const isCentralAxis = Boolean(
+    hingePosition === PosicaoDobradica.CENTER || analyzedResults?.equilibrium?.eixoCentralAtivo
+  );
+  const isVerticalWallHingeA = Boolean(
+    hasVerticalWallHingeA || analyzedResults?.equilibrium?.articulacaoParedeVerticalA
+  );
   const isKgf = analyzedResults?.sistemaUnidades === SistemaUnidades.TECNICO_KGF;
   const g = 9.81;
 
@@ -193,9 +201,19 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
 
           {/* 2. RESULTADOS HIDROSTÁTICOS */}
           <SectionLabel
-            title="A. Resultados Hidrostáticos"
+            title={
+              isCentralAxis
+                ? 'A. Força Hidrostática'
+                : isVerticalWallHingeA
+                ? 'A. Propriedades Geométricas'
+                : 'A. Resultados Hidrostáticos'
+            }
             subtitle={
-              analyzedResults && !isFechada
+              isCentralAxis
+                ? 'Item (a): Módulo e ponto de aplicação da força resultante na comporta circular'
+                : isVerticalWallHingeA
+                ? 'Área, centroide, pressão média e momento de inércia da comporta plana inclinada'
+                : analyzedResults && !isFechada
                 ? isAberta
                   ? 'Valores de referência da seção fechada (comporta aberta no momento)'
                   : `Referência hidrostática nominal (${100 - (operacao?.grauAberturaPercent ?? 0)}% da seção obstruída)`
@@ -203,7 +221,309 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             }
           />
 
-          {isFloorSupport ? (
+          {isVerticalWallHingeA ? (
+            <>
+              <ResultsCard
+                title="Área da Comporta (A)"
+                value={
+                  analyzedResults
+                    ? analyzedResults.forceData.up.area.toFixed(2).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? 'm²' : ''}
+                secondaryValue="A = w · L"
+                theme="slate"
+                leftIcon={Maximize}
+              />
+
+              <ResultsCard
+                title={<>Profundidade do Centroide (h<sub>c</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.h_cg !== undefined
+                    ? analyzedResults.forceData.up.h_cg.toFixed(2).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.Y_CG !== undefined
+                    ? `y_c (inclinado) = ${analyzedResults.forceData.up.Y_CG.toFixed(2).replace('.', ',')} m | h_c = D + (L/2)·sen(θ)`
+                    : 'h_c = D + (L/2)·sen(θ)'
+                }
+                theme="slate"
+                leftIcon={MoveVertical}
+              />
+
+              <ResultsCard
+                title={<>Pressão no Centroide (p<sub>c</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.p_cg !== undefined
+                    ? isKgf
+                      ? Math.round(analyzedResults.forceData.up.p_cg / g).toLocaleString('pt-BR')
+                      : (analyzedResults.forceData.up.p_cg / 1000).toFixed(2).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? (isKgf ? 'kgf/m²' : 'kPa') : ''}
+                secondaryValue="p_c = γ · h_c (pressão atmosférica se anula nas duas faces)"
+                theme="blue"
+                leftIcon={Gauge}
+              />
+
+              <ResultsCard
+                title={<>Momento de Inércia (I<sub>G</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.Ixx !== undefined
+                    ? analyzedResults.forceData.up.Ixx.toFixed(4).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? 'm⁴' : ''}
+                secondaryValue="I_G = w · L³ / 12"
+                theme="slate"
+                leftIcon={Calculator}
+              />
+
+              <SectionLabel
+                title="B. Força Hidrostática e Centro de Pressão"
+                subtitle="Módulo da força resultante F_R e localização exata do CP"
+              />
+
+              <ResultsCard
+                highlight
+                highlightTheme="blue"
+                title="Força Hidrostática Resultante (F_R)"
+                value={isKgf ? forceVal : forceVal.replace('.', ',')}
+                unit={forceUnit}
+                secondaryValue={
+                  analyzedResults
+                    ? `${forceSec} | F_R = γ · h_c · A (perpendicular à comporta)`
+                    : forceSec
+                }
+                badge={analyzedResults ? 'RESULTANTE' : undefined}
+                leftIcon={Droplets}
+              />
+
+              <ResultsCard
+                title={<>Profundidade Vertical do CP (h<sub>CP</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.h_cp !== undefined
+                    ? analyzedResults.forceData.up.h_cp.toFixed(3).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.h_cp !== undefined
+                    ? `h_CP = h_c + (I_G · sen²θ)/(h_c · A) > h_c (${analyzedResults.forceData.up.h_cg.toFixed(2).replace('.', ',')} m)`
+                    : 'Profundidade vertical do centro de pressão'
+                }
+                theme="cyan"
+                leftIcon={MoveVertical}
+              />
+
+              <ResultsCard
+                title={<>Distância Inclinada do CP à Superfície Livre (y<sub>CP</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.Y_CP !== undefined
+                    ? analyzedResults.forceData.up.Y_CP.toFixed(3).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.Y_CP !== undefined
+                    ? `y_CP = h_CP / sen(θ) = y_c + Δy > y_c (${analyzedResults.forceData.up.Y_CG.toFixed(2).replace('.', ',')} m)`
+                    : 'Medida ao longo do plano inclinado a partir da superfície livre'
+                }
+                theme="cyan"
+                leftIcon={Compass}
+              />
+
+              <ResultsCard
+                title={<>Distância entre CG e CP (Δy = y<sub>CP</sub> − y<sub>c</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.delta_y !== undefined
+                    ? analyzedResults.forceData.up.delta_y.toFixed(3).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.delta_y !== undefined
+                    ? `${(analyzedResults.forceData.up.delta_y * 100).toFixed(2).replace('.', ',')} cm abaixo do centroide (I_G / (y_c · A))`
+                    : 'Excentricidade entre o centroide e o centro de pressão'
+                }
+                theme="purple"
+                leftIcon={MoveVertical}
+              />
+
+              <ResultsCard
+                title={<>Distância entre Articulação A e CP (y<sub>CP,A</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.s_cp !== undefined
+                    ? analyzedResults.forceData.up.s_cp.toFixed(3).replace('.', ',')
+                    : '???'
+                }
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.s_cp !== undefined
+                    ? `y_CP,A = L/2 + Δy = ${(analyzedResults.forceData.up.s_cg ?? 2).toFixed(3).replace('.', ',')} + ${(analyzedResults.forceData.up.delta_y ?? 0).toFixed(3).replace('.', ',')} m a partir de A`
+                    : 'Posição do CP medida ao longo da comporta a partir de A'
+                }
+                theme="amber"
+                leftIcon={Compass}
+              />
+            </>
+          ) : isCentralAxis ? (
+            <>
+              <ResultsCard
+                highlight
+                highlightTheme="blue"
+                title="Força Hidrostática Resultante (F_R)"
+                value={forceVal}
+                unit={forceUnit}
+                secondaryValue={forceSec}
+                badge="ITEM (a)"
+                leftIcon={Droplets}
+              />
+
+              <ResultsCard
+                title="Área da Comporta Circular (A)"
+                value={analyzedResults ? analyzedResults.forceData.up.area.toFixed(4) : '???'}
+                unit={analyzedResults ? 'm²' : ''}
+                secondaryValue="A = π·D² / 4 = π·R²"
+                theme="slate"
+                leftIcon={Maximize}
+              />
+
+              <ResultsCard
+                title={<>Profundidade do Centroide / Eixo (h<sub>c</sub>)</>}
+                value={analyzedResults?.forceData?.up?.h_cg !== undefined ? analyzedResults.forceData.up.h_cg.toFixed(2) : '???'}
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.Y_CG !== undefined
+                    ? `y_c (inclinado) = ${analyzedResults.forceData.up.Y_CG.toFixed(4)} m`
+                    : 'Profundidade vertical do eixo horizontal'
+                }
+                theme="slate"
+                leftIcon={MoveVertical}
+              />
+
+              <ResultsCard
+                title={<>Pressão no Centroide (p<sub>c</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.p_cg !== undefined
+                    ? isKgf
+                      ? Math.round(analyzedResults.forceData.up.p_cg / g).toLocaleString('pt-BR')
+                      : (analyzedResults.forceData.up.p_cg / 1000).toFixed(2)
+                    : '???'
+                }
+                unit={analyzedResults ? (isKgf ? 'kgf/m²' : 'kPa') : ''}
+                secondaryValue="p_c = γ · h_c"
+                theme="blue"
+                leftIcon={Gauge}
+              />
+
+              <ResultsCard
+                title={<>Profundidade do Centro de Pressão (h<sub>CP</sub>)</>}
+                value={analyzedResults?.forceData?.up?.h_cp !== undefined ? analyzedResults.forceData.up.h_cp.toFixed(3) : '???'}
+                unit={analyzedResults ? 'm' : ''}
+                badge={analyzedResults ? 'ITEM (a)' : undefined}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.h_cp !== undefined
+                    ? `Δh = +${(analyzedResults.forceData.up.h_cp - analyzedResults.forceData.up.h_cg).toFixed(3)} m abaixo do eixo`
+                    : 'Profundidade vertical do ponto de aplicação'
+                }
+                theme="cyan"
+                leftIcon={MoveVertical}
+              />
+
+              <ResultsCard
+                title={<>Posição Inclinada do Centro de Pressão (y<sub>CP</sub>)</>}
+                value={analyzedResults?.forceData?.up?.Y_CP !== undefined ? analyzedResults.forceData.up.Y_CP.toFixed(4) : '???'}
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.delta_y !== undefined
+                    ? `Abaixo do eixo ao longo do plano: e = ${analyzedResults.forceData.up.delta_y.toFixed(4)} m (${(analyzedResults.forceData.up.delta_y * 100).toFixed(2)} cm)`
+                    : 'Distância inclinada da superfície livre ao CP'
+                }
+                theme="cyan"
+                leftIcon={Compass}
+              />
+
+              <SectionLabel
+                title="B. Momento de Abertura"
+                subtitle="Item (b): Momento aplicado no eixo horizontal para abrir a comporta"
+              />
+
+              <ResultsCard
+                highlight
+                highlightTheme="purple"
+                title="Momento Necessário para Abertura (M)"
+                value={
+                  !analyzedResults
+                    ? '???'
+                    : isAberta
+                    ? 'N/A'
+                    : (
+                        Math.abs(
+                          analyzedResults.equilibrium.M_abertura_eixo ?? analyzedResults.equilibrium.M_hinge
+                        ) / (isKgf ? g : 1000)
+                      ).toFixed(2)
+                }
+                unit={analyzedResults && !isAberta ? (isKgf ? 'kgf·m' : 'kN·m') : ''}
+                badge={analyzedResults && !isAberta ? 'ITEM (b)' : undefined}
+                secondaryValue={
+                  !analyzedResults
+                    ? 'Clique em Analisar para calcular M = F_R · e'
+                    : `M = F_R · e | ${analyzedResults.equilibrium.sentidoMomentoAbertura ?? 'Sentido horário (oposto ao momento hidrostático)'}`
+                }
+                leftIcon={RotateCw}
+              />
+
+              <ResultsCard
+                title="Excentricidade em Relação ao Eixo (e)"
+                value={
+                  analyzedResults
+                    ? (
+                        analyzedResults.equilibrium.excentricidadeEixo ??
+                        analyzedResults.forceData.up.delta_y ??
+                        0
+                      ).toFixed(4)
+                    : '???'
+                }
+                unit={analyzedResults ? 'm' : ''}
+                secondaryValue={
+                  analyzedResults
+                    ? `${(
+                        (analyzedResults.equilibrium.excentricidadeEixo ??
+                          analyzedResults.forceData.up.delta_y ??
+                          0) * 100
+                      ).toFixed(2)} cm ao longo da comporta (y_CP − y_c = I_G / (y_c · A))`
+                    : 'Braço de alavanca entre o CG (eixo) e o CP'
+                }
+                theme="purple"
+                leftIcon={MoveVertical}
+              />
+
+              <ResultsCard
+                title="Momento Hidrostático Resistente (M_hid)"
+                value={
+                  !analyzedResults
+                    ? '???'
+                    : (
+                        Math.abs(
+                          analyzedResults.equilibrium.M_hidrostatico_eixo ?? analyzedResults.equilibrium.M_hinge
+                        ) / (isKgf ? g : 1000)
+                      ).toFixed(2)
+                }
+                unit={analyzedResults ? (isKgf ? 'kgf·m' : 'kN·m') : ''}
+                secondaryValue={
+                  analyzedResults
+                    ? analyzedResults.equilibrium.sentidoMomentoHidrostatico ??
+                      'Sentido anti-horário em relação ao eixo central'
+                    : 'Momento exercido pela força hidrostática sobre o eixo'
+                }
+                theme="amber"
+                leftIcon={RotateCw}
+              />
+            </>
+          ) : isFloorSupport ? (
             <>
               <ResultsCard
                 title={<>Empuxo na Face Esquerda — Glicerina (F<sub>g</sub>)</>}
@@ -274,346 +594,354 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
           )}
 
-          <ResultsCard
-            title={<>Distância Inclinada (y<sub>CG</sub>)</>}
-            value={analyzedResults?.forceData?.up?.Y_CG !== undefined ? analyzedResults.forceData.up.Y_CG.toFixed(2) : '???'}
-            unit={analyzedResults ? 'm' : ''}
-            theme="cyan"
-            leftIcon={Compass}
-            secondaryValue={isFloorSupport ? 'Glicerina: da superfície livre ao CG' : "Da linha d'água ao Centróide (CG)"}
-          />
-
-          <ResultsCard
-            title={<>Distância Inclinada (y<sub>CP</sub>)</>}
-            value={analyzedResults?.forceData?.up?.Y_CP !== undefined ? analyzedResults.forceData.up.Y_CP.toFixed(2) : '???'}
-            unit={analyzedResults ? 'm' : ''}
-            theme="cyan"
-            leftIcon={MoveVertical}
-            secondaryValue={isFloorSupport ? 'Glicerina: da superfície livre ao CP' : "Da linha d'água ao Centro de Pressão"}
-          />
-
-          <ResultsCard
-            title={<>Profundidade do Centróide (h<sub>CG</sub>)</>}
-            value={analyzedResults?.forceData?.up?.h_cg !== undefined ? analyzedResults.forceData.up.h_cg.toFixed(2) : '???'}
-            unit={analyzedResults ? 'm' : ''}
-            theme="slate"
-            leftIcon={MoveVertical}
-            secondaryValue="Profundidade vertical da superfície livre"
-          />
-
-          <ResultsCard
-            title={<>Pressão no Centróide (p<sub>CG</sub>)</>}
-            value={
-              analyzedResults?.forceData?.up?.p_cg !== undefined
-                ? isKgf
-                  ? Math.round(analyzedResults.forceData.up.p_cg / g).toLocaleString('pt-BR')
-                  : (analyzedResults.forceData.up.p_cg / 1000).toFixed(2)
-                : '???'
-            }
-            unit={analyzedResults ? (isKgf ? 'kgf/m²' : 'kPa') : ''}
-            theme="blue"
-            leftIcon={Gauge}
-            secondaryValue={
-              analyzedResults?.forceData?.up?.p_cg !== undefined
-                ? isKgf
-                  ? `${(analyzedResults.forceData.up.p_cg / 1000).toFixed(2)} kPa`
-                  : `${(analyzedResults.forceData.up.p_cg).toFixed(1)} Pa`
-                : 'Pressão hidrostática média no CG'
-            }
-          />
-
-          <ResultsCard
-            title={<>Profundidade Vertical (h<sub>CP</sub>)</>}
-            value={analyzedResults?.forceData?.up?.h_cp !== undefined ? analyzedResults.forceData.up.h_cp.toFixed(3) : '???'}
-            unit={analyzedResults ? 'm' : ''}
-            theme="slate"
-            leftIcon={MoveVertical}
-            secondaryValue={
-              isFloorSupport && analyzedResults?.forceData?.down?.h_cp !== undefined
-                ? `Glicerina: ${analyzedResults.forceData.up.h_cp.toFixed(3)} m | Água: ${analyzedResults.forceData.down.h_cp.toFixed(3)} m`
-                : 'Profundidade vertical do ponto de aplicação'
-            }
-          />
-
-          {(hingePosition !== PosicaoDobradica.NONE || hasTieRod || hasSmoothWallSupport || isFloorSupport) && (
+          {!isCentralAxis && !isVerticalWallHingeA && (
             <>
-              {isFloorSupport && (
+              <ResultsCard
+                title={<>Distância Inclinada (y<sub>CG</sub>)</>}
+                value={analyzedResults?.forceData?.up?.Y_CG !== undefined ? analyzedResults.forceData.up.Y_CG.toFixed(2) : '???'}
+                unit={analyzedResults ? 'm' : ''}
+                theme="cyan"
+                leftIcon={Compass}
+                secondaryValue={isFloorSupport ? 'Glicerina: da superfície livre ao CG' : "Da linha d'água ao Centróide (CG)"}
+              />
+
+              <ResultsCard
+                title={<>Distância Inclinada (y<sub>CP</sub>)</>}
+                value={analyzedResults?.forceData?.up?.Y_CP !== undefined ? analyzedResults.forceData.up.Y_CP.toFixed(2) : '???'}
+                unit={analyzedResults ? 'm' : ''}
+                theme="cyan"
+                leftIcon={MoveVertical}
+                secondaryValue={isFloorSupport ? 'Glicerina: da superfície livre ao CP' : "Da linha d'água ao Centro de Pressão"}
+              />
+
+              <ResultsCard
+                title={<>Profundidade do Centróide (h<sub>CG</sub>)</>}
+                value={analyzedResults?.forceData?.up?.h_cg !== undefined ? analyzedResults.forceData.up.h_cg.toFixed(2) : '???'}
+                unit={analyzedResults ? 'm' : ''}
+                theme="slate"
+                leftIcon={MoveVertical}
+                secondaryValue="Profundidade vertical da superfície livre"
+              />
+
+              <ResultsCard
+                title={<>Pressão no Centróide (p<sub>CG</sub>)</>}
+                value={
+                  analyzedResults?.forceData?.up?.p_cg !== undefined
+                    ? isKgf
+                      ? Math.round(analyzedResults.forceData.up.p_cg / g).toLocaleString('pt-BR')
+                      : (analyzedResults.forceData.up.p_cg / 1000).toFixed(2)
+                    : '???'
+                }
+                unit={analyzedResults ? (isKgf ? 'kgf/m²' : 'kPa') : ''}
+                theme="blue"
+                leftIcon={Gauge}
+                secondaryValue={
+                  analyzedResults?.forceData?.up?.p_cg !== undefined
+                    ? isKgf
+                      ? `${(analyzedResults.forceData.up.p_cg / 1000).toFixed(2)} kPa`
+                      : `${(analyzedResults.forceData.up.p_cg).toFixed(1)} Pa`
+                    : 'Pressão hidrostática média no CG'
+                }
+              />
+
+              <ResultsCard
+                title={<>Profundidade Vertical (h<sub>CP</sub>)</>}
+                value={analyzedResults?.forceData?.up?.h_cp !== undefined ? analyzedResults.forceData.up.h_cp.toFixed(3) : '???'}
+                unit={analyzedResults ? 'm' : ''}
+                theme="slate"
+                leftIcon={MoveVertical}
+                secondaryValue={
+                  isFloorSupport && analyzedResults?.forceData?.down?.h_cp !== undefined
+                    ? `Glicerina: ${analyzedResults.forceData.up.h_cp.toFixed(3)} m | Água: ${analyzedResults.forceData.down.h_cp.toFixed(3)} m`
+                    : 'Profundidade vertical do ponto de aplicação'
+                }
+              />
+
+              {(hingePosition !== PosicaoDobradica.NONE || hasTieRod || hasSmoothWallSupport || isFloorSupport) && (
                 <>
-                  <SectionLabel
-                    title="C. Apoios e Reações de Equilíbrio"
-                    subtitle="Articulação fixa em A (topo) e fundo liso em B (base)"
-                  />
+                  {isFloorSupport && (
+                    <>
+                      <SectionLabel
+                        title="C. Apoios e Reações de Equilíbrio"
+                        subtitle="Articulação fixa em A (topo) e fundo liso em B (base)"
+                      />
 
-                  <ResultsCard
-                    title={<>Reação Normal no Fundo em B (R<sub>B</sub>)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round((analyzedResults.equilibrium.R_B ?? 0) / g).toLocaleString('pt-BR')
-                        : ((analyzedResults.equilibrium.R_B ?? 0) / 1000).toFixed(3)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    badge={
-                      analyzedResults && !isAberta
-                        ? Math.abs(analyzedResults.equilibrium.R_B ?? 0) < 1e-2
-                          ? 'R_B = 0'
-                          : (analyzedResults.equilibrium.R_B ?? 0) > 0
-                          ? 'APOIO ↑'
-                          : 'ABERTURA'
-                        : undefined
-                    }
-                    secondaryValue={
-                      !analyzedResults
-                        ? 'Fundo liso sem atrito (apenas normal vertical)'
-                        : isAberta
-                        ? 'Não aplicável com a comporta totalmente aberta'
-                        : Math.abs(analyzedResults.equilibrium.R_B ?? 0) < 1e-2
-                        ? 'Condição limite: perda iminente de contato em B'
-                        : (analyzedResults.equilibrium.R_B ?? 0) > 0
-                        ? 'Sentido: ↑ (comporta pressiona o fundo em B)'
-                        : 'Sentido invertido (< 0): água superou o limite de equilíbrio'
-                    }
-                    theme={
-                      analyzedResults && Math.abs(analyzedResults.equilibrium.R_B ?? 0) < 1e-2
-                        ? 'green'
-                        : 'amber'
-                    }
-                    leftIcon={ArrowUp}
-                  />
+                      <ResultsCard
+                        title={<>Reação Normal no Fundo em B (R<sub>B</sub>)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round((analyzedResults.equilibrium.R_B ?? 0) / g).toLocaleString('pt-BR')
+                            : ((analyzedResults.equilibrium.R_B ?? 0) / 1000).toFixed(3)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        badge={
+                          analyzedResults && !isAberta
+                            ? Math.abs(analyzedResults.equilibrium.R_B ?? 0) < 1e-2
+                              ? 'R_B = 0'
+                              : (analyzedResults.equilibrium.R_B ?? 0) > 0
+                              ? 'APOIO ↑'
+                              : 'ABERTURA'
+                            : undefined
+                        }
+                        secondaryValue={
+                          !analyzedResults
+                            ? 'Fundo liso sem atrito (apenas normal vertical)'
+                            : isAberta
+                            ? 'Não aplicável com a comporta totalmente aberta'
+                            : Math.abs(analyzedResults.equilibrium.R_B ?? 0) < 1e-2
+                            ? 'Condição limite: perda iminente de contato em B'
+                            : (analyzedResults.equilibrium.R_B ?? 0) > 0
+                            ? 'Sentido: ↑ (comporta pressiona o fundo em B)'
+                            : 'Sentido invertido (< 0): água superou o limite de equilíbrio'
+                        }
+                        theme={
+                          analyzedResults && Math.abs(analyzedResults.equilibrium.R_B ?? 0) < 1e-2
+                            ? 'green'
+                            : 'amber'
+                        }
+                        leftIcon={ArrowUp}
+                      />
 
-                  <ResultsCard
-                    title={<>Reação Horizontal na Articulação A (A<sub>x</sub>)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round(Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / g).toLocaleString('pt-BR')
-                        : (Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / 1000).toFixed(2)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    secondaryValue={
-                      !analyzedResults
-                        ? 'ΣFx = 0 na articulação A'
-                        : isAberta
-                        ? 'Não aplicável com a comporta totalmente aberta'
-                        : `${(analyzedResults.equilibrium.Rx_hinge ?? 0) >= 0 ? 'Sentido: → (para a direita)' : 'Sentido: ← (para a esquerda)'}`
-                    }
-                    theme="purple"
-                    leftIcon={ArrowRight}
-                  />
+                      <ResultsCard
+                        title={<>Reação Horizontal na Articulação A (A<sub>x</sub>)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round(Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / g).toLocaleString('pt-BR')
+                            : (Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / 1000).toFixed(2)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        secondaryValue={
+                          !analyzedResults
+                            ? 'ΣFx = 0 na articulação A'
+                            : isAberta
+                            ? 'Não aplicável com a comporta totalmente aberta'
+                            : `${(analyzedResults.equilibrium.Rx_hinge ?? 0) >= 0 ? 'Sentido: → (para a direita)' : 'Sentido: ← (para a esquerda)'}`
+                        }
+                        theme="purple"
+                        leftIcon={ArrowRight}
+                      />
 
-                  <ResultsCard
-                    title={<>Reação Vertical na Articulação A (A<sub>y</sub>)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round(Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / g).toLocaleString('pt-BR')
-                        : (Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / 1000).toFixed(2)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    secondaryValue={
-                      !analyzedResults
-                        ? 'ΣFy = 0 na articulação A'
-                        : isAberta
-                        ? 'Não aplicável com a comporta totalmente aberta'
-                        : `${(analyzedResults.equilibrium.Ry_hinge ?? 0) >= 0 ? 'Sentido: ↑ (para cima)' : 'Sentido: ↓ (para baixo)'}`
-                    }
-                    theme="purple"
-                    leftIcon={ArrowUp}
-                  />
+                      <ResultsCard
+                        title={<>Reação Vertical na Articulação A (A<sub>y</sub>)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round(Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / g).toLocaleString('pt-BR')
+                            : (Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / 1000).toFixed(2)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        secondaryValue={
+                          !analyzedResults
+                            ? 'ΣFy = 0 na articulação A'
+                            : isAberta
+                            ? 'Não aplicável com a comporta totalmente aberta'
+                            : `${(analyzedResults.equilibrium.Ry_hinge ?? 0) >= 0 ? 'Sentido: ↑ (para cima)' : 'Sentido: ↓ (para baixo)'}`
+                        }
+                        theme="purple"
+                        leftIcon={ArrowUp}
+                      />
 
-                  <ResultsCard
-                    title={<>Reação Resultante em A (R<sub>A</sub>)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round((analyzedResults.equilibrium.R_hinge ?? 0) / g).toLocaleString('pt-BR')
-                        : ((analyzedResults.equilibrium.R_hinge ?? 0) / 1000).toFixed(2)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    secondaryValue={
-                      analyzedResults && !isAberta
-                        ? 'Resultante vetorial: √(Ax² + Ay²)'
-                        : undefined
-                    }
-                    theme="slate"
-                    leftIcon={Compass}
-                  />
+                      <ResultsCard
+                        title={<>Reação Resultante em A (R<sub>A</sub>)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round((analyzedResults.equilibrium.R_hinge ?? 0) / g).toLocaleString('pt-BR')
+                            : ((analyzedResults.equilibrium.R_hinge ?? 0) / 1000).toFixed(2)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        secondaryValue={
+                          analyzedResults && !isAberta
+                            ? 'Resultante vetorial: √(Ax² + Ay²)'
+                            : undefined
+                        }
+                        theme="slate"
+                        leftIcon={Compass}
+                      />
+                    </>
+                  )}
+
+                  {(hasSmoothWallSupport || analyzedResults?.equilibrium?.apoioParedeAtivo) && !isFloorSupport && (
+                    <>
+                      <SectionLabel
+                        title="C. Apoios e Reações de Equilíbrio"
+                        subtitle="Parede lisa vertical em A e articulação fixa em B"
+                      />
+
+                      <ResultsCard
+                        title={<>Reação Horizontal no Apoio A (P)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round(Math.abs(analyzedResults.equilibrium.P_apoio ?? 0) / g).toLocaleString('pt-BR')
+                            : (Math.abs(analyzedResults.equilibrium.P_apoio ?? 0) / 1000).toFixed(2)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        secondaryValue={
+                          !analyzedResults
+                            ? 'Clique em Analisar para calcular'
+                            : isAberta
+                            ? 'Não aplicável com a comporta totalmente aberta'
+                            : `${(analyzedResults.equilibrium.P_apoio ?? 0) >= 0 ? 'Sentido: ← (para a esquerda)' : 'Sentido: → (para a direita)'} | Atrito vertical = 0`
+                        }
+                        theme="green"
+                        leftIcon={ArrowLeft}
+                      />
+
+                      <ResultsCard
+                        title={<>Reação Horizontal na Articulação B (B<sub>x</sub>)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round(Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / g).toLocaleString('pt-BR')
+                            : (Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / 1000).toFixed(2)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        secondaryValue={
+                          !analyzedResults
+                            ? 'ΣFx = 0 na articulação B'
+                            : isAberta
+                            ? 'Não aplicável com a comporta totalmente aberta'
+                            : `${(analyzedResults.equilibrium.Rx_hinge ?? 0) >= 0 ? 'Sentido: → (para a direita)' : 'Sentido: ← (para a esquerda)'}`
+                        }
+                        theme="purple"
+                        leftIcon={ArrowRight}
+                      />
+
+                      <ResultsCard
+                        title={<>Reação Vertical na Articulação B (B<sub>y</sub>)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round(Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / g).toLocaleString('pt-BR')
+                            : (Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / 1000).toFixed(2)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        secondaryValue={
+                          !analyzedResults
+                            ? 'ΣFy = 0 na articulação B'
+                            : isAberta
+                            ? 'Não aplicável com a comporta totalmente aberta'
+                            : `${(analyzedResults.equilibrium.Ry_hinge ?? 0) >= 0 ? 'Sentido: ↑ (para cima)' : 'Sentido: ↓ (para baixo)'}`
+                        }
+                        theme="purple"
+                        leftIcon={ArrowUp}
+                      />
+
+                      <ResultsCard
+                        title={<>Reação Resultante em B (R<sub>B</sub>)</>}
+                        value={
+                          !analyzedResults
+                            ? '???'
+                            : isAberta
+                            ? 'N/A'
+                            : isKgf
+                            ? Math.round((analyzedResults.equilibrium.R_hinge ?? 0) / g).toLocaleString('pt-BR')
+                            : ((analyzedResults.equilibrium.R_hinge ?? 0) / 1000).toFixed(2)
+                        }
+                        unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                        secondaryValue={
+                          analyzedResults && !isAberta
+                            ? 'Resultante vetorial: √(Bx² + By²)'
+                            : undefined
+                        }
+                        theme="slate"
+                        leftIcon={Compass}
+                      />
+                    </>
+                  )}
+
+                  {hingePosition !== PosicaoDobradica.NONE &&
+                    !hasSmoothWallSupport &&
+                    !analyzedResults?.equilibrium?.apoioParedeAtivo &&
+                    !isFloorSupport && (
+                    <ResultsCard
+                      title="Momento no Apoio"
+                      value={
+                        !analyzedResults
+                          ? '???'
+                          : isAberta
+                          ? 'N/A'
+                          : (Math.abs(analyzedResults.equilibrium.M_hinge) / (isKgf ? g : 1000)).toFixed(2)
+                      }
+                      unit={analyzedResults && !isAberta ? (isKgf ? 'kgf·m' : 'kN·m') : ''}
+                      secondaryValue={
+                        analyzedResults && isAberta
+                          ? 'Não aplicável com a comporta totalmente aberta'
+                          : undefined
+                      }
+                      theme="purple"
+                      leftIcon={RotateCw}
+                    />
+                  )}
+                  {hasTieRod && (
+                    <ResultsCard
+                      title="Força no Tirante"
+                      value={
+                        !analyzedResults
+                          ? '???'
+                          : isAberta
+                          ? 'N/A'
+                          : (Math.abs(analyzedResults.equilibrium.F_tie) / (isKgf ? g : 1000)).toFixed(2)
+                      }
+                      unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
+                      secondaryValue={
+                        analyzedResults && isAberta
+                          ? 'Não aplicável com a comporta totalmente aberta'
+                          : undefined
+                      }
+                      theme="amber"
+                      leftIcon={ArrowDown}
+                    />
+                  )}
                 </>
               )}
 
-              {(hasSmoothWallSupport || analyzedResults?.equilibrium?.apoioParedeAtivo) && !isFloorSupport && (
-                <>
-                  <SectionLabel
-                    title="C. Apoios e Reações de Equilíbrio"
-                    subtitle="Parede lisa vertical em A e articulação fixa em B"
-                  />
-
-                  <ResultsCard
-                    title={<>Reação Horizontal no Apoio A (P)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round(Math.abs(analyzedResults.equilibrium.P_apoio ?? 0) / g).toLocaleString('pt-BR')
-                        : (Math.abs(analyzedResults.equilibrium.P_apoio ?? 0) / 1000).toFixed(2)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    secondaryValue={
-                      !analyzedResults
-                        ? 'Clique em Analisar para calcular'
-                        : isAberta
-                        ? 'Não aplicável com a comporta totalmente aberta'
-                        : `${(analyzedResults.equilibrium.P_apoio ?? 0) >= 0 ? 'Sentido: ← (para a esquerda)' : 'Sentido: → (para a direita)'} | Atrito vertical = 0`
-                    }
-                    theme="green"
-                    leftIcon={ArrowLeft}
-                  />
-
-                  <ResultsCard
-                    title={<>Reação Horizontal na Articulação B (B<sub>x</sub>)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round(Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / g).toLocaleString('pt-BR')
-                        : (Math.abs(analyzedResults.equilibrium.Rx_hinge ?? 0) / 1000).toFixed(2)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    secondaryValue={
-                      !analyzedResults
-                        ? 'ΣFx = 0 na articulação B'
-                        : isAberta
-                        ? 'Não aplicável com a comporta totalmente aberta'
-                        : `${(analyzedResults.equilibrium.Rx_hinge ?? 0) >= 0 ? 'Sentido: → (para a direita)' : 'Sentido: ← (para a esquerda)'}`
-                    }
-                    theme="purple"
-                    leftIcon={ArrowRight}
-                  />
-
-                  <ResultsCard
-                    title={<>Reação Vertical na Articulação B (B<sub>y</sub>)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round(Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / g).toLocaleString('pt-BR')
-                        : (Math.abs(analyzedResults.equilibrium.Ry_hinge ?? 0) / 1000).toFixed(2)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    secondaryValue={
-                      !analyzedResults
-                        ? 'ΣFy = 0 na articulação B'
-                        : isAberta
-                        ? 'Não aplicável com a comporta totalmente aberta'
-                        : `${(analyzedResults.equilibrium.Ry_hinge ?? 0) >= 0 ? 'Sentido: ↑ (para cima)' : 'Sentido: ↓ (para baixo)'}`
-                    }
-                    theme="purple"
-                    leftIcon={ArrowUp}
-                  />
-
-                  <ResultsCard
-                    title={<>Reação Resultante em B (R<sub>B</sub>)</>}
-                    value={
-                      !analyzedResults
-                        ? '???'
-                        : isAberta
-                        ? 'N/A'
-                        : isKgf
-                        ? Math.round((analyzedResults.equilibrium.R_hinge ?? 0) / g).toLocaleString('pt-BR')
-                        : ((analyzedResults.equilibrium.R_hinge ?? 0) / 1000).toFixed(2)
-                    }
-                    unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                    secondaryValue={
-                      analyzedResults && !isAberta
-                        ? 'Resultante vetorial: √(Bx² + By²)'
-                        : undefined
-                    }
-                    theme="slate"
-                    leftIcon={Compass}
-                  />
-                </>
-              )}
-
-              {hingePosition !== PosicaoDobradica.NONE &&
-                !hasSmoothWallSupport &&
-                !analyzedResults?.equilibrium?.apoioParedeAtivo &&
-                !isFloorSupport && (
-                <ResultsCard
-                  title="Momento no Apoio"
-                  value={
-                    !analyzedResults
-                      ? '???'
-                      : isAberta
-                      ? 'N/A'
-                      : (Math.abs(analyzedResults.equilibrium.M_hinge) / (isKgf ? g : 1000)).toFixed(2)
-                  }
-                  unit={analyzedResults && !isAberta ? (isKgf ? 'kgf·m' : 'kN·m') : ''}
-                  secondaryValue={
-                    analyzedResults && isAberta
-                      ? 'Não aplicável com a comporta totalmente aberta'
-                      : undefined
-                  }
-                  theme="purple"
-                  leftIcon={RotateCw}
-                />
-              )}
-              {hasTieRod && (
-                <ResultsCard
-                  title="Força no Tirante"
-                  value={
-                    !analyzedResults
-                      ? '???'
-                      : isAberta
-                      ? 'N/A'
-                      : (Math.abs(analyzedResults.equilibrium.F_tie) / (isKgf ? g : 1000)).toFixed(2)
-                  }
-                  unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
-                  secondaryValue={
-                    analyzedResults && isAberta
-                      ? 'Não aplicável com a comporta totalmente aberta'
-                      : undefined
-                  }
-                  theme="amber"
-                  leftIcon={ArrowDown}
-                />
-              )}
+              <ResultsCard
+                title="Área Molhada (Seção)"
+                value={analyzedResults ? analyzedResults.forceData.up.area.toFixed(4) : '???'}
+                unit={analyzedResults ? 'm²' : ''}
+                secondaryValue={
+                  analyzedResults && isParcial && operacao
+                    ? `Bloqueada: ${operacao.areaBloqueada.toFixed(4)} m² | Livre: ${operacao.areaAberturaLivre.toFixed(4)} m²`
+                    : undefined
+                }
+                theme="slate"
+                leftIcon={Maximize}
+              />
             </>
           )}
 
-          <ResultsCard
-            title="Área Molhada (Seção)"
-            value={analyzedResults ? analyzedResults.forceData.up.area.toFixed(4) : '???'}
-            unit={analyzedResults ? 'm²' : ''}
-            secondaryValue={
-              analyzedResults && isParcial && operacao
-                ? `Bloqueada: ${operacao.areaBloqueada.toFixed(4)} m² | Livre: ${operacao.areaAberturaLivre.toFixed(4)} m²`
-                : undefined
-            }
-            theme="slate"
-            leftIcon={Maximize}
-          />
-
           {/* 3. COMPORTAMENTO HIDRÁULICO */}
           <SectionLabel
-            title="B. Comportamento Hidráulico"
+            title={
+              isCentralAxis || isVerticalWallHingeA
+                ? 'C. Comportamento Hidráulico'
+                : 'B. Comportamento Hidráulico'
+            }
             subtitle="Parâmetros de abertura, passagem e desnível"
           />
 

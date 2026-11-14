@@ -489,6 +489,509 @@ export const Memorial: React.FC<MemorialProps> = ({
                 </section>
               </>
             );
+          })() : analyzedResults?.equilibrium?.eixoCentralAtivo ? (() => {
+            const eq = analyzedResults.equilibrium;
+            const e_m = eq.excentricidadeEixo ?? delta_y;
+            const M_hid_val = (eq.M_hidrostatico_eixo ?? FR_N * e_m) / fDiv;
+            const M_ab_val = (eq.M_abertura_eixo ?? FR_N * e_m) / fDiv;
+            const R_val = H / 2;
+            const gamma_kN = gamma_N / 1000;
+
+            return (
+              <>
+                {/* 1. IDENTIFICAÇÃO DOS DADOS */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 1. Identificação dos Dados do Exercício{' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50/70 dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-400 block font-medium">Geometria da Comporta:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        Circular (<MathTex tex={`D = ${H.toFixed(2)}\\text{ m},\\; R = ${R_val.toFixed(2)}\\text{ m}`} />)
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-400 block font-medium">Inclinação e Eixo:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        <MathTex tex={`\\theta = ${gateInclination}^\\circ`} /> | Eixo horizontal no diâmetro central (CG)
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-400 block font-medium">Profundidade do Eixo e Fluido:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        <MathTex tex={`h_c = ${h_cg.toFixed(2)}\\text{ m}`} /> |{' '}
+                        <MathTex
+                          tex={
+                            isKgf
+                              ? `\\gamma = ${gamma_kgf.toFixed(1)}\\text{ kgf/m}^3`
+                              : `\\gamma = ${gamma_kN.toFixed(2)}\\text{ kN/m}^3`
+                          }
+                        />
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 2. DETERMINAÇÃO DA ÁREA CIRCULAR */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 2. Determinação da Área Circular (<MathTex tex="A" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="slate"
+                      label={<>Área da Comporta Circular (<MathTex tex="A" />)</>}
+                      symbol={<MathTex tex="A" />}
+                      formula={<MathTex tex="\frac{\pi \cdot D^2}{4} = \pi \cdot R^2" />}
+                      substitution={<MathTex tex={`\\frac{\\pi \\cdot (${H.toFixed(2)})^2}{4} = \\pi \\cdot (${R_val.toFixed(2)})^2`} />}
+                      result={<MathTex tex={area.toFixed(4)} />}
+                      unit={<MathTex tex="\text{m}^2" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 3. DETERMINAÇÃO DA PROFUNDIDADE DO CENTROIDE */}
+                <section>
+                  <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-blue-300 dark:bg-blue-700"></div> 3. Determinação da Profundidade e Posição do Centroide (<MathTex tex="h_c,\; y_c" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="blue"
+                      label={<>Profundidade Vertical do Centroide / Eixo de Rotação (<MathTex tex="h_c" />)</>}
+                      symbol={<MathTex tex="h_c" />}
+                      formula={<MathTex tex="\text{Coincidente com a profundidade do eixo central}" />}
+                      substitution={<MathTex tex={`h_c = ${h_cg.toFixed(2)}\\text{ m}`} />}
+                      result={<MathTex tex={h_cg.toFixed(2)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                    />
+                    <CalculationLine
+                      theme="blue"
+                      label={<>Coordenada Inclinada do Centroide (<MathTex tex="y_c" />)</>}
+                      symbol={<MathTex tex="y_c" />}
+                      formula={<MathTex tex="\frac{h_c}{\operatorname{sen}(\theta)}" />}
+                      substitution={<MathTex tex={`\\frac{${h_cg.toFixed(2)}}{\\operatorname{sen}(${gateInclination}^\\circ)}`} />}
+                      result={<MathTex tex={Y_CG.toFixed(4)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 4. CÁLCULO DA PRESSÃO NO CENTROIDE */}
+                <section>
+                  <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-blue-300 dark:bg-blue-700"></div> 4. Cálculo da Pressão no Centroide (<MathTex tex="p_c" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="blue"
+                      label={<>Pressão Hidrostática no Centroide (<MathTex tex="p_c" />)</>}
+                      symbol={<MathTex tex="p_c" />}
+                      formula={<MathTex tex="\gamma \cdot h_c" />}
+                      substitution={
+                        isKgf ? (
+                          <MathTex tex={`${gamma_kgf.toFixed(1)} \\cdot ${h_cg.toFixed(2)}`} />
+                        ) : (
+                          <MathTex tex={`${gamma_kN.toFixed(2)}\\text{ kN/m}^3 \\cdot ${h_cg.toFixed(2)}\\text{ m}`} />
+                        )
+                      }
+                      result={<MathTex tex={texNum(p_cg_disp)} />}
+                      unit={<MathTex tex={p_unit_tex} />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 5. DETERMINAÇÃO DO MOMENTO DE INÉRCIA */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 5. Determinação do Momento de Inércia (<MathTex tex="I_G" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="slate"
+                      label={<>Momento de Inércia da Área Circular em Relação ao Eixo Centroidal (<MathTex tex="I_G" />)</>}
+                      symbol={<MathTex tex="I_G" />}
+                      formula={<MathTex tex="\frac{\pi \cdot D^4}{64} = \frac{\pi \cdot R^4}{4}" />}
+                      substitution={<MathTex tex={`\\frac{\\pi \\cdot (${H.toFixed(2)})^4}{64} = \\frac{\\pi \\cdot (${R_val.toFixed(2)})^4}{4}`} />}
+                      result={<MathTex tex={Ixx.toFixed(5)} />}
+                      unit={<MathTex tex="\text{m}^4" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 6. CÁLCULO DA FORÇA HIDROSTÁTICA RESULTANTE */}
+                <section>
+                  <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-indigo-300 dark:bg-indigo-700"></div> 6. Cálculo da Força Hidrostática Resultante (<MathTex tex="F_R" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="indigo"
+                      label={<>Força Hidrostática Resultante — Item (a) (<MathTex tex="F_R" />)</>}
+                      symbol={<MathTex tex="F_R" />}
+                      formula={<MathTex tex="\gamma \cdot h_c \cdot A = p_c \cdot A" />}
+                      substitution={
+                        isKgf ? (
+                          <MathTex tex={`${texNum(p_cg_disp)} \\cdot ${area.toFixed(4)}`} />
+                        ) : (
+                          <MathTex tex={`${gamma_kN.toFixed(2)} \\cdot ${h_cg.toFixed(2)} \\cdot ${area.toFixed(4)}`} />
+                        )
+                      }
+                      result={<MathTex tex={texNum(FR_disp)} />}
+                      unit={<MathTex tex={force_unit_tex} />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 7. DETERMINAÇÃO DO CENTRO DE PRESSÃO */}
+                <section>
+                  <h4 className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-cyan-300 dark:bg-cyan-700"></div> 7. Determinação do Centro de Pressão (<MathTex tex="y_{\text{CP}},\; h_{\text{CP}}" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="cyan"
+                      label={<>Posição Inclinada do Centro de Pressão (<MathTex tex="y_{\text{CP}}" />)</>}
+                      symbol={<MathTex tex="y_{\text{CP}}" />}
+                      formula={<MathTex tex="y_c + \frac{I_G}{y_c \cdot A}" />}
+                      substitution={<MathTex tex={`${Y_CG.toFixed(4)} + \\frac{${Ixx.toFixed(5)}}{${Y_CG.toFixed(4)} \\cdot ${area.toFixed(4)}}`} />}
+                      result={<MathTex tex={Y_CP.toFixed(4)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                    />
+                    <CalculationLine
+                      theme="cyan"
+                      label={<>Profundidade Vertical do Centro de Pressão — Item (a) (<MathTex tex="h_{\text{CP}}" />)</>}
+                      symbol={<MathTex tex="h_{\text{CP}}" />}
+                      formula={<MathTex tex="h_c + \frac{I_G \cdot \operatorname{sen}^2(\theta)}{h_c \cdot A}" />}
+                      substitution={<MathTex tex={`${h_cg.toFixed(2)} + \\frac{${Ixx.toFixed(5)} \\cdot \\operatorname{sen}^2(${gateInclination}^\\circ)}{${h_cg.toFixed(2)} \\cdot ${area.toFixed(4)}}`} />}
+                      result={<MathTex tex={h_cp.toFixed(3)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 8. DETERMINAÇÃO DA EXCENTRICIDADE */}
+                <section>
+                  <h4 className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-purple-300 dark:bg-purple-700"></div> 8. Determinação da Excentricidade em Relação ao Eixo (<MathTex tex="e" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="purple"
+                      label={<>Excentricidade ao Longo do Plano da Comporta (<MathTex tex="e = y_{\text{CP}} - y_c" />)</>}
+                      symbol={<MathTex tex="e" />}
+                      formula={<MathTex tex="\frac{I_G}{y_c \cdot A} = \frac{h_{\text{CP}} - h_c}{\operatorname{sen}(\theta)}" />}
+                      substitution={<MathTex tex={`\\frac{${h_cp.toFixed(3)} - ${h_cg.toFixed(2)}}{\\operatorname{sen}(${gateInclination}^\\circ)}`} />}
+                      result={<MathTex tex={`${e_m.toFixed(4)}\\text{ m}\\; (${(e_m * 100).toFixed(2)}\\text{ cm})`} />}
+                      unit={<MathTex tex="\text{m}" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 9. CÁLCULO DO MOMENTO EM RELAÇÃO AO EIXO */}
+                <section>
+                  <h4 className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-amber-300 dark:bg-amber-700"></div> 9. Cálculo do Momento Hidrostático em Relação ao Eixo (<MathTex tex="M_{\text{hid}}" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="amber"
+                      label={<>Momento Hidrostático Resistente sobre o Eixo Central (<MathTex tex="M_{\text{hid}}" />)</>}
+                      symbol={<MathTex tex="M_{\text{hid}}" />}
+                      formula={<MathTex tex="F_R \cdot e" />}
+                      substitution={<MathTex tex={`${(FR_N / fDiv).toFixed(2)} \\cdot ${e_m.toFixed(5)}`} />}
+                      result={<MathTex tex={texNum(M_hid_val.toFixed(2))} />}
+                      unit={<MathTex tex={moment_unit_tex} />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 10. DETERMINAÇÃO DO MOMENTO NECESSÁRIO PARA ABERTURA */}
+                <section>
+                  <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-emerald-300 dark:bg-emerald-700"></div> 10. Determinação do Momento Necessário para Abertura (<MathTex tex="M_{\text{abertura}}" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="emerald"
+                      label={<>Momento Aplicado no Eixo para Abrir a Comporta — Item (b) (<MathTex tex="M" />)</>}
+                      symbol={<MathTex tex="M" />}
+                      formula={<MathTex tex="\Sigma M_{\text{eixo}} = 0 \implies M = F_R \cdot e" />}
+                      substitution={<MathTex tex={`\\text{Sentido horário (oposto ao momento hidrostático anti-horário)}`} />}
+                      result={<MathTex tex={texNum(M_ab_val.toFixed(2))} />}
+                      unit={<MathTex tex={moment_unit_tex} />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+              </>
+            );
+          })() : (analyzedResults?.equilibrium?.articulacaoParedeVerticalA ||
+              config?.comporta?.articulacaoParedeVerticalA) ? (() => {
+            const D_val = config?.comporta?.profundidadeTopo ?? analyzedResults?.h_top_up ?? 2.0;
+            const gamma_kN = gamma_N / 1000;
+            const y_cp_A = analyzedResults.forceData.up.s_cp ?? H / 2 + delta_y;
+            const sinSq = Math.pow(sinTheta, 2);
+
+            return (
+              <>
+                {/* 1. IDENTIFICAÇÃO DOS DADOS */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 1. Identificação dos Dados e Cancelamento da Pressão Atmosférica{' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50/70 dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-400 block font-medium">Geometria da Comporta Retangular:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        <MathTex tex={`w = ${W.toFixed(2)}\\text{ m},\\; L = ${H.toFixed(2)}\\text{ m}`} />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-400 block font-medium">Inclinação e Articulação Superior A:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        <MathTex tex={`\\theta = ${gateInclination}^\\circ,\\; D = ${D_val.toFixed(2)}\\text{ m}`} />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-400 block font-medium">Fluido (Água):</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        <MathTex
+                          tex={
+                            isKgf
+                              ? `\\gamma = ${gamma_kgf.toFixed(1)}\\text{ kgf/m}^3`
+                              : `\\gamma = ${gamma_kN.toFixed(2)}\\text{ kN/m}^3`
+                          }
+                        />
+                      </span>
+                    </div>
+                    <div className="md:col-span-3 pt-2 border-t border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <span className="font-bold text-blue-700 dark:text-blue-300">Efeito da Pressão Atmosférica (<MathTex tex="p_{\text{atm}}" />):</span>{' '}
+                      A pressão atmosférica atua simultaneamente sobre a superfície livre da água (transmitindo-se integralmente pelo fluido) e sobre a face inferior/externa da comporta exposta ao ar. Como ambas atuam em sentidos opostos sobre a mesma área <MathTex tex="A" />, suas contribuições se anulam (<MathTex tex="F_{\text{atm,água}} - F_{\text{atm,ar}} = 0" />), trabalhando-se diretamente com a pressão efetiva (manométrica) <MathTex tex="p = \gamma \cdot h" />.
+                    </div>
+                  </div>
+                </section>
+
+                {/* 2. DETERMINAÇÃO DA ÁREA DA COMPORTA */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 2. Determinação da Área da Comporta (<MathTex tex="A" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="slate"
+                      label={<>Área da Superfície Plana Inclinada (<MathTex tex="A" />)</>}
+                      symbol={<MathTex tex="A" />}
+                      formula={<MathTex tex="w \cdot L" />}
+                      substitution={<MathTex tex={`${W.toFixed(2)} \\cdot ${H.toFixed(2)}`} />}
+                      result={<MathTex tex={area.toFixed(2)} />}
+                      unit={<MathTex tex="\text{m}^2" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 3. DETERMINAÇÃO DA PROFUNDIDADE DO CENTROIDE */}
+                <section>
+                  <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-blue-300 dark:bg-blue-700"></div> 3. Determinação da Profundidade do Centroide (<MathTex tex="h_c,\; y_c" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="blue"
+                      label={<>Profundidade Vertical do Centroide (<MathTex tex="h_c" />)</>}
+                      symbol={<MathTex tex="h_c" />}
+                      formula={<MathTex tex="D + \frac{L}{2}\operatorname{sen}(\theta)" />}
+                      substitution={<MathTex tex={`${D_val.toFixed(2)} + \\frac{${H.toFixed(2)}}{2} \\cdot \\operatorname{sen}(${gateInclination}^\\circ)`} />}
+                      result={<MathTex tex={h_cg.toFixed(2)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                    />
+                    <CalculationLine
+                      theme="blue"
+                      label={<>Distância Inclinada da Superfície Livre ao Centroide (<MathTex tex="y_c" />)</>}
+                      symbol={<MathTex tex="y_c" />}
+                      formula={<MathTex tex="\frac{h_c}{\operatorname{sen}(\theta)}" />}
+                      substitution={<MathTex tex={`\\frac{${h_cg.toFixed(2)}}{\\operatorname{sen}(${gateInclination}^\\circ)}`} />}
+                      result={<MathTex tex={Y_CG.toFixed(2)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 4. CÁLCULO DA PRESSÃO NO CENTROIDE */}
+                <section>
+                  <h4 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-blue-300 dark:bg-blue-700"></div> 4. Cálculo da Pressão no Centroide (<MathTex tex="p_c" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="blue"
+                      label={<>Pressão Hidrostática Efetiva no Centroide (<MathTex tex="p_c" />)</>}
+                      symbol={<MathTex tex="p_c" />}
+                      formula={<MathTex tex="\gamma \cdot h_c" />}
+                      substitution={
+                        isKgf ? (
+                          <MathTex tex={`${gamma_kgf.toFixed(1)} \\cdot ${h_cg.toFixed(2)}`} />
+                        ) : (
+                          <MathTex tex={`${gamma_kN.toFixed(2)}\\text{ kN/m}^3 \\cdot ${h_cg.toFixed(2)}\\text{ m}`} />
+                        )
+                      }
+                      result={<MathTex tex={texNum(p_cg_disp)} />}
+                      unit={<MathTex tex={p_unit_tex} />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 5. DETERMINAÇÃO DO MOMENTO DE INÉRCIA */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-slate-300 dark:bg-slate-700"></div> 5. Determinação do Momento de Inércia (<MathTex tex="I_G" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="slate"
+                      label={<>Momento de Inércia da Área Retangular em Relação ao Eixo Centroidal (<MathTex tex="I_G" />)</>}
+                      symbol={<MathTex tex="I_G" />}
+                      formula={<MathTex tex="\frac{w \cdot L^3}{12}" />}
+                      substitution={<MathTex tex={`\\frac{${W.toFixed(2)} \\cdot (${H.toFixed(2)})^3}{12}`} />}
+                      result={<MathTex tex={Ixx.toFixed(4)} />}
+                      unit={<MathTex tex="\text{m}^4" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 6. CÁLCULO DA FORÇA HIDROSTÁTICA RESULTANTE */}
+                <section>
+                  <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-indigo-300 dark:bg-indigo-700"></div> 6. Cálculo da Força Hidrostática Resultante (<MathTex tex="F_R" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="indigo"
+                      label={<>Força Resultante da Água e do Ar sobre a Superfície Inclinada (<MathTex tex="F_R" />)</>}
+                      symbol={<MathTex tex="F_R" />}
+                      formula={<MathTex tex="\gamma \cdot h_c \cdot A = p_c \cdot A" />}
+                      substitution={
+                        isKgf ? (
+                          <MathTex tex={`${texNum(p_cg_disp)} \\cdot ${area.toFixed(2)}`} />
+                        ) : (
+                          <MathTex tex={`${gamma_kN.toFixed(2)} \\cdot ${h_cg.toFixed(2)} \\cdot ${area.toFixed(2)}`} />
+                        )
+                      }
+                      result={<MathTex tex={texNum(FR_disp)} />}
+                      unit={<MathTex tex={force_unit_tex} />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 7. DETERMINAÇÃO DO CENTRO DE PRESSÃO */}
+                <section>
+                  <h4 className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-cyan-300 dark:bg-cyan-700"></div> 7. Determinação do Centro de Pressão (<MathTex tex="h_{\text{CP}},\; y_{\text{CP}}" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="cyan"
+                      label={<>Profundidade Vertical do Centro de Pressão (<MathTex tex="h_{\text{CP}}" />)</>}
+                      symbol={<MathTex tex="h_{\text{CP}}" />}
+                      formula={<MathTex tex="h_c + \frac{I_G \cdot \operatorname{sen}^2(\theta)}{h_c \cdot A}" />}
+                      substitution={<MathTex tex={`${h_cg.toFixed(2)} + \\frac{${Ixx.toFixed(4)} \\cdot (${sinSq.toFixed(2)})}{${h_cg.toFixed(2)} \\cdot ${area.toFixed(2)}}`} />}
+                      result={<MathTex tex={h_cp.toFixed(3)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                    />
+                    <CalculationLine
+                      theme="cyan"
+                      label={<>Distância Inclinada do Centro de Pressão à Superfície Livre (<MathTex tex="y_{\text{CP}}" />)</>}
+                      symbol={<MathTex tex="y_{\text{CP}}" />}
+                      formula={<MathTex tex="\frac{h_{\text{CP}}}{\operatorname{sen}(\theta)} = y_c + \frac{I_G}{y_c \cdot A}" />}
+                      substitution={<MathTex tex={`\\frac{${h_cp.toFixed(3)}}{\\operatorname{sen}(${gateInclination}^\\circ)} = ${Y_CG.toFixed(2)} + \\frac{${Ixx.toFixed(4)}}{${Y_CG.toFixed(2)} \\cdot ${area.toFixed(2)}}`} />}
+                      result={<MathTex tex={Y_CP.toFixed(3)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 8. DETERMINAÇÃO DA POSIÇÃO DO CP EM RELAÇÃO À ARTICULAÇÃO A */}
+                <section>
+                  <h4 className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-purple-300 dark:bg-purple-700"></div> 8. Posição do Centro de Pressão em Relação à Articulação A (<MathTex tex="y_{\text{CP},A}" />){' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="purple"
+                      label={<>Deslocamento entre o Centroide e o CP ao Longo da Comporta (<MathTex tex="\Delta y" />)</>}
+                      symbol={<MathTex tex="\Delta y" />}
+                      formula={<MathTex tex="y_{\text{CP}} - y_c = \frac{I_G}{y_c \cdot A}" />}
+                      substitution={<MathTex tex={`${Y_CP.toFixed(3)} - ${Y_CG.toFixed(2)}`} />}
+                      result={<MathTex tex={`${delta_y.toFixed(3)}\\text{ m}\\; (${(delta_y * 100).toFixed(2)}\\text{ cm})`} />}
+                      unit={<MathTex tex="\text{m}" />}
+                    />
+                    <CalculationLine
+                      theme="purple"
+                      label={<>Distância ao Longo da Comporta da Articulação A até o CP (<MathTex tex="y_{\text{CP},A}" />)</>}
+                      symbol={<MathTex tex="y_{\text{CP},A}" />}
+                      formula={<MathTex tex="\frac{L}{2} + (y_{\text{CP}} - y_c)" />}
+                      substitution={<MathTex tex={`\\frac{${H.toFixed(2)}}{2} + ${delta_y.toFixed(3)}`} />}
+                      result={<MathTex tex={y_cp_A.toFixed(3)} />}
+                      unit={<MathTex tex="\text{m}" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+
+                {/* 9. VERIFICAÇÃO DOS RESULTADOS */}
+                <section>
+                  <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-6 h-px bg-emerald-300 dark:bg-emerald-700"></div> 9. Verificação Física e Consistência dos Resultados{' '}
+                    <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+                  </h4>
+                  <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <CalculationLine
+                      theme="emerald"
+                      label={<>Verificação da Posição Relativa (<MathTex tex="h_{\text{CP}} > h_c" /> e <MathTex tex="y_{\text{CP}} > y_c" />)</>}
+                      symbol={<MathTex tex="\text{CP vs CG}" />}
+                      formula={<MathTex tex="h_{\text{CP}} - h_c = \Delta h > 0,\quad y_{\text{CP}} - y_c = \Delta y > 0" />}
+                      substitution={<MathTex tex={`h_{\\text{CP}} = ${h_cp.toFixed(3)}\\text{ m} > h_c = ${h_cg.toFixed(2)}\\text{ m}\\; |\\; y_{\\text{CP}} = ${Y_CP.toFixed(3)}\\text{ m} > y_c = ${Y_CG.toFixed(2)}\\text{ m}`} />}
+                      result={<MathTex tex={`\\text{CP abaixo do CG (+${(delta_y * 100).toFixed(2)} cm)}`} />}
+                      unit={<MathTex tex="\text{OK}" />}
+                      isSubHeader
+                    />
+                  </div>
+                </section>
+              </>
+            );
           })() : (
             <>
           {/* 1. DADOS DE ENTRADA */}

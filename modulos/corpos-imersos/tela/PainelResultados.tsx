@@ -38,6 +38,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
 
   const isInverseMode = Boolean(physics?.inverseSpecificWeightMode);
   const isValidInverse = Boolean(physics?.inverseValid);
+  const isFloatingMode = Boolean(physics?.floatingEquilibriumMode);
+  const isValidFloating = Boolean(physics?.floatingValid);
+  const isInterfaceMode = Boolean(physics?.interfaceEquilibriumMode);
+  const isValidInterface = Boolean(physics?.interfaceValid);
+  const isAnchoredBuoyMode = Boolean(physics?.anchoredBuoyMode);
+  const isValidAnchoredBuoy = Boolean(physics?.anchoredBuoyValid);
 
   return (
     <div id="tour-resultados" data-tour="painel-resultados" className="lg:col-span-3 flex flex-col gap-3 h-[600px] lg:h-full lg:max-h-full min-h-0 overflow-hidden">
@@ -49,7 +55,306 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           disabled: !isSimulating,
         }}
       >
-        {isInverseMode ? (
+        {isAnchoredBuoyMode ? (
+          <>
+            <ResultsCard
+              title={<>Tração no Cabo (<MathTex tex="T" />)</>}
+              value={
+                isSimulating
+                  ? isValidAnchoredBuoy
+                    ? `${(physics.cordTension / 1000).toFixed(2).replace('.', ',')} kN`
+                    : 'INVÁLIDO'
+                  : '?'
+              }
+              highlight={true}
+              leftIcon={Scale}
+              highlightTheme={isSimulating ? (physics.isCableInTension ? 'purple' : 'amber') : 'slate'}
+              secondaryValue={
+                isSimulating
+                  ? physics.isCableInTension
+                    ? `Resultado Principal | T = E − W = ${(physics.buoyancyForce / 1000).toFixed(2).replace('.', ',')} − ${physics.buoyWeightKN.toFixed(2).replace('.', ',')} = ${(physics.cordTension / 1000).toFixed(2).replace('.', ',')} kN (${physics.cordTension.toFixed(1).replace('.', ',')} N)`
+                    : 'W ≥ E: o peso iguala ou supera o empuxo (cabo frouxo, T = 0)'
+                  : 'Clique em ANALISAR para determinar a força de tração no cabo'
+              }
+            />
+
+            {isSimulating && physics.isCableInTension && (
+              <div className="p-2.5 rounded-xl bg-blue-50/90 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-800/70 text-[10px] text-blue-900 dark:text-blue-200 leading-relaxed">
+                <span className="font-bold block mb-0.5 text-blue-700 dark:text-blue-300">Por que o cabo traciona a boia?</span>
+                O empuxo (<span className="font-bold">E = {(physics.buoyancyForce / 1000).toFixed(2).replace('.', ',')} kN</span>) é superior ao peso próprio da boia (<span className="font-bold">W = {physics.buoyWeightKN.toFixed(2).replace('.', ',')} kN</span>), sendo necessária a atuação da força de tração (<span className="font-bold">T = {(physics.cordTension / 1000).toFixed(2).replace('.', ',')} kN</span>) exercida pelo cabo para impedir que a boia suba até a superfície.
+              </div>
+            )}
+
+            <ResultsCard
+              title={<>Empuxo (<MathTex tex="E" />)</>}
+              value={
+                isSimulating
+                  ? `${(physics.buoyancyForce / 1000).toFixed(2).replace('.', ',')} kN`
+                  : '?'
+              }
+              leftIcon={Droplets}
+              icon={isSimulating ? ArrowUp : EyeOff}
+              theme="green"
+              secondaryValue={
+                isSimulating
+                  ? `E = γ_mar · V = ${physics.buoyancyForce.toFixed(1).replace('.', ',')} N`
+                  : 'Aguardando análise'
+              }
+            />
+
+            <ResultsCard
+              title={<>Peso Próprio da Boia (<MathTex tex="W" />)</>}
+              value={`${physics.buoyWeightKN.toFixed(2).replace('.', ',')} kN`}
+              leftIcon={Weight}
+              icon={ArrowDown}
+              theme="red"
+              secondaryValue={`W = ${physics.objectWeight.toFixed(0)} N${isSimulating ? ` (m = ${physics.objectMass.toFixed(1).replace('.', ',')} kg)` : ''}`}
+            />
+
+            <ResultsCard
+              title={<>Volume Total e Submerso (<MathTex tex="V = V_{\text{sub}}" />)</>}
+              value={
+                isSimulating
+                  ? `${physics.volume.toFixed(4).replace('.', ',')} m³`
+                  : '?'
+              }
+              leftIcon={Box}
+              theme="cyan"
+              badge="100% Submersa"
+              secondaryValue={
+                isSimulating
+                  ? `V = π·D³/6 = ${(physics.volume * 1000).toFixed(1).replace('.', ',')} L (Totalmente submersa)`
+                  : 'Aguardando análise'
+              }
+            />
+
+            <ResultsCard
+              title={<>Diâmetro da Boia (<MathTex tex="D" />)</>}
+              value={`${physics.buoyDiameterM.toFixed(2).replace('.', ',')} m`}
+              leftIcon={Ruler}
+              theme="slate"
+              badge={`R = ${physics.buoyRadiusM.toFixed(2).replace('.', ',')} m`}
+              secondaryValue={`Diâmetro = ${physics.buoyDiameterCm.toFixed(0)} cm | Raio = ${physics.buoyRadiusCm.toFixed(0)} cm`}
+            />
+
+            <ResultsCard
+              title={<>Peso Específico do Fluido (<MathTex tex="\gamma_{\text{mar}}" />)</>}
+              value={
+                isSimulating
+                  ? `${(physics.fluidSpecificWeight / 1000).toFixed(2).replace('.', ',')} kN/m³`
+                  : '?'
+              }
+              leftIcon={Gauge}
+              theme="blue"
+              secondaryValue={
+                isSimulating
+                  ? `Água do Mar (ρ = ${physics.rhoA.toFixed(0)} kg/m³): γ = ${physics.fluidSpecificWeight.toFixed(2).replace('.', ',')} N/m³ (ref. 10,05 kN/m³)`
+                  : 'Aguardando análise'
+              }
+            />
+          </>
+        ) : isInterfaceMode ? (
+          <>
+            <ResultsCard
+              title={<>Razão entre Alturas (<MathTex tex="a / b" />)</>}
+              value={
+                isSimulating
+                  ? isValidInterface
+                    ? physics.ratioAtoB.toFixed(3).replace('.', ',')
+                    : 'INVÁLIDO'
+                  : '?'
+              }
+              highlight={true}
+              leftIcon={Scale}
+              highlightTheme={isSimulating ? (isValidInterface ? 'purple' : 'red') : 'slate'}
+              secondaryValue={
+                isSimulating
+                  ? isValidInterface
+                    ? `Resultado Principal | a/b = (d_m − d_s)/(d_s − d_a) = ${physics.numeratorDiff.toFixed(2).replace('.', ',')}/${physics.denominatorDiff.toFixed(2).replace('.', ',')} = ${physics.ratioAtoB.toFixed(4).replace('.', ',')}`
+                    : 'Requer d_a < d_s < d_m para equilíbrio na interface'
+                  : 'Clique em ANALISAR para calcular a razão a/b'
+              }
+            />
+
+            <ResultsCard
+              title={<>Alturas Submersas (<MathTex tex="a" /> e <MathTex tex="b" />)</>}
+              value={
+                isSimulating
+                  ? `a = ${(physics.fractionA * 100).toFixed(1).replace('.', ',')}% | b = ${(physics.fractionB * 100).toFixed(1).replace('.', ',')}%`
+                  : '?'
+              }
+              leftIcon={Ruler}
+              theme="cyan"
+              badge={isSimulating ? 'a + b = H' : undefined}
+              secondaryValue={
+                isSimulating
+                  ? `Ilustrativo (H = ${physics.illustrativeHeightCm} cm): a = ${physics.heightA_cm.toFixed(2).replace('.', ',')} cm (Água) | b = ${physics.heightB_cm.toFixed(2).replace('.', ',')} cm (Mercúrio)`
+                  : 'Aguardando análise'
+              }
+            />
+
+            <ResultsCard
+              title={<>Peso Específico do Aço (<MathTex tex="\gamma_s" />)</>}
+              value={isSimulating ? `${physics.bodySpecificWeight.toFixed(1).replace('.', ',')}` : '?'}
+              unit={isSimulating ? 'N/m³' : undefined}
+              leftIcon={Gauge}
+              theme="amber"
+              badge={isSimulating ? `d_s = ${physics.bodyRelativeDensity.toFixed(2).replace('.', ',')}` : undefined}
+              secondaryValue={
+                isSimulating
+                  ? `ρ_s = ${physics.objectDensity.toFixed(0)} kg/m³ | ${(physics.bodySpecificWeight / 1000).toFixed(2).replace('.', ',')} kN/m³`
+                  : 'Aguardando análise'
+              }
+            />
+
+            <ResultsCard
+              title={<>Pesos Específicos (<MathTex tex="\gamma_a" /> e <MathTex tex="\gamma_m" />)</>}
+              value={
+                isSimulating
+                  ? `γ_a = ${physics.upperFluidSpecificWeight.toFixed(0)} | γ_m = ${physics.lowerFluidSpecificWeight.toFixed(1).replace('.', ',')}`
+                  : '?'
+              }
+              unit={isSimulating ? 'N/m³' : undefined}
+              leftIcon={Droplets}
+              theme="blue"
+              secondaryValue={
+                isSimulating
+                  ? `Água: d_a = ${physics.upperFluidRelativeDensity.toFixed(2).replace('.', ',')} | Mercúrio: d_m = ${physics.lowerFluidRelativeDensity.toFixed(2).replace('.', ',')}`
+                  : 'Aguardando análise'
+              }
+            />
+
+            <ResultsCard
+              title={<>Empuxo da Água (<MathTex tex="E_{\text{água}}" />) e do Mercúrio (<MathTex tex="E_{\text{merc}}" />)</>}
+              value={
+                isSimulating
+                  ? `E_a = ${(physics.E_A / 1000).toFixed(2).replace('.', ',')} kN | E_m = ${(physics.E_B / 1000).toFixed(2).replace('.', ',')} kN`
+                  : '?'
+              }
+              leftIcon={Droplets}
+              icon={isSimulating ? ArrowUp : EyeOff}
+              theme="green"
+              secondaryValue={
+                isSimulating
+                  ? `E_água = ${physics.E_A.toFixed(1).replace('.', ',')} N (${((physics.E_A / physics.buoyancyForce) * 100).toFixed(1).replace('.', ',')}%) | E_mercúrio = ${physics.E_B.toFixed(1).replace('.', ',')} N (${((physics.E_B / physics.buoyancyForce) * 100).toFixed(1).replace('.', ',')}%)`
+                  : 'Aguardando análise'
+              }
+            />
+
+            <ResultsCard
+              title={
+                isSimulating ? (
+                  <>Equilíbrio Vertical (<MathTex tex="P = E_{\text{água}} + E_{\text{mercúrio}}" />)</>
+                ) : (
+                  <>Condição de Equilíbrio Vertical</>
+                )
+              }
+              value={
+                isSimulating
+                  ? `P = ${(physics.objectWeight / 1000).toFixed(2).replace('.', ',')} kN`
+                  : '?'
+              }
+              leftIcon={CheckCircle2}
+              theme="red"
+              badge={isSimulating ? 'ΣFy = 0' : undefined}
+              secondaryValue={
+                isSimulating
+                  ? `P = ${physics.objectWeight.toFixed(1).replace('.', ',')} N = E_água + E_mercúrio = ${physics.buoyancyForce.toFixed(1).replace('.', ',')} N`
+                  : 'Aguardando análise'
+              }
+            />
+          </>
+        ) : isFloatingMode ? (
+          <>
+            <ResultsCard
+              title={<>Peso da Lata (<MathTex tex="P" />)</>}
+              value={
+                isSimulating
+                  ? isValidFloating
+                    ? `${physics.objectWeight.toFixed(2).replace('.', ',')} N`
+                    : 'DADOS INVÁLIDOS'
+                  : 'PRONTO (?)'
+              }
+              highlight={true}
+              leftIcon={Weight}
+              highlightTheme={isSimulating ? (isValidFloating ? 'purple' : 'red') : 'slate'}
+              secondaryValue={
+                isSimulating
+                  ? isValidFloating
+                    ? `Resultado Principal | P = E = ${physics.objectWeight.toFixed(3).replace('.', ',')} N (m ≈ ${(physics.objectMass * 1000).toFixed(1).replace('.', ',')} g)`
+                    : 'Verifique as dimensões informadas'
+                  : 'Execute a análise para determinar o peso P'
+              }
+            />
+
+            <ResultsCard
+              title={<>Empuxo (<MathTex tex="E" />)</>}
+              value={isSimulating ? physics.buoyancyForce.toFixed(2).replace('.', ',') : '?'}
+              unit={isSimulating ? 'N' : ''}
+              secondaryValue={
+                isSimulating
+                  ? `E = γ_água · V_sub = ${physics.buoyancyForce.toFixed(3).replace('.', ',')} N`
+                  : 'Princípio de Arquimedes (E = γ · V_sub)'
+              }
+              leftIcon={Droplets}
+              icon={isSimulating ? ArrowUp : EyeOff}
+              theme="green"
+            />
+
+            <ResultsCard
+              title={<>Condição de Equilíbrio (<MathTex tex="P = E" />)</>}
+              value={isSimulating ? 'P = E (Flutuando)' : 'Equilíbrio Estático'}
+              leftIcon={CheckCircle2}
+              theme="blue"
+              badge="ΣFy = 0"
+              secondaryValue={
+                isSimulating
+                  ? `${physics.objectWeight.toFixed(2).replace('.', ',')} N = ${physics.buoyancyForce.toFixed(2).replace('.', ',')} N | Sem reação de fundo`
+                  : 'Flutuação livre: Peso próprio equilibra o Empuxo'
+              }
+            />
+
+            <ResultsCard
+              title={<>Volume Submerso (<MathTex tex="V_{sub}" />)</>}
+              value={isSimulating ? physics.vol_deslocado.toFixed(6).replace('.', ',') : '?'}
+              unit={isSimulating ? 'm³' : ''}
+              leftIcon={Box}
+              theme="cyan"
+              badge={`h_sub = ${physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm`}
+              secondaryValue={
+                isSimulating
+                  ? `${(physics.vol_deslocado * 1e6).toFixed(2).replace('.', ',')} cm³ (${(physics.vol_deslocado * 1000).toFixed(3).replace('.', ',')} L) | A = ${(physics.baseArea * 1e4).toFixed(2).replace('.', ',')} cm²`
+                  : `V_sub = A · h_sub`
+              }
+            />
+
+            <ResultsCard
+              title={<>Volume Total (<MathTex tex="V_{total}" />) e Emerso (<MathTex tex="V_{em}" />)</>}
+              value={isSimulating ? physics.volume.toFixed(6).replace('.', ',') : '?'}
+              unit={isSimulating ? 'm³' : ''}
+              leftIcon={Box}
+              theme="amber"
+              badge={`H = ${physics.totalHeightCm.toFixed(1).replace('.', ',')} cm`}
+              secondaryValue={
+                isSimulating
+                  ? `V_total = ${(physics.volume * 1e6).toFixed(2).replace('.', ',')} cm³ | V_em = ${physics.vol_emerso.toFixed(6).replace('.', ',')} m³ (${(physics.vol_emerso * 1e6).toFixed(2).replace('.', ',')} cm³)`
+                  : `h_em = ${physics.emergedHeightCm.toFixed(1).replace('.', ',')} cm acima da superfície livre`
+              }
+            />
+
+            <ResultsCard
+              title={<>Fração Submersa (<MathTex tex="h_{sub} / H" />)</>}
+              value={isSimulating ? `${physics.submergedPercentage.toFixed(2).replace('.', ',')}%` : '?'}
+              leftIcon={Ruler}
+              theme="purple"
+              secondaryValue={
+                isSimulating
+                  ? `h_sub = ${physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm | h_em = ${physics.emergedHeightCm.toFixed(1).replace('.', ',')} cm | ρ_eq ≈ ${physics.equivalentDensity.toFixed(1).replace('.', ',')} kg/m³`
+                  : `Razão submersa: ${physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm / ${physics.totalHeightCm.toFixed(1).replace('.', ',')} cm`
+              }
+            />
+          </>
+        ) : isInverseMode ? (
           <>
             <ResultsCard
               title={<>Peso Específico Médio (<MathTex tex="\gamma_c" />)</>}

@@ -168,8 +168,15 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
           const nextProfTopo = prev.comporta.apoioFundoLiso
             ? Math.max(0, prev.fluidoMontante.nivel - val * sinTheta)
             : prev.comporta.profundidadeTopo;
+          const nextNivelMontante = prev.comporta.articulacaoParedeVerticalA
+            ? parseFloat((nextProfTopo + val * sinTheta).toFixed(3))
+            : prev.fluidoMontante.nivel;
           return {
               ...prev,
+              fluidoMontante: {
+                  ...prev.fluidoMontante,
+                  nivel: nextNivelMontante,
+              },
               comporta: {
                   ...prev.comporta,
                   altura: val,
@@ -312,6 +319,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
                 hasTieRod={hasTieRod}
                 hasSmoothWallSupport={Boolean(hasSmoothWallSupport)}
                 hasSmoothFloorSupport={Boolean(comporta.apoioFundoLiso)}
+                hasVerticalWallHingeA={Boolean(comporta.articulacaoParedeVerticalA)}
                 tieRodPosRel={tieRodPosRel}
                 tieRodAngle={tieRodAngle}
                 gateWeight={gateWeight}
@@ -332,6 +340,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
           hasTieRod={hasTieRod}
           hasSmoothWallSupport={Boolean(hasSmoothWallSupport)}
           hasSmoothFloorSupport={Boolean(comporta.apoioFundoLiso)}
+          hasVerticalWallHingeA={Boolean(comporta.articulacaoParedeVerticalA)}
         />
       </div>
 

@@ -26,6 +26,7 @@ interface RenderizadorComportaProps {
   hasTieRod: boolean;
   hasSmoothWallSupport?: boolean;
   hasSmoothFloorSupport?: boolean;
+  hasVerticalWallHingeA?: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
   gateWeight?: number;

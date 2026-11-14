@@ -8,6 +8,7 @@ export enum PosicaoDobradica {
   NONE = 'NONE',
   TOP = 'TOP',
   BOTTOM = 'BOTTOM',
+  CENTER = 'CENTER',
 }
 
 export enum ModoPosicionamentoComporta {
@@ -40,6 +41,13 @@ export const FLUIDOS_PREDEFINIDOS: Record<string, FluidoInfo> = {
   agua: {
     nome: 'Água',
     densidade: 1000,
+    corPrimaria: '#3b82f6',
+    corSecundaria: '#2563eb',
+    corSuperficie: '#60a5fa',
+  },
+  agua980: {
+    nome: 'Água (γ = 9,80 kN/m³)',
+    densidade: Number((9800 / 9.81).toFixed(4)),
     corPrimaria: '#3b82f6',
     corSecundaria: '#2563eb',
     corSuperficie: '#60a5fa',

@@ -56,7 +56,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
           ...prev[target],
           chave,
           densidade: fluido.densidade,
-          pesoEspecifico: chave === 'aguaDoMar' ? 10054 : undefined,
+          pesoEspecifico: chave === 'aguaDoMar' ? 10054 : chave === 'agua980' ? 9800 : undefined,
         }
       };
     });
@@ -298,11 +298,15 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                   {config.comporta.forma === FormaComporta.RETANGULAR && (
                       <div className="grid grid-cols-2 gap-3">
                           <div>
-                              <label className={labelClass}>Altura/Comp. (m)</label>
+                              <label className={labelClass}>
+                                {config.comporta.articulacaoParedeVerticalA ? 'Comprimento L (m)' : 'Altura/Comp. (m)'}
+                              </label>
                               <NumberInput value={config.comporta.altura} onChange={props.handleHeightChange} min={0.1} max={props.maxGateHeight} step="any" />
                           </div>
                           <div>
-                              <label className={labelClass}>Largura (m)</label>
+                              <label className={labelClass}>
+                                {config.comporta.articulacaoParedeVerticalA ? 'Largura w (m)' : 'Largura (m)'}
+                              </label>
                               <NumberInput value={config.comporta.largura} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, largura: val}}))} min={0.1} max={100} step="any" />
                           </div>
                       </div>
@@ -427,15 +431,26 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                           </div>
                       ) : (
                           <div>
-                              <label className={labelClass}>Profundidade do Topo (h₁)</label>
+                              <label className={labelClass}>
+                                {config.comporta.articulacaoParedeVerticalA
+                                  ? 'Profundidade da Articulação A (D)'
+                                  : 'Profundidade do Topo (h₁)'}
+                              </label>
                               <NumberInput
                                 value={config.comporta.profundidadeTopo}
                                 onChange={(val: number) => setConfig(prev => {
                                   const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
                                   const ybarTotal = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
                                   const calculatedY_CG = val / Math.max(0.01, sinTheta) + ybarTotal;
+                                  const nextNivel = prev.comporta.articulacaoParedeVerticalA
+                                    ? parseFloat((val + prev.comporta.altura * sinTheta).toFixed(3))
+                                    : prev.fluidoMontante.nivel;
                                   return {
                                     ...prev,
+                                    fluidoMontante: {
+                                      ...prev.fluidoMontante,
+                                      nivel: nextNivel,
+                                    },
                                     comporta: {
                                       ...prev.comporta,
                                       profundidadeTopo: val,
@@ -444,7 +459,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                                   };
                                 })}
                                 min={0}
-                                max={config.fluidoMontante.nivel}
+                                max={config.comporta.articulacaoParedeVerticalA ? 20 : config.fluidoMontante.nivel}
                                 step="any"
                               />
                           </div>
@@ -462,8 +477,15 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                         } else if (prev.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && prev.comporta.y_cg_direto) {
                           h_topo = prev.comporta.y_cg_direto * sinTheta - ybarTotal * sinTheta;
                         }
+                        const nextNivel = prev.comporta.articulacaoParedeVerticalA
+                          ? parseFloat((h_topo + prev.comporta.altura * sinTheta).toFixed(3))
+                          : prev.fluidoMontante.nivel;
                         return {
                           ...prev,
+                          fluidoMontante: {
+                            ...prev.fluidoMontante,
+                            nivel: nextNivel,
+                          },
                           comporta: {
                             ...prev.comporta,
                             angulo: val,
@@ -481,16 +503,77 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       
                       <div className="space-y-4">
                           <div>
-                              <label className={labelClass}>Posição da Dobradiça</label>
+                              <label className={labelClass}>Posição da Dobradiça / Eixo de Rotação</label>
                               <select 
                                   value={config.comporta.posicaoDobradica} 
-                                  onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, posicaoDobradica: e.target.value as PosicaoDobradica}}))}
+                                  onChange={(e) => {
+                                    const pos = e.target.value as PosicaoDobradica;
+                                    setConfig(prev => ({
+                                      ...prev,
+                                      comporta: {
+                                        ...prev.comporta,
+                                        posicaoDobradica: pos,
+                                        eixoRotacaoCentral: pos === PosicaoDobradica.CENTER,
+                                      },
+                                    }));
+                                  }}
                                   className={selectClass}
                               >
                                   <option value={PosicaoDobradica.NONE}>Sem Dobradiça (Fixa)</option>
                                   <option value={PosicaoDobradica.TOP}>No Topo da Comporta</option>
                                   <option value={PosicaoDobradica.BOTTOM}>Na Base da Comporta</option>
+                                  <option value={PosicaoDobradica.CENTER}>No Eixo Central (Diâmetro Horizontal / CG)</option>
                               </select>
+
+                              {config.comporta.posicaoDobradica === PosicaoDobradica.CENTER && (
+                                <div className="mt-2 p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-800/50 space-y-2">
+                                  <div className="text-[10px] text-blue-900 dark:text-blue-200 leading-relaxed">
+                                    Eixo físico horizontal passando pelo <strong>centro da comporta (CG)</strong> ao longo de seu diâmetro horizontal.
+                                  </div>
+                                  <div>
+                                    <label className={labelClass}>Profundidade Vertical do Eixo h<sub>c</sub> (m)</label>
+                                    <NumberInput
+                                      value={parseFloat(
+                                        (
+                                          config.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO &&
+                                          config.comporta.y_cg_direto !== undefined
+                                            ? config.comporta.y_cg_direto *
+                                              Math.sin(((config.comporta.angulo || 90) * Math.PI) / 180)
+                                            : config.comporta.profundidadeTopo +
+                                              getGateYBarTotal(config.comporta.forma, config.comporta.altura) *
+                                                Math.sin(((config.comporta.angulo || 90) * Math.PI) / 180)
+                                        ).toFixed(2)
+                                      )}
+                                      min={0.5}
+                                      max={22}
+                                      step={0.1}
+                                      onChange={(hcVal: number) => {
+                                        setConfig(prev => {
+                                          const sinT = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                          const ybar = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
+                                          const hTopo = Math.max(0, hcVal - ybar * sinT);
+                                          const yCg = hcVal / Math.max(0.01, sinT);
+                                          const minWater = hcVal + ybar * sinT + 1.5;
+                                          return {
+                                            ...prev,
+                                            fluidoMontante: {
+                                              ...prev.fluidoMontante,
+                                              nivel: Math.max(prev.fluidoMontante.nivel, parseFloat(minWater.toFixed(2))),
+                                            },
+                                            comporta: {
+                                              ...prev.comporta,
+                                              modoPosicionamento: ModoPosicionamentoComporta.Y_CG_DIRETO,
+                                              y_cg_direto: parseFloat(yCg.toFixed(4)),
+                                              profundidadeEixo: hcVal,
+                                              profundidadeTopo: parseFloat(hTopo.toFixed(4)),
+                                            },
+                                          };
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
                           </div>
 
                           <div className="pt-2 border-t border-blue-50/50 dark:border-slate-800/60">

@@ -134,11 +134,11 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
 
               <ResultsCard
                 title="Centro de Pressão (Face AB)"
-                value={`h_CP = ${fd.up.h_cp.toFixed(2).replace('.', ',')}`}
-                unit="m"
+                value={`h_CP = ${fd.up.h_cp.toFixed(2).replace('.', ',')} m (hp)`}
+                unit=""
                 theme="cyan"
                 leftIcon={MoveVertical}
-                secondaryValue={`s_CP = ${fd.up.s_cp.toFixed(2).replace('.', ',')} m ao longo de AB (${apC.L_AB.toFixed(0)} m) | y_CP = ${fd.up.y_cp.toFixed(2).replace('.', ',')} m da base`}
+                secondaryValue={`yp (Inclinado) = ${fd.up.s_cp.toFixed(2).replace('.', ',')} m | Dist. ao Fundo = ${fd.up.y_cp.toFixed(2).replace('.', ',')} m`}
               />
 
               <ResultsCard
@@ -250,17 +250,17 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
 
             <ResultsCard
               title="Centro de Pressão (CP)"
-              value={fd ? fd.y_cp_net.toFixed(2) : '?'}
-              unit={fd ? 'm' : ''}
+              value={fd ? `${fd.up.h_cp.toFixed(2)} m` : '?'}
+              unit="hp"
               theme="cyan"
               leftIcon={MoveVertical}
               secondaryValue={
                 fd
                   ? hasDownWater
-                    ? `Mont: y=${fd.up.y_cp.toFixed(2)}m (h=${fd.up.h_cp.toFixed(2)}m) | Jus: s=${fd.down.s_cp.toFixed(2)}m (y=${fd.down.y_cp.toFixed(2)}m)`
+                    ? `Mont: yp=${fd.up.s_cp.toFixed(2)}m, hp=${fd.up.h_cp.toFixed(2)}m (Fundo: ${fd.up.y_cp.toFixed(2)}m) | Jus: yp=${fd.down.s_cp.toFixed(2)}m`
                     : mud
-                    ? `P' a ${mud.y_cp_water.toFixed(2)}m | P'' a ${mud.y_cp_mud.toFixed(2)}m | Total y=${fd.up.y_cp.toFixed(2)}m`
-                    : 'Altura vertical da resultante a partir do fundo'
+                    ? `P' a ${mud.y_cp_water.toFixed(2)}m | P'' a ${mud.y_cp_mud.toFixed(2)}m`
+                    : `yp (inclinado) = ${fd.up.s_cp.toFixed(2)}m | Dist. ao Fundo = ${fd.up.y_cp.toFixed(2)}m`
                   : undefined
               }
             />

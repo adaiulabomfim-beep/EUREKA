@@ -70,6 +70,27 @@ interface Vista2DProps {
   inverseSpecificWeightMode?: boolean;
   apparentWeight?: number;
 
+  floatingEquilibriumMode?: boolean;
+  cylinderDiameterCm?: number;
+  cylinderHeightCm?: number;
+  submergedHeightCm?: number;
+  emergedHeightCm?: number;
+
+  interfaceEquilibriumMode?: boolean;
+  heightA_cm?: number;
+  heightB_cm?: number;
+  ratioAtoB?: number;
+  E_A?: number;
+  E_B?: number;
+  bodyRelativeDensity?: number;
+  upperFluidRelativeDensity?: number;
+  lowerFluidRelativeDensity?: number;
+
+  anchoredBuoyMode?: boolean;
+  buoyDiameterM?: number;
+  buoyWeightKN?: number;
+  cableTensionN?: number;
+
   pan?: { x: number; y: number };
 }
 
@@ -187,6 +208,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   OBJECT_BORDER_COLOR,
   colorA,
   colorB,
+  selectedFluid,
   effectiveHB_px,
   hA_dynamic_px,
   showFBD = true,
@@ -205,6 +227,24 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   visualWidth2 = 0,
   inverseSpecificWeightMode = false,
   apparentWeight = 0,
+  floatingEquilibriumMode = false,
+  cylinderDiameterCm = 9,
+  cylinderHeightCm = 11,
+  submergedHeightCm = 8,
+  emergedHeightCm = 3,
+  interfaceEquilibriumMode = false,
+  heightA_cm = 40.91,
+  heightB_cm = 49.09,
+  ratioAtoB = 0.8336,
+  E_A = 0,
+  E_B = 0,
+  bodyRelativeDensity = 7.85,
+  upperFluidRelativeDensity = 1.0,
+  lowerFluidRelativeDensity = 13.56,
+  anchoredBuoyMode = false,
+  buoyDiameterM = 1.5,
+  buoyWeightKN = 8.5,
+  cableTensionN = 0,
 }) => {
   const clipId = useId().replace(/:/g, '');
   const clipUnderWaterId = `clip-under-water-${clipId}`;
@@ -623,14 +663,14 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       </g>
 
       {/* Cotas */}
-      {isSimulating && deltaH_cm > 0 && renderDimensionLine(
+      {!interfaceEquilibriumMode && !anchoredBuoyMode && isSimulating && deltaH_cm > 0 && renderDimensionLine(
         tankLeft - 20,
         fluidSurfaceY + pan.y,
         originalFluidSurfaceY + pan.y,
         `Δh = ${deltaH_cm.toFixed(2)}cm`,
         colorA
       )}
-      {enableTwoFluids ? (
+      {!interfaceEquilibriumMode && !anchoredBuoyMode && (enableTwoFluids ? (
         <>
           {renderDimensionLine(
             tankLeft - 20,
@@ -655,10 +695,10 @@ export const Vista2D: React.FC<Vista2DProps> = ({
           `hA = ${depthA.toFixed(1)}cm`,
           colorA
         )
-      )}
+      ))}
 
       {/* Cota horizontal da base do tanque */}
-      {tankWidth !== undefined && (
+      {!interfaceEquilibriumMode && !anchoredBuoyMode && tankWidth !== undefined && (
         <g>
           <line
             x1={tankLeft}
@@ -791,9 +831,557 @@ export const Vista2D: React.FC<Vista2DProps> = ({
         </g>
       )}
 
+      {/* Cotas geométricas da Lata Cilíndrica Flutuante (Problema 2.104) */}
+      {floatingEquilibriumMode && (() => {
+        const canLeft = cx - visualWidth / 2;
+        const canRight = cx + visualWidth / 2;
+        const canTop = cy;
+        const canBottom = cy + visualHeight;
+        const waterY = fluidSurfaceY + pan.y;
+        const dimXRight = canRight + 42;
+        const dimYTop = canTop - 28;
+        const fmtCm = (val: number) =>
+          Number.isInteger(val) ? `${val} cm` : `${val.toFixed(1).replace('.', ',')} cm`;
+
+        return (
+          <g pointerEvents="none">
+            {/* Aros metálicos superior e inferior da lata */}
+            <rect
+              x={canLeft - 1.5}
+              y={canTop - 1.5}
+              width={visualWidth + 3}
+              height={4}
+              rx={1.5}
+              fill="#cbd5e1"
+              stroke="#475569"
+              strokeWidth="1"
+            />
+            <rect
+              x={canLeft - 1.5}
+              y={canBottom - 2.5}
+              width={visualWidth + 3}
+              height={4}
+              rx={1.5}
+              fill="#94a3b8"
+              stroke="#475569"
+              strokeWidth="1"
+            />
+
+            {/* Indicador de superfície livre (∇) */}
+            <g transform={`translate(${canLeft - 38}, ${waterY})`}>
+              <polygon points="0,0 -7,-11 7,-11" fill="none" stroke="#0284c7" strokeWidth="1.5" />
+              <line x1="-9" y1="4" x2="9" y2="4" stroke="#0284c7" strokeWidth="1.3" />
+              <line x1="-5" y1="8" x2="5" y2="8" stroke="#0284c7" strokeWidth="1.1" />
+            </g>
+
+            {/* 1. Cota do Diâmetro (D = 9 cm) */}
+            <line x1={canLeft} y1={canTop - 3} x2={canLeft} y2={dimYTop - 6} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+            <line x1={canRight} y1={canTop - 3} x2={canRight} y2={dimYTop - 6} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+            <line x1={canLeft} y1={dimYTop} x2={canRight} y2={dimYTop} stroke="#1e293b" strokeWidth="1.4" />
+            <path d={`M${canLeft},${dimYTop} L${canLeft + 7},${dimYTop - 3.2} L${canLeft + 7},${dimYTop + 3.2} Z`} fill="#1e293b" />
+            <path d={`M${canRight},${dimYTop} L${canRight - 7},${dimYTop - 3.2} L${canRight - 7},${dimYTop + 3.2} Z`} fill="#1e293b" />
+            <g transform={`translate(${cx}, ${dimYTop - 14})`}>
+              <rect x="-38" y="-10" width="76" height="20" rx="5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" opacity="0.96" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0f172a" fontSize="11.5" fontWeight="bold" fontFamily="monospace">
+                {`D = ${fmtCm(cylinderDiameterCm)}`}
+              </text>
+            </g>
+
+            {/* 2. Cota da Altura Emersa (h_em = 3 cm) */}
+            {emergedHeightCm > 0.05 && Math.abs(waterY - canTop) > 10 && (
+              <>
+                <line x1={canRight + 4} y1={canTop} x2={dimXRight + 6} y2={canTop} stroke="#475569" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={canRight + 4} y1={waterY} x2={dimXRight + 6} y2={waterY} stroke="#0284c7" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={dimXRight} y1={canTop} x2={dimXRight} y2={waterY} stroke="#d97706" strokeWidth="1.4" />
+                <path d={`M${dimXRight},${canTop} L${dimXRight - 3.2},${canTop + 7} L${dimXRight + 3.2},${canTop + 7} Z`} fill="#d97706" />
+                <path d={`M${dimXRight},${waterY} L${dimXRight - 3.2},${waterY - 7} L${dimXRight + 3.2},${waterY - 7} Z`} fill="#d97706" />
+                <g transform={`translate(${dimXRight + 40}, ${(canTop + waterY) / 2})`}>
+                  <rect x="-32" y="-10" width="64" height="20" rx="5" fill="#fffbeb" stroke="#fcd34d" strokeWidth="1" opacity="0.96" />
+                  <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#b45309" fontSize="11.5" fontWeight="bold" fontFamily="monospace">
+                    {fmtCm(emergedHeightCm)}
+                  </text>
+                </g>
+              </>
+            )}
+
+            {/* 3. Cota da Altura Submersa (h_sub = 8 cm) */}
+            {submergedHeightCm > 0.05 && Math.abs(canBottom - waterY) > 12 && (
+              <>
+                <line x1={canRight + 4} y1={waterY} x2={dimXRight + 6} y2={waterY} stroke="#0284c7" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={canRight + 4} y1={canBottom} x2={dimXRight + 6} y2={canBottom} stroke="#475569" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={dimXRight} y1={waterY} x2={dimXRight} y2={canBottom} stroke="#0284c7" strokeWidth="1.4" />
+                <path d={`M${dimXRight},${waterY} L${dimXRight - 3.2},${waterY + 7} L${dimXRight + 3.2},${waterY + 7} Z`} fill="#0284c7" />
+                <path d={`M${dimXRight},${canBottom} L${dimXRight - 3.2},${canBottom - 7} L${dimXRight + 3.2},${canBottom - 7} Z`} fill="#0284c7" />
+                <g transform={`translate(${dimXRight + 40}, ${(waterY + canBottom) / 2})`}>
+                  <rect x="-32" y="-10" width="64" height="20" rx="5" fill="#f0f9ff" stroke="#7dd3fc" strokeWidth="1" opacity="0.96" />
+                  <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="11.5" fontWeight="bold" fontFamily="monospace">
+                    {fmtCm(submergedHeightCm)}
+                  </text>
+                </g>
+              </>
+            )}
+          </g>
+        );
+      })()}
+
+      {/* Cotas geométricas e identificação da Interface Água-Mercúrio (Problema 2.122) */}
+      {interfaceEquilibriumMode && (() => {
+        const blockLeft = cx - visualWidth / 2;
+        const blockRight = cx + visualWidth / 2;
+        const blockTop = cy;
+        const blockBottom = cy + visualHeight;
+        const interfaceY = fluidBTop;
+        const waterSurfaceY = fluidSurfaceY + pan.y;
+        const dimXRight = blockRight + 36;
+        const fmtRel = (v: number) => v.toFixed(2).replace('.', ',');
+
+        const midWaterLayerY = (waterSurfaceY + interfaceY) / 2;
+        const midMercuryLayerY = (interfaceY + (tankBottomY + pan.y)) / 2;
+        const midA = (blockTop + interfaceY) / 2;
+        const midB = (interfaceY + blockBottom) / 2;
+
+        return (
+          <g pointerEvents="none">
+            {/* Linha da interface Água-Mercúrio destacada */}
+            <line
+              x1={tankLeft}
+              y1={interfaceY}
+              x2={tankLeft + currentTankW}
+              y2={interfaceY}
+              stroke="#1e293b"
+              strokeWidth="2"
+              strokeDasharray="6,4"
+              opacity="0.85"
+            />
+            <line
+              x1={blockLeft}
+              y1={interfaceY}
+              x2={blockRight}
+              y2={interfaceY}
+              stroke="#f8fafc"
+              strokeWidth="1.6"
+              strokeDasharray="4,3"
+              opacity="0.9"
+            />
+
+            {/* Indicador da superfície livre da água (∇) */}
+            <g transform={`translate(${tankLeft + 34}, ${waterSurfaceY})`}>
+              <polygon points="0,0 -6,-10 6,-10" fill="none" stroke="#0284c7" strokeWidth="1.5" />
+              <line x1="-8" y1="3.5" x2="8" y2="3.5" stroke="#0284c7" strokeWidth="1.2" />
+              <line x1="-4.5" y1="7" x2="4.5" y2="7" stroke="#0284c7" strokeWidth="1" />
+            </g>
+
+            {/* Identificação do Fluido Superior (Água, d = 1,00) */}
+            <g transform={`translate(${tankLeft + 74}, ${midWaterLayerY})`}>
+              <rect x="-58" y="-18" width="116" height="36" rx="8" fill="#f0f9ff" stroke="#38bdf8" strokeWidth="1.2" opacity="0.95" />
+              <text x="0" y="-4" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="11" fontWeight="bold">
+                Água (Superior)
+              </text>
+              <text x="0" y="9" textAnchor="middle" dominantBaseline="central" fill="#0284c7" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                {`d = ${fmtRel(upperFluidRelativeDensity)}`}
+              </text>
+            </g>
+
+            {/* Identificação do Fluido Inferior (Mercúrio, d = 13,56) */}
+            <g transform={`translate(${tankLeft + 74}, ${midMercuryLayerY})`}>
+              <rect x="-58" y="-18" width="116" height="36" rx="8" fill="#f8fafc" stroke="#64748b" strokeWidth="1.2" opacity="0.95" />
+              <text x="0" y="-4" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="11" fontWeight="bold">
+                Mercúrio (Inferior)
+              </text>
+              <text x="0" y="9" textAnchor="middle" dominantBaseline="central" fill="#475569" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                {`d = ${fmtRel(lowerFluidRelativeDensity)}`}
+              </text>
+            </g>
+
+            {/* Rótulo do Bloco de Aço */}
+            <g transform={`translate(${cx}, ${blockTop - 16})`}>
+              <rect x="-66" y="-10" width="132" height="20" rx="6" fill="#1e293b" stroke="#94a3b8" strokeWidth="1" opacity="0.94" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#f8fafc" fontSize="10.5" fontWeight="bold">
+                {`Aço (d = ${fmtRel(bodyRelativeDensity)})`}
+              </text>
+            </g>
+
+            {/* 1. Cota da altura 'a' na água (acima da interface) */}
+            {Math.abs(interfaceY - blockTop) > 10 && (
+              <>
+                <line x1={blockRight + 4} y1={blockTop} x2={dimXRight + 6} y2={blockTop} stroke="#0284c7" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={blockRight + 4} y1={interfaceY} x2={dimXRight + 6} y2={interfaceY} stroke="#1e293b" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={dimXRight} y1={blockTop} x2={dimXRight} y2={interfaceY} stroke="#0284c7" strokeWidth="1.6" />
+                <path d={`M${dimXRight},${blockTop} L${dimXRight - 3.4},${blockTop + 7} L${dimXRight + 3.4},${blockTop + 7} Z`} fill="#0284c7" />
+                <path d={`M${dimXRight},${interfaceY} L${dimXRight - 3.4},${interfaceY - 7} L${dimXRight + 3.4},${interfaceY - 7} Z`} fill="#0284c7" />
+                {isSimulating ? (
+                  <g transform={`translate(${dimXRight + 54}, ${midA})`}>
+                    <rect x="-46" y="-14" width="92" height="28" rx="6" fill="#f0f9ff" stroke="#38bdf8" strokeWidth="1.2" opacity="0.96" />
+                    <text x="0" y="-4" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                      {`a = ${heightA_cm.toFixed(1).replace('.', ',')} cm`}
+                    </text>
+                    <text x="0" y="8" textAnchor="middle" dominantBaseline="central" fill="#0284c7" fontSize="9.5" fontWeight="bold" fontFamily="monospace">
+                      {`${((heightA_cm / Math.max(0.01, heightA_cm + heightB_cm)) * 100).toFixed(1).replace('.', ',')}% de H`}
+                    </text>
+                  </g>
+                ) : (
+                  <g transform={`translate(${dimXRight + 24}, ${midA})`}>
+                    <rect x="-14" y="-11" width="28" height="22" rx="6" fill="#f0f9ff" stroke="#38bdf8" strokeWidth="1.2" opacity="0.96" />
+                    <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="12" fontWeight="bold" fontFamily="monospace">
+                      a
+                    </text>
+                  </g>
+                )}
+              </>
+            )}
+
+            {/* 2. Cota da altura 'b' no mercúrio (abaixo da interface) */}
+            {Math.abs(blockBottom - interfaceY) > 10 && (
+              <>
+                <line x1={blockRight + 4} y1={interfaceY} x2={dimXRight + 6} y2={interfaceY} stroke="#1e293b" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={blockRight + 4} y1={blockBottom} x2={dimXRight + 6} y2={blockBottom} stroke="#475569" strokeWidth="1" strokeDasharray="3,2" />
+                <line x1={dimXRight} y1={interfaceY} x2={dimXRight} y2={blockBottom} stroke="#334155" strokeWidth="1.6" />
+                <path d={`M${dimXRight},${interfaceY} L${dimXRight - 3.4},${interfaceY + 7} L${dimXRight + 3.4},${interfaceY + 7} Z`} fill="#334155" />
+                <path d={`M${dimXRight},${blockBottom} L${dimXRight - 3.4},${blockBottom - 7} L${dimXRight + 3.4},${blockBottom - 7} Z`} fill="#334155" />
+                {isSimulating ? (
+                  <g transform={`translate(${dimXRight + 54}, ${midB})`}>
+                    <rect x="-46" y="-14" width="92" height="28" rx="6" fill="#f8fafc" stroke="#64748b" strokeWidth="1.2" opacity="0.96" />
+                    <text x="0" y="-4" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                      {`b = ${heightB_cm.toFixed(1).replace('.', ',')} cm`}
+                    </text>
+                    <text x="0" y="8" textAnchor="middle" dominantBaseline="central" fill="#475569" fontSize="9.5" fontWeight="bold" fontFamily="monospace">
+                      {`${((heightB_cm / Math.max(0.01, heightA_cm + heightB_cm)) * 100).toFixed(1).replace('.', ',')}% de H`}
+                    </text>
+                  </g>
+                ) : (
+                  <g transform={`translate(${dimXRight + 24}, ${midB})`}>
+                    <rect x="-14" y="-11" width="28" height="22" rx="6" fill="#f8fafc" stroke="#64748b" strokeWidth="1.2" opacity="0.96" />
+                    <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="12" fontWeight="bold" fontFamily="monospace">
+                      b
+                    </text>
+                  </g>
+                )}
+              </>
+            )}
+
+            {/* 3. Destaque da Razão a/b e Equilíbrio — exibido somente após clicar em ANALISAR */}
+            {isSimulating && (
+              <g transform={`translate(${tankLeft + currentTankW / 2}, ${tankBottomY + pan.y + 46})`}>
+                <rect x="-175" y="-11" width="350" height="22" rx="11" fill="#eff6ff" stroke="#93c5fd" strokeWidth="1.2" opacity="0.98" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e3a8a" fontSize="10.5" fontWeight="bold" fontFamily="monospace">
+                  {`Equilíbrio: P = E_água + E_mercúrio  |  Razão a / b = ${ratioAtoB.toFixed(3).replace('.', ',')}`}
+                </text>
+              </g>
+            )}
+          </g>
+        );
+      })()}
+
+      {/* Boia Esférica Submersa Ancorada por Cabo (Exemplo 2.10) */}
+      {anchoredBuoyMode && (() => {
+        const sphereLeft = cx - visualWidth / 2;
+        const sphereRight = cx + visualWidth / 2;
+        const sphereTop = cy;
+        const sphereBottom = cy + visualHeight;
+        const sphereCenterY = cy + visualHeight / 2;
+        const floorY = tankBottomY + pan.y;
+        const waterSurfaceY = fluidSurfaceY + pan.y;
+        const dimXRight = sphereRight + 34;
+
+        return (
+          <g pointerEvents="none">
+            {/* Indicador da superfície livre da água do mar (∇) */}
+            <g transform={`translate(${tankLeft + 34}, ${waterSurfaceY})`}>
+              <polygon points="0,0 -6,-10 6,-10" fill="none" stroke="#0284c7" strokeWidth="1.5" />
+              <line x1="-8" y1="3.5" x2="8" y2="3.5" stroke="#0284c7" strokeWidth="1.2" />
+              <line x1="-4.5" y1="7" x2="4.5" y2="7" stroke="#0284c7" strokeWidth="1" />
+            </g>
+
+            {/* Identificação do fluido: Água do Mar */}
+            <g transform={`translate(${tankLeft + 68}, ${waterSurfaceY + 28})`}>
+              <rect x="-54" y="-12" width="108" height="24" rx="6" fill="#f0f9ff" stroke="#38bdf8" strokeWidth="1.1" opacity="0.95" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="10.5" fontWeight="bold">
+                {selectedFluid}
+              </text>
+            </g>
+
+            {/* Cabo vertical de ancoragem entre a base da boia e o fundo do mar */}
+            <line
+              x1={cx}
+              y1={sphereBottom}
+              x2={cx}
+              y2={floorY - 6}
+              stroke="#1e293b"
+              strokeWidth="2.8"
+            />
+            <line
+              x1={cx}
+              y1={sphereBottom}
+              x2={cx}
+              y2={floorY - 6}
+              stroke="#94a3b8"
+              strokeWidth="1"
+              strokeDasharray="3,3"
+            />
+            {/* Olhal de conexão na base da boia */}
+            <circle cx={cx} cy={sphereBottom} r={4} fill="#334155" stroke="#f8fafc" strokeWidth="1.2" />
+
+            {/* Base de ancoragem no fundo do mar */}
+            <rect x={cx - 16} y={floorY - 6} width={32} height={6} rx="2" fill="#334155" stroke="#0f172a" strokeWidth="1" />
+            <circle cx={cx} cy={floorY - 6} r={3.5} fill="#475569" stroke="#f8fafc" strokeWidth="1" />
+
+            {/* Rótulo de identificação do cabo */}
+            <g transform={`translate(${cx - 64}, ${(sphereBottom + floorY) / 2})`}>
+              <rect x="-46" y="-10" width="92" height="20" rx="5" fill="#f8fafc" stroke="#94a3b8" strokeWidth="1" opacity="0.94" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#334155" fontSize="9.5" fontWeight="bold">
+                Cabo de Ancoragem
+              </text>
+              <line x1="46" y1="0" x2="62" y2="0" stroke="#64748b" strokeWidth="1" strokeDasharray="2,2" />
+            </g>
+
+            {/* Cota do Diâmetro da Esfera (D = 1,50 m) */}
+            <line x1={cx} y1={sphereTop} x2={dimXRight + 6} y2={sphereTop} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+            <line x1={cx} y1={sphereBottom} x2={dimXRight + 6} y2={sphereBottom} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+            <line x1={dimXRight} y1={sphereTop} x2={dimXRight} y2={sphereBottom} stroke="#1e293b" strokeWidth="1.6" />
+            <path d={`M${dimXRight},${sphereTop} L${dimXRight - 3.4},${sphereTop + 7} L${dimXRight + 3.4},${sphereTop + 7} Z`} fill="#1e293b" />
+            <path d={`M${dimXRight},${sphereBottom} L${dimXRight - 3.4},${sphereBottom - 7} L${dimXRight + 3.4},${sphereBottom - 7} Z`} fill="#1e293b" />
+            <g transform={`translate(${dimXRight + 48}, ${sphereCenterY})`}>
+              <rect x="-42" y="-12" width="84" height="24" rx="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.2" opacity="0.96" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0f172a" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                {`D = ${buoyDiameterM.toFixed(2).replace('.', ',')} m`}
+              </text>
+            </g>
+
+            {/* Identificação do CG e CE coincidentes no centro da esfera */}
+            <circle cx={cx} cy={sphereCenterY} r={4.5} fill="#0f172a" stroke="#ffffff" strokeWidth="1.5" />
+            <g transform={`translate(${sphereLeft - 38}, ${sphereCenterY})`}>
+              <rect x="-32" y="-10" width="64" height="20" rx="5" fill="#ffffff" stroke="#94a3b8" strokeWidth="1" opacity="0.95" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="9.5" fontWeight="bold">
+                CG ≡ CE
+              </text>
+              <line x1="32" y1="0" x2={38 + visualWidth / 2 - 6} y2="0" stroke="#475569" strokeWidth="1" strokeDasharray="2,2" />
+            </g>
+
+            {/* Faixa de resultado de equilíbrio — exibida somente após clicar em ANALISAR */}
+            {isSimulating && (
+              <g transform={`translate(${tankLeft + currentTankW / 2}, ${tankBottomY + pan.y + 46})`}>
+                <rect x="-180" y="-11" width="360" height="22" rx="11" fill="#eff6ff" stroke="#93c5fd" strokeWidth="1.2" opacity="0.98" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e3a8a" fontSize="10.5" fontWeight="bold" fontFamily="monospace">
+                  {`Equilíbrio: E = W + T  |  Tração no cabo T = ${(cableTensionN / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+            )}
+          </g>
+        );
+      })()}
+
       {/* Vetores (renderizados no topo para nunca ficarem encobertos) */}
       {showFBD && (
-        inverseSpecificWeightMode ? (() => {
+        anchoredBuoyMode ? (isSimulating ? (() => {
+          const sphereCenterY = cy + visualHeight / 2;
+          const sphereBottom = cy + visualHeight;
+          const xOff = Math.min(20, Math.max(12, visualWidth * 0.16));
+          const wX = cx - xOff;
+          const eX = cx + xOff;
+          const tX = cx + 10;
+
+          const eLen = 72;
+          const wLen = 46;
+          const tLen = 50;
+
+          return (
+            <g pointerEvents="none">
+              {/* 1. Empuxo E (apontando para cima a partir do CE) */}
+              <circle cx={eX} cy={sphereCenterY} r={4} fill="#16a34a" stroke="#ffffff" strokeWidth="1.4" />
+              <line
+                x1={eX}
+                y1={sphereCenterY}
+                x2={eX}
+                y2={sphereCenterY - eLen}
+                stroke="#16a34a"
+                strokeWidth="3.2"
+                markerEnd={`url(#${arrowGreenId})`}
+              />
+              <g transform={`translate(${eX + 46}, ${sphereCenterY - eLen - 12})`}>
+                <rect x="-48" y="-11" width="96" height="22" rx="6" fill="#ffffff" stroke="#86efac" strokeWidth="1.2" opacity="0.96" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10.5" fontWeight="bold">
+                  {`E = ${(buoyancyForce / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              {/* 2. Peso próprio W (apontando para baixo a partir do CG) */}
+              <circle cx={wX} cy={sphereCenterY} r={4} fill="#ef4444" stroke="#ffffff" strokeWidth="1.4" />
+              <line
+                x1={wX}
+                y1={sphereCenterY}
+                x2={wX}
+                y2={sphereCenterY + wLen}
+                stroke="#ef4444"
+                strokeWidth="3.2"
+                markerEnd={`url(#${arrowRedId})`}
+              />
+              <g transform={`translate(${wX - 52}, ${sphereCenterY + wLen + 10})`}>
+                <rect x="-46" y="-11" width="92" height="22" rx="6" fill="#ffffff" stroke="#fca5a5" strokeWidth="1.2" opacity="0.96" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10.5" fontWeight="bold">
+                  {`W = ${buoyWeightKN.toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              {/* 3. Tração T no cabo (apontando para baixo no ponto de conexão do cabo com a boia) */}
+              <circle cx={tX} cy={sphereBottom} r={4} fill="#2563eb" stroke="#ffffff" strokeWidth="1.4" />
+              <line
+                x1={tX}
+                y1={sphereBottom}
+                x2={tX}
+                y2={sphereBottom + tLen}
+                stroke="#2563eb"
+                strokeWidth="3.2"
+                markerEnd={`url(#${arrowBlueId})`}
+              />
+              <g transform={`translate(${tX + 54}, ${sphereBottom + tLen * 0.65})`}>
+                <rect x="-46" y="-11" width="92" height="22" rx="6" fill="#ffffff" stroke="#93c5fd" strokeWidth="1.2" opacity="0.96" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1d4ed8" fontSize="10.5" fontWeight="bold">
+                  {`T = ${(cableTensionN / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+            </g>
+          );
+        })() : null) : interfaceEquilibriumMode ? (isSimulating ? (() => {
+          const blockTop = cy;
+          const blockBottom = cy + visualHeight;
+          const interfaceY = fluidBTop;
+          const cgY = (blockTop + blockBottom) / 2;
+          const ceWaterY = (blockTop + interfaceY) / 2;
+          const ceMercY = (interfaceY + blockBottom) / 2;
+
+          const pX = cx - Math.min(22, Math.max(12, visualWidth * 0.22));
+          const eWaterX = cx + Math.min(22, Math.max(12, visualWidth * 0.22));
+          const eMercX = cx + Math.min(8, Math.max(4, visualWidth * 0.06));
+
+          const pLen = 62;
+          const eWaterLen = 46;
+          const eMercLen = 64;
+
+          return (
+            <g pointerEvents="none">
+              {/* 1. Peso do bloco (P) atuando verticalmente para baixo */}
+              <circle cx={pX} cy={cgY} r={4} fill="#ef4444" stroke="#ffffff" strokeWidth="1.4" />
+              <line
+                x1={pX}
+                y1={cgY}
+                x2={pX}
+                y2={cgY + pLen}
+                stroke="#ef4444"
+                strokeWidth="3"
+                markerEnd={`url(#${arrowRedId})`}
+              />
+              <g transform={`translate(${pX - 50}, ${cgY + pLen + 10})`}>
+                <rect x="-46" y="-11" width="92" height="22" rx="6" fill="#ffffff" stroke="#fca5a5" strokeWidth="1.2" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10" fontWeight="bold">
+                  {`P = ${(objectWeight / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              {/* 2. Empuxo da água (E_água) atuando verticalmente para cima */}
+              <circle cx={eWaterX} cy={ceWaterY} r={4} fill="#2563eb" stroke="#ffffff" strokeWidth="1.4" />
+              <line
+                x1={eWaterX}
+                y1={ceWaterY}
+                x2={eWaterX}
+                y2={ceWaterY - eWaterLen}
+                stroke="#2563eb"
+                strokeWidth="3"
+                markerEnd={`url(#${arrowBlueId})`}
+              />
+              <g transform={`translate(${eWaterX + 46}, ${ceWaterY - eWaterLen - 10})`}>
+                <rect x="-50" y="-11" width="100" height="22" rx="6" fill="#ffffff" stroke="#93c5fd" strokeWidth="1.2" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1d4ed8" fontSize="10" fontWeight="bold">
+                  {`E_água = ${(E_A / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              {/* 3. Empuxo do mercúrio (E_mercúrio) atuando verticalmente para cima */}
+              <circle cx={eMercX} cy={ceMercY} r={4} fill="#16a34a" stroke="#ffffff" strokeWidth="1.4" />
+              <line
+                x1={eMercX}
+                y1={ceMercY}
+                x2={eMercX}
+                y2={ceMercY - eMercLen}
+                stroke="#16a34a"
+                strokeWidth="3"
+                markerEnd={`url(#${arrowGreenId})`}
+              />
+              <g transform={`translate(${eMercX + 54}, ${ceMercY - eMercLen + 8})`}>
+                <rect x="-54" y="-11" width="108" height="22" rx="6" fill="#ffffff" stroke="#86efac" strokeWidth="1.2" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10" fontWeight="bold">
+                  {`E_merc = ${(E_B / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+            </g>
+          );
+        })() : null) : floatingEquilibriumMode ? (() => {
+          const cgY = centerOfMass.y;
+          const ceY = centerOfBuoyancy.y;
+          const vecLen = 68;
+          const xOff = Math.min(20, Math.max(12, visualWidth * 0.16));
+          const pX = cx - xOff;
+          const eX = cx + xOff;
+
+          return (
+            <g pointerEvents="none">
+              {/* Centro de Gravidade (CG) e Vetor Peso Próprio (P) apontando para baixo */}
+              <circle cx={pX} cy={cgY} r={4.5} fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
+              <g transform={`translate(${pX - 22}, ${cgY})`}>
+                <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#fef2f2" stroke="#fca5a5" strokeWidth="1" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#b91c1c" fontSize="9.5" fontWeight="bold">
+                  CG
+                </text>
+              </g>
+              <line
+                x1={pX}
+                y1={cgY}
+                x2={pX}
+                y2={cgY + vecLen}
+                stroke="#ef4444"
+                strokeWidth="3"
+                markerEnd={`url(#${arrowRedId})`}
+              />
+              <g transform={`translate(${pX - 52}, ${cgY + vecLen + 14})`}>
+                <rect x="-46" y="-11" width="92" height="22" fill="#ffffff" opacity="0.95" stroke="#fca5a5" strokeWidth="1.2" rx="6" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10.5" fontWeight="bold">
+                  {isSimulating
+                    ? `P = ${objectWeight.toFixed(2).replace('.', ',')} N`
+                    : 'P = ?'}
+                </text>
+              </g>
+
+              {/* Centro de Empuxo (CE) e Vetor Empuxo (E) apontando para cima */}
+              {showCenterOfBuoyancy && (
+                <>
+                  <circle cx={eX} cy={ceY} r={4.5} fill="#16a34a" stroke="#ffffff" strokeWidth="1.5" />
+                  <g transform={`translate(${eX + 22}, ${ceY})`}>
+                    <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#f0fdf4" stroke="#86efac" strokeWidth="1" opacity="0.95" />
+                    <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="9.5" fontWeight="bold">
+                      CE
+                    </text>
+                  </g>
+                </>
+              )}
+              <line
+                x1={eX}
+                y1={ceY}
+                x2={eX}
+                y2={ceY - vecLen}
+                stroke="#16a34a"
+                strokeWidth="3"
+                markerEnd={`url(#${arrowGreenId})`}
+              />
+              <g transform={`translate(${eX + 52}, ${ceY - vecLen - 14})`}>
+                <rect x="-46" y="-11" width="92" height="22" fill="#ffffff" opacity="0.95" stroke="#86efac" strokeWidth="1.2" rx="6" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10.5" fontWeight="bold">
+                  {isSimulating
+                    ? `E = ${buoyancyForce.toFixed(2).replace('.', ',')} N`
+                    : 'E = γ · Vsub'}
+                </text>
+              </g>
+            </g>
+          );
+        })() : inverseSpecificWeightMode ? (() => {
           const baseLen = 78;
           const pLen = objectWeight > 0 ? baseLen : 0;
           const eLen = objectWeight > 0 ? Math.max(18, baseLen * (buoyancyForce / objectWeight)) : 0;

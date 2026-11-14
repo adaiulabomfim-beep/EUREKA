@@ -293,15 +293,42 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       dims.push(drawLevelSymbol('downstreamLevel', xBase, downstreamLevel, `NA=${downstreamLevel.toFixed(2)}`, true, SVG_W - 28));
     }
 
-    if (isAnalyzed && force !== 0 && y_cp > 0) {
-      const xBase = toWorldX(getDamXAtY(0, 'UPSTREAM'));
+    if (isAnalyzed && up && up.FR > 0) {
+      const xTop = getDamXAtY(upstreamLevel, 'UPSTREAM');
+      const xCP = getDamXAtY(up.y_cp, 'UPSTREAM');
+      const isVertical = Math.abs(inclinationAngle - 90) < 0.1;
+
       dims.push(
         drawDim(
-          'yp',
-          { x: xBase, y: 0 },
-          { x: xBase, y: y_cp },
-          `Yp=${y_cp.toFixed(2)}m`,
+          'hp',
+          { x: xTop, y: upstreamLevel },
+          { x: xTop, y: up.y_cp },
+          `HP = ${up.h_cp.toFixed(2)}m`,
           { x: -120, y: 0 },
+          { x: -40, y: 0 }
+        )
+      );
+
+      if (!isVertical) {
+        dims.push(
+          drawDim(
+            'yp',
+            { x: xTop, y: upstreamLevel },
+            { x: xCP, y: up.y_cp },
+            `YP = ${up.s_cp.toFixed(2)}m`,
+            { x: -55, y: 0 },
+            { x: -40, y: 0 }
+          )
+        );
+      }
+
+      dims.push(
+        drawDim(
+          'distFundo',
+          { x: xTop - 2, y: 0 },
+          { x: xTop - 2, y: up.y_cp },
+          `Fundo = ${up.y_cp.toFixed(2)}m`,
+          { x: -180, y: 0 },
           { x: -40, y: 0 }
         )
       );

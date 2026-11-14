@@ -80,6 +80,13 @@ export interface ResultadoSimulacaoComporta {
     R_hinge?: number;
     deltaX_BA?: number;
     deltaY_BA?: number;
+    eixoCentralAtivo?: boolean;
+    articulacaoParedeVerticalA?: boolean;
+    excentricidadeEixo?: number;
+    M_hidrostatico_eixo?: number;
+    M_abertura_eixo?: number;
+    sentidoMomentoHidrostatico?: string;
+    sentidoMomentoAbertura?: string;
   };
   operacao?: CondicaoOperacionalResultado;
   hidraulica?: ComportamentoHidraulicoResultado;

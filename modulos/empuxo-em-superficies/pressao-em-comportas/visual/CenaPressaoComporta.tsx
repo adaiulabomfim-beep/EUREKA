@@ -25,6 +25,7 @@ interface CenaProps {
   hasTieRod: boolean;
   hasSmoothWallSupport?: boolean;
   hasSmoothFloorSupport?: boolean;
+  hasVerticalWallHingeA?: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
   gateWeight: number;
@@ -42,6 +43,12 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
   const [is3D, setIs3D] = useState(false);
   const [isFrontalView, setIsFrontalView] = useState(false);
   const [showVectors, setShowVectors] = useState(true);
+
+  React.useEffect(() => {
+    if (props.hingePosition === PosicaoDobradica.CENTER) {
+      setIsFrontalView(true);
+    }
+  }, [props.hingePosition]);
 
   const handleCalculate = () => {
     setShowVectors(true);

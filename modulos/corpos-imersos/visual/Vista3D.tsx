@@ -66,6 +66,24 @@ interface Vista3DProps {
   inverseSpecificWeightMode?: boolean;
   apparentWeight?: number;
   vol_deslocado?: number;
+  floatingEquilibriumMode?: boolean;
+  cylinderDiameterCm?: number;
+  cylinderHeightCm?: number;
+  submergedHeightCm?: number;
+  emergedHeightCm?: number;
+  interfaceEquilibriumMode?: boolean;
+  heightA_cm?: number;
+  heightB_cm?: number;
+  ratioAtoB?: number;
+  E_A?: number;
+  E_B?: number;
+  bodyRelativeDensity?: number;
+  upperFluidRelativeDensity?: number;
+  lowerFluidRelativeDensity?: number;
+  anchoredBuoyMode?: boolean;
+  buoyDiameterM?: number;
+  buoyWeightKN?: number;
+  cableTensionN?: number;
 }
 
 type FaceDef = {
@@ -116,6 +134,24 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   inverseSpecificWeightMode = false,
   apparentWeight = 0,
   vol_deslocado = 0,
+  floatingEquilibriumMode = false,
+  cylinderDiameterCm = 9,
+  cylinderHeightCm = 11,
+  submergedHeightCm = 8,
+  emergedHeightCm = 3,
+  interfaceEquilibriumMode = false,
+  heightA_cm = 40.91,
+  heightB_cm = 49.09,
+  ratioAtoB = 0.8336,
+  E_A = 0,
+  E_B = 0,
+  bodyRelativeDensity = 7.85,
+  upperFluidRelativeDensity = 1.0,
+  lowerFluidRelativeDensity = 13.56,
+  anchoredBuoyMode = false,
+  buoyDiameterM = 1.5,
+  buoyWeightKN = 8.5,
+  cableTensionN = 0,
 }) => {
   // câmera do 3D
   const [rotX, setRotX] = useState<number>(15);
@@ -618,6 +654,314 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   };
 
   const Vectors = () => {
+    if (anchoredBuoyMode) {
+      const topCenter = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+      const botCenter = project(0, tankBottomY - objBottomDistFromTankBottom, 0);
+      const floorCenter = project(0, tankBottomY, 0);
+      const cgPt = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);
+      const topRight = project(
+        visualWidth / 2,
+        tankBottomY - (objBottomDistFromTankBottom + visualHeight),
+        0
+      );
+      const dimXRight = Math.max(topRight.x, cgPt.x + visualWidth / 2) + 38;
+      const wX = cgPt.x - 16;
+      const eX = cgPt.x + 16;
+      const tX = botCenter.x + 8;
+
+      return (
+        <g pointerEvents="none">
+          {/* Cabo de ancoragem vertical até o fundo */}
+          <line x1={botCenter.x} y1={botCenter.y} x2={floorCenter.x} y2={floorCenter.y - 4} stroke="#1e293b" strokeWidth="2.8" />
+          <circle cx={botCenter.x} cy={botCenter.y} r={3.5} fill="#334155" stroke="#ffffff" strokeWidth="1" />
+          <rect x={floorCenter.x - 14} y={floorCenter.y - 5} width={28} height={5} rx="2" fill="#334155" />
+
+          {/* Rótulo do cabo */}
+          <g transform={`translate(${botCenter.x - 62}, ${(botCenter.y + floorCenter.y) / 2})`}>
+            <rect x="-46" y="-10" width="92" height="20" rx="5" fill="#f8fafc" stroke="#94a3b8" strokeWidth="1" opacity="0.94" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#334155" fontSize="9.5" fontWeight="bold">
+              Cabo de Ancoragem
+            </text>
+          </g>
+
+          {/* Cota D = 1,50 m */}
+          <line x1={topCenter.x} y1={topCenter.y} x2={dimXRight} y2={topCenter.y} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={botCenter.x} y1={botCenter.y} x2={dimXRight} y2={botCenter.y} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={dimXRight} y1={topCenter.y} x2={dimXRight} y2={botCenter.y} stroke="#1e293b" strokeWidth="1.5" />
+          <g transform={`translate(${dimXRight + 46}, ${cgPt.y})`}>
+            <rect x="-42" y="-11" width="84" height="22" rx="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" opacity="0.95" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0f172a" fontSize="10.5" fontWeight="bold" fontFamily="monospace">
+              {`D = ${buoyDiameterM.toFixed(2).replace('.', ',')} m`}
+            </text>
+          </g>
+
+          {/* CG ≡ CE */}
+          <circle cx={cgPt.x} cy={cgPt.y} r={4} fill="#0f172a" stroke="#ffffff" strokeWidth="1.4" />
+          <g transform={`translate(${cgPt.x - visualWidth / 2 - 38}, ${cgPt.y})`}>
+            <rect x="-32" y="-10" width="64" height="20" rx="5" fill="#ffffff" stroke="#94a3b8" strokeWidth="1" opacity="0.94" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="9.5" fontWeight="bold">
+              CG ≡ CE
+            </text>
+          </g>
+
+          {isSimulating && showFBD && (
+            <>
+              <circle cx={eX} cy={cgPt.y} r={4} fill="#16a34a" stroke="#ffffff" strokeWidth="1.4" />
+              <line x1={eX} y1={cgPt.y} x2={eX} y2={cgPt.y - 68} stroke="#16a34a" strokeWidth="3" markerEnd="url(#arrow-green-3d)" />
+              <g transform={`translate(${eX + 46}, ${cgPt.y - 78})`}>
+                <rect x="-48" y="-10" width="96" height="20" rx="6" fill="#ffffff" stroke="#86efac" strokeWidth="1" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10" fontWeight="bold">
+                  {`E = ${(buoyancyForce / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              <circle cx={wX} cy={cgPt.y} r={4} fill="#ef4444" stroke="#ffffff" strokeWidth="1.4" />
+              <line x1={wX} y1={cgPt.y} x2={wX} y2={cgPt.y + 44} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow-red-3d)" />
+              <g transform={`translate(${wX - 50}, ${cgPt.y + 54})`}>
+                <rect x="-46" y="-10" width="92" height="20" rx="6" fill="#ffffff" stroke="#fca5a5" strokeWidth="1" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10" fontWeight="bold">
+                  {`W = ${buoyWeightKN.toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              <circle cx={tX} cy={botCenter.y} r={4} fill="#2563eb" stroke="#ffffff" strokeWidth="1.4" />
+              <line x1={tX} y1={botCenter.y} x2={tX} y2={botCenter.y + 48} stroke="#2563eb" strokeWidth="3" markerEnd="url(#arrow-blue-3d)" />
+              <g transform={`translate(${tX + 52}, ${botCenter.y + 32})`}>
+                <rect x="-46" y="-10" width="92" height="20" rx="6" fill="#ffffff" stroke="#93c5fd" strokeWidth="1" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1d4ed8" fontSize="10" fontWeight="bold">
+                  {`T = ${(cableTensionN / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+            </>
+          )}
+
+          {isSimulating && (
+            <g transform={`translate(${tankOffsetX + currentTankW / 2}, ${tankBottomY + 46})`}>
+              <rect x="-180" y="-11" width="360" height="22" rx="11" fill="#eff6ff" stroke="#93c5fd" strokeWidth="1.2" opacity="0.98" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e3a8a" fontSize="10.5" fontWeight="bold" fontFamily="monospace">
+                {`Equilíbrio: E = W + T  |  Tração no cabo T = ${(cableTensionN / 1000).toFixed(2).replace('.', ',')} kN`}
+              </text>
+            </g>
+          )}
+        </g>
+      );
+    }
+
+    if (interfaceEquilibriumMode) {
+      const topCenter = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+      const botCenter = project(0, tankBottomY - objBottomDistFromTankBottom, 0);
+      const interfaceCenter = project(0, tankBottomY - effectiveHB_px, 0);
+      const cgPt = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);
+      const ceWaterPt = project(
+        0,
+        (tankBottomY - (objBottomDistFromTankBottom + visualHeight) + (tankBottomY - effectiveHB_px)) / 2,
+        0
+      );
+      const ceMercPt = project(
+        0,
+        (tankBottomY - effectiveHB_px + (tankBottomY - objBottomDistFromTankBottom)) / 2,
+        0
+      );
+      const topRight = project(
+        visualWidth / 2,
+        tankBottomY - (objBottomDistFromTankBottom + visualHeight),
+        0
+      );
+
+      const dimXRight = Math.max(topRight.x, botCenter.x + visualWidth / 2) + 38;
+      const fmtRel = (v: number) => v.toFixed(2).replace('.', ',');
+
+      const pX = cgPt.x - 16;
+      const eWaterX = ceWaterPt.x + 16;
+      const eMercX = ceMercPt.x + 6;
+
+      return (
+        <g pointerEvents="none">
+          {/* Rótulo do Bloco de Aço */}
+          <g transform={`translate(${topCenter.x}, ${topCenter.y - 20})`}>
+            <rect x="-66" y="-10" width="132" height="20" rx="6" fill="#1e293b" stroke="#94a3b8" strokeWidth="1" opacity="0.94" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#f8fafc" fontSize="10.5" fontWeight="bold">
+              {`Aço (d = ${fmtRel(bodyRelativeDensity)})`}
+            </text>
+          </g>
+
+          {/* Cota a (Água) */}
+          <line x1={topRight.x} y1={topCenter.y} x2={dimXRight} y2={topCenter.y} stroke="#0284c7" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={topRight.x} y1={interfaceCenter.y} x2={dimXRight} y2={interfaceCenter.y} stroke="#1e293b" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={dimXRight} y1={topCenter.y} x2={dimXRight} y2={interfaceCenter.y} stroke="#0284c7" strokeWidth="1.5" />
+          {isSimulating ? (
+            <g transform={`translate(${dimXRight + 50}, ${(topCenter.y + interfaceCenter.y) / 2})`}>
+              <rect x="-44" y="-13" width="88" height="26" rx="6" fill="#f0f9ff" stroke="#38bdf8" strokeWidth="1" opacity="0.95" />
+              <text x="0" y="-3.5" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                {`a = ${heightA_cm.toFixed(1).replace('.', ',')} cm`}
+              </text>
+              <text x="0" y="7.5" textAnchor="middle" dominantBaseline="central" fill="#0284c7" fontSize="9.5" fontWeight="bold" fontFamily="monospace">
+                {`d = ${fmtRel(upperFluidRelativeDensity)}`}
+              </text>
+            </g>
+          ) : (
+            <g transform={`translate(${dimXRight + 24}, ${(topCenter.y + interfaceCenter.y) / 2})`}>
+              <rect x="-14" y="-11" width="28" height="22" rx="6" fill="#f0f9ff" stroke="#38bdf8" strokeWidth="1" opacity="0.95" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="12" fontWeight="bold" fontFamily="monospace">
+                a
+              </text>
+            </g>
+          )}
+
+          {/* Cota b (Mercúrio) */}
+          <line x1={topRight.x} y1={interfaceCenter.y} x2={dimXRight} y2={interfaceCenter.y} stroke="#1e293b" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={topRight.x} y1={botCenter.y} x2={dimXRight} y2={botCenter.y} stroke="#475569" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={dimXRight} y1={interfaceCenter.y} x2={dimXRight} y2={botCenter.y} stroke="#334155" strokeWidth="1.5" />
+          {isSimulating ? (
+            <g transform={`translate(${dimXRight + 50}, ${(interfaceCenter.y + botCenter.y) / 2})`}>
+              <rect x="-44" y="-13" width="88" height="26" rx="6" fill="#f8fafc" stroke="#64748b" strokeWidth="1" opacity="0.95" />
+              <text x="0" y="-3.5" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                {`b = ${heightB_cm.toFixed(1).replace('.', ',')} cm`}
+              </text>
+              <text x="0" y="7.5" textAnchor="middle" dominantBaseline="central" fill="#475569" fontSize="9.5" fontWeight="bold" fontFamily="monospace">
+                {`d = ${fmtRel(lowerFluidRelativeDensity)}`}
+              </text>
+            </g>
+          ) : (
+            <g transform={`translate(${dimXRight + 24}, ${(interfaceCenter.y + botCenter.y) / 2})`}>
+              <rect x="-14" y="-11" width="28" height="22" rx="6" fill="#f8fafc" stroke="#64748b" strokeWidth="1" opacity="0.95" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="12" fontWeight="bold" fontFamily="monospace">
+                b
+              </text>
+            </g>
+          )}
+
+          {isSimulating && showFBD && (
+            <>
+              <circle cx={pX} cy={cgPt.y} r={4} fill="#ef4444" stroke="#ffffff" strokeWidth="1.4" />
+              <line x1={pX} y1={cgPt.y} x2={pX} y2={cgPt.y + 58} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow-red-3d)" />
+              <g transform={`translate(${pX - 48}, ${cgPt.y + 68})`}>
+                <rect x="-44" y="-10" width="88" height="20" rx="6" fill="#ffffff" stroke="#fca5a5" strokeWidth="1" opacity="0.94" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10" fontWeight="bold">
+                  {`P = ${(objectWeight / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              <circle cx={eWaterX} cy={ceWaterPt.y} r={4} fill="#2563eb" stroke="#ffffff" strokeWidth="1.4" />
+              <line x1={eWaterX} y1={ceWaterPt.y} x2={eWaterX} y2={ceWaterPt.y - 44} stroke="#2563eb" strokeWidth="3" markerEnd="url(#arrow-blue-3d)" />
+              <g transform={`translate(${eWaterX + 46}, ${ceWaterPt.y - 54})`}>
+                <rect x="-48" y="-10" width="96" height="20" rx="6" fill="#ffffff" stroke="#93c5fd" strokeWidth="1" opacity="0.94" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1d4ed8" fontSize="10" fontWeight="bold">
+                  {`E_água = ${(E_A / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+
+              <circle cx={eMercX} cy={ceMercPt.y} r={4} fill="#16a34a" stroke="#ffffff" strokeWidth="1.4" />
+              <line x1={eMercX} y1={ceMercPt.y} x2={eMercX} y2={ceMercPt.y - 60} stroke="#16a34a" strokeWidth="3" markerEnd="url(#arrow-green-3d)" />
+              <g transform={`translate(${eMercX + 52}, ${ceMercPt.y - 50})`}>
+                <rect x="-52" y="-10" width="104" height="20" rx="6" fill="#ffffff" stroke="#86efac" strokeWidth="1" opacity="0.94" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10" fontWeight="bold">
+                  {`E_merc = ${(E_B / 1000).toFixed(2).replace('.', ',')} kN`}
+                </text>
+              </g>
+            </>
+          )}
+
+          {isSimulating && (
+            <g transform={`translate(${tankOffsetX + currentTankW / 2}, ${tankBottomY + 46})`}>
+              <rect x="-175" y="-11" width="350" height="22" rx="11" fill="#eff6ff" stroke="#93c5fd" strokeWidth="1.2" opacity="0.98" />
+              <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e3a8a" fontSize="10.5" fontWeight="bold" fontFamily="monospace">
+                {`Equilíbrio: P = E_água + E_mercúrio  |  Razão a / b = ${ratioAtoB.toFixed(3).replace('.', ',')}`}
+              </text>
+            </g>
+          )}
+        </g>
+      );
+    }
+
+    if (floatingEquilibriumMode) {
+      const topCenter = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+      const botCenter = project(0, tankBottomY - objBottomDistFromTankBottom, 0);
+      const waterCenter = project(0, fluidSurfaceY, 0);
+      const cgPt = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);
+      const cePt = project(0, centerOfBuoyancyY_visual, 0);
+      const topLeft = project(-visualWidth / 2, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+      const topRight = project(visualWidth / 2, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+
+      const vecLen = 64;
+      const xOff = Math.min(18, Math.max(10, visualWidth * 0.16));
+      const pX = cgPt.x - xOff;
+      const eX = cePt.x + xOff;
+      const dimXRight = Math.max(topRight.x, botCenter.x + visualWidth / 2) + 38;
+      const dimYTop = Math.min(topLeft.y, topRight.y) - 24;
+      const fmtCm = (val: number) =>
+        Number.isInteger(val) ? `${val} cm` : `${val.toFixed(1).replace('.', ',')} cm`;
+
+      return (
+        <g pointerEvents="none">
+          {/* Cota Diâmetro D = 9 cm */}
+          <line x1={topLeft.x} y1={topLeft.y} x2={topLeft.x} y2={dimYTop} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={topRight.x} y1={topRight.y} x2={topRight.x} y2={dimYTop} stroke="#334155" strokeWidth="1" strokeDasharray="3,2" />
+          <line x1={topLeft.x} y1={dimYTop} x2={topRight.x} y2={dimYTop} stroke="#1e293b" strokeWidth="1.4" />
+          <g transform={`translate(${(topLeft.x + topRight.x) / 2}, ${dimYTop - 13})`}>
+            <rect x="-38" y="-10" width="76" height="20" rx="5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" opacity="0.95" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0f172a" fontSize="11" fontWeight="bold" fontFamily="monospace">
+              {`D = ${fmtCm(cylinderDiameterCm)}`}
+            </text>
+          </g>
+
+          {/* Cota Altura Emersa (3 cm) */}
+          {emergedHeightCm > 0.05 && (
+            <>
+              <line x1={topRight.x} y1={topCenter.y} x2={dimXRight} y2={topCenter.y} stroke="#475569" strokeWidth="1" strokeDasharray="3,2" />
+              <line x1={topRight.x} y1={waterCenter.y} x2={dimXRight} y2={waterCenter.y} stroke="#0284c7" strokeWidth="1" strokeDasharray="3,2" />
+              <line x1={dimXRight} y1={topCenter.y} x2={dimXRight} y2={waterCenter.y} stroke="#d97706" strokeWidth="1.4" />
+              <g transform={`translate(${dimXRight + 38}, ${(topCenter.y + waterCenter.y) / 2})`}>
+                <rect x="-30" y="-10" width="60" height="20" rx="5" fill="#fffbeb" stroke="#fcd34d" strokeWidth="1" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#b45309" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                  {fmtCm(emergedHeightCm)}
+                </text>
+              </g>
+            </>
+          )}
+
+          {/* Cota Altura Submersa (8 cm) */}
+          {submergedHeightCm > 0.05 && (
+            <>
+              <line x1={topRight.x} y1={waterCenter.y} x2={dimXRight} y2={waterCenter.y} stroke="#0284c7" strokeWidth="1" strokeDasharray="3,2" />
+              <line x1={topRight.x} y1={botCenter.y} x2={dimXRight} y2={botCenter.y} stroke="#475569" strokeWidth="1" strokeDasharray="3,2" />
+              <line x1={dimXRight} y1={waterCenter.y} x2={dimXRight} y2={botCenter.y} stroke="#0284c7" strokeWidth="1.4" />
+              <g transform={`translate(${dimXRight + 38}, ${(waterCenter.y + botCenter.y) / 2})`}>
+                <rect x="-30" y="-10" width="60" height="20" rx="5" fill="#f0f9ff" stroke="#7dd3fc" strokeWidth="1" opacity="0.95" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#0369a1" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                  {fmtCm(submergedHeightCm)}
+                </text>
+              </g>
+            </>
+          )}
+
+          {showFBD && (
+            <>
+              <circle cx={pX} cy={cgPt.y} r={4} fill="#ef4444" stroke="#ffffff" strokeWidth="1.4" />
+              <line x1={pX} y1={cgPt.y} x2={pX} y2={cgPt.y + vecLen} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow-red-3d)" />
+              <g transform={`translate(${pX - 50}, ${cgPt.y + vecLen + 12})`}>
+                <rect x="-46" y="-10" width="92" height="20" fill="white" opacity="0.94" stroke="#fca5a5" strokeWidth="1" rx="6" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10.5" fontWeight="bold">
+                  {isSimulating ? `P = ${objectWeight.toFixed(2).replace('.', ',')} N` : 'P = ?'}
+                </text>
+              </g>
+
+              {showCenterOfBuoyancy && (
+                <circle cx={eX} cy={cePt.y} r={4} fill="#16a34a" stroke="#ffffff" strokeWidth="1.4" />
+              )}
+              <line x1={eX} y1={cePt.y} x2={eX} y2={cePt.y - vecLen} stroke="#16a34a" strokeWidth="3" markerEnd="url(#arrow-green-3d)" />
+              <g transform={`translate(${eX + 50}, ${cePt.y - vecLen - 12})`}>
+                <rect x="-46" y="-10" width="92" height="20" fill="white" opacity="0.94" stroke="#86efac" strokeWidth="1" rx="6" />
+                <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10.5" fontWeight="bold">
+                  {isSimulating ? `E = ${buoyancyForce.toFixed(2).replace('.', ',')} N` : 'E = γ · Vsub'}
+                </text>
+              </g>
+            </>
+          )}
+        </g>
+      );
+    }
+
     if (inverseSpecificWeightMode) {
       const centerTop = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
       const centerMid = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);

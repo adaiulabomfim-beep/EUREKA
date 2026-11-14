@@ -158,17 +158,21 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
     Ry_hinge = W_peso + (forceData.up.FR - forceData.down.FR) * cosTheta - R_B;
     R_hinge = Math.hypot(Rx_hinge, Ry_hinge);
   } else if (comporta.posicaoDobradica !== PosicaoDobradica.NONE) {
-    // Distance from hinge to CP
+    const y_cg_gate = getGateYBarTotal(comporta.forma, comporta.altura);
+    // Distance from hinge/axis to CP
     let d_cp = 0;
     if (comporta.posicaoDobradica === PosicaoDobradica.TOP) {
       d_cp = forceData.s_cp_net;
     } else if (comporta.posicaoDobradica === PosicaoDobradica.BOTTOM) {
       d_cp = comporta.altura - forceData.s_cp_net;
+    } else if (comporta.posicaoDobradica === PosicaoDobradica.CENTER) {
+      d_cp = Math.abs(forceData.s_cp_net - y_cg_gate);
     }
 
     // Moment due to hydrostatic force (positive = tending to open gate towards downstream/bottom-right)
     // Note: About TOP hinge, FR_net (>0) rotates counter-clockwise (+);
-    // About BOTTOM hinge, FR_net (>0) rotates clockwise (+).
+    // About BOTTOM hinge, FR_net (>0) rotates clockwise (+);
+    // About CENTER horizontal axis, CP is below CG by eccentricity e = d_cp, producing a counter-clockwise hydrostatic moment.
     M_hinge = forceData.FR_net * d_cp;
 
     // Add moment due to gate weight if enabled
@@ -178,7 +182,6 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
       const g = fluidoMontante.gravidade || 9.81;
       W = comporta.pesoProprio * g;
       W_peso = W;
-      const y_cg_gate = getGateYBarTotal(comporta.forma, comporta.altura);
 
       // Distance from hinge to gate CG along the incline
       let d_cg = 0;
@@ -186,17 +189,21 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
         d_cg = y_cg_gate;
       } else if (comporta.posicaoDobradica === PosicaoDobradica.BOTTOM) {
         d_cg = comporta.altura - y_cg_gate;
+      } else if (comporta.posicaoDobradica === PosicaoDobradica.CENTER) {
+        d_cg = 0;
       }
       
       // Component of weight perpendicular to the gate
       const signW = comporta.posicaoDobradica === PosicaoDobradica.TOP ? -1 : 1;
 
-      if (comporta.bracoPesoHorizontal !== undefined && comporta.bracoPesoHorizontal > 0) {
-        // Braço horizontal informado diretamente no enunciado: M = W · d_P
-        M_hinge += signW * W * comporta.bracoPesoHorizontal;
-      } else {
-        const W_perp = W * cosTheta;
-        M_hinge += signW * W_perp * d_cg;
+      if (comporta.posicaoDobradica !== PosicaoDobradica.CENTER) {
+        if (comporta.bracoPesoHorizontal !== undefined && comporta.bracoPesoHorizontal > 0) {
+          // Braço horizontal informado diretamente no enunciado: M = W · d_P
+          M_hinge += signW * W * comporta.bracoPesoHorizontal;
+        } else {
+          const W_perp = W * cosTheta;
+          M_hinge += signW * W_perp * d_cg;
+        }
       }
     }
 
@@ -219,6 +226,8 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
         d_tie = comporta.altura * comporta.posicaoTiranteRelativa;
       } else if (comporta.posicaoDobradica === PosicaoDobradica.BOTTOM) {
         d_tie = comporta.altura * (1 - comporta.posicaoTiranteRelativa);
+      } else if (comporta.posicaoDobradica === PosicaoDobradica.CENTER) {
+        d_tie = Math.abs(comporta.altura * comporta.posicaoTiranteRelativa - y_cg_gate);
       }
 
       const tieRad = (comporta.anguloTirante * Math.PI) / 180;
@@ -241,6 +250,22 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
     }
   }
 
+  const y_cg_gate_ref = getGateYBarTotal(comporta.forma, comporta.altura);
+  const eixoCentralAtivo = Boolean(
+    comporta.posicaoDobradica === PosicaoDobradica.CENTER || comporta.eixoRotacaoCentral
+  );
+  const excentricidadeEixo = eixoCentralAtivo
+    ? Math.abs(forceData.s_cp_net - y_cg_gate_ref)
+    : 0;
+  const M_hidrostatico_eixo = eixoCentralAtivo
+    ? forceData.FR_net * excentricidadeEixo
+    : 0;
+  const M_abertura_eixo = M_hidrostatico_eixo;
+  const sentidoMomentoHidrostatico =
+    'Anti-horário (CP abaixo do eixo central, tendendo a girar a metade inferior para jusante)';
+  const sentidoMomentoAbertura =
+    'Horário (contrário ao momento hidrostático resistente)';
+
   return {
     M_hinge,
     F_tie,
@@ -261,5 +286,12 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
     R_hinge,
     deltaX_BA,
     deltaY_BA,
+    eixoCentralAtivo,
+    articulacaoParedeVerticalA: Boolean(comporta.articulacaoParedeVerticalA),
+    excentricidadeEixo,
+    M_hidrostatico_eixo,
+    M_abertura_eixo,
+    sentidoMomentoHidrostatico,
+    sentidoMomentoAbertura,
   };
 }
