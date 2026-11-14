@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
 import {
   FormaComporta,
@@ -19,13 +19,15 @@ interface PainelControlesProps {
   setHasDownstream: (val: boolean) => void;
   maxGateHeight: number;
   maxWaterLevel: number;
-  toggleGate: (active: boolean) => void;
+  gateOpeningPercent: number;
+  setGateOpeningPercent: (percent: number) => void;
   loadPreset: (key: string) => void;
   presets: { [key: string]: ConfiguracaoSimulacaoComporta & { title: string, subtitle: string, enunciado?: string } };
   activePresetKey?: string | null;
   onResetDefaults?: () => void;
   handleHeightChange: (val: number) => void;
   handleShapeChange: (newShape: FormaComporta) => void;
+  liveH_eq?: number;
   wallDims: { height: number; thickness: number; width: number; };
   setWallDims: React.Dispatch<React.SetStateAction<{ height: number; thickness: number; width: number; }>>;
 }
@@ -53,7 +55,8 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
         [target]: {
           ...prev[target],
           chave,
-          densidade: fluido.densidade
+          densidade: fluido.densidade,
+          pesoEspecifico: chave === 'aguaDoMar' ? 10054 : undefined,
         }
       };
     });
@@ -174,16 +177,97 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
 
       {/* Comporta */}
       <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200 shrink-0">
-          <div className="flex items-center justify-between mb-5 pb-3 border-b border-blue-50 dark:border-slate-800/80">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-blue-50 dark:border-slate-800/80">
               <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-lg"><Square className="w-4 h-4" /></div>
                   <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Geometria da Comporta</h3>
               </div>
-              <input type="checkbox" checked={config.comporta.ativa} onChange={(e) => props.toggleGate(e.target.checked)} className="accent-blue-600 w-4 h-4 cursor-pointer" />
           </div>
-          
-          {config.comporta.ativa && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+
+          {/* Condição de Operação / Grau de Abertura */}
+          <div className="mb-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center justify-between mb-1.5">
+                  <label className={labelClass + " !mb-0"}>Operação da Comporta</label>
+                  <span className="text-[10px] font-bold font-mono text-blue-600 dark:text-blue-400">
+                      {props.gateOpeningPercent === 0
+                        ? 'Fechada (0%)'
+                        : props.gateOpeningPercent >= 100
+                        ? 'Aberta (100%)'
+                        : `Parcial (${props.gateOpeningPercent}%)`}
+                  </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => props.setGateOpeningPercent(0)}
+                    className={`py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${
+                      props.gateOpeningPercent === 0
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-blue-300'
+                    }`}
+                  >
+                    Fechada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = props.gateOpeningPercent > 0 && props.gateOpeningPercent < 100 ? props.gateOpeningPercent : 50;
+                      props.setGateOpeningPercent(next);
+                    }}
+                    className={`py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${
+                      props.gateOpeningPercent > 0 && props.gateOpeningPercent < 100
+                        ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-amber-300'
+                    }`}
+                  >
+                    Parcial
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => props.setGateOpeningPercent(100)}
+                    className={`py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all ${
+                      props.gateOpeningPercent >= 100
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-300 hover:border-emerald-300'
+                    }`}
+                  >
+                    Aberta
+                  </button>
+              </div>
+
+              {props.gateOpeningPercent > 0 && props.gateOpeningPercent < 100 && (
+                <div className="mt-3 p-2.5 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/50 rounded-xl">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-amber-800 dark:text-amber-300 mb-1.5">
+                    <span>Grau de Abertura</span>
+                    <span className="font-mono">
+                      {props.gateOpeningPercent}% ({((props.gateOpeningPercent / 100) * config.comporta.altura * Math.sin(((config.comporta.angulo || 90) * Math.PI) / 180)).toFixed(2)} m vert.)
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={5}
+                    max={95}
+                    step={5}
+                    value={props.gateOpeningPercent}
+                    onChange={(e) => props.setGateOpeningPercent(Number(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+              )}
+
+              {props.gateOpeningPercent >= 100 && (
+                <div className="mt-2.5 px-2.5 py-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 text-[10px] font-medium text-emerald-800 dark:text-emerald-300">
+                  {config.comporta.forma === FormaComporta.CIRCULAR
+                    ? `Orifício circular desobstruído (Ø = ${config.comporta.altura.toFixed(2)} m).`
+                    : config.comporta.forma === FormaComporta.SEMI_CIRCULAR
+                    ? `Orifício semicircular desobstruído (R = ${config.comporta.altura.toFixed(2)} m).`
+                    : `Orifício retangular desobstruído (${config.comporta.altura.toFixed(2)} m × ${config.comporta.largura.toFixed(2)} m).`}{' '}
+                  Clique em <strong>Fechada</strong> ou <strong>Parcial</strong> para rebaixar a comporta.
+                </div>
+              )}
+          </div>
+
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                   <div>
                       <label className={labelClass}>Formato</label>
                       <div className="grid grid-cols-3 gap-2">
@@ -215,11 +299,11 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       <div className="grid grid-cols-2 gap-3">
                           <div>
                               <label className={labelClass}>Altura/Comp. (m)</label>
-                              <NumberInput value={config.comporta.altura} onChange={props.handleHeightChange} min={0.1} max={props.maxGateHeight} step={0.1} />
+                              <NumberInput value={config.comporta.altura} onChange={props.handleHeightChange} min={0.1} max={props.maxGateHeight} step="any" />
                           </div>
                           <div>
                               <label className={labelClass}>Largura (m)</label>
-                              <NumberInput value={config.comporta.largura} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, largura: val}}))} min={0.1} max={100} step={0.1} />
+                              <NumberInput value={config.comporta.largura} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, largura: val}}))} min={0.1} max={100} step="any" />
                           </div>
                       </div>
                   )}
@@ -361,7 +445,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                                 })}
                                 min={0}
                                 max={config.fluidoMontante.nivel}
-                                step={0.1}
+                                step="any"
                               />
                           </div>
                       )}
@@ -373,7 +457,9 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                         const sinTheta = Math.sin((val * Math.PI) / 180);
                         const ybarTotal = getGateYBarTotal(prev.comporta.forma, prev.comporta.altura);
                         let h_topo = prev.comporta.profundidadeTopo;
-                        if (prev.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && prev.comporta.y_cg_direto) {
+                        if (prev.comporta.apoioFundoLiso) {
+                          h_topo = Math.max(0, prev.fluidoMontante.nivel - prev.comporta.altura * sinTheta);
+                        } else if (prev.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && prev.comporta.y_cg_direto) {
                           h_topo = prev.comporta.y_cg_direto * sinTheta - ybarTotal * sinTheta;
                         }
                         return {
@@ -381,10 +467,10 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                           comporta: {
                             ...prev.comporta,
                             angulo: val,
-                            profundidadeTopo: parseFloat(h_topo.toFixed(3))
+                            profundidadeTopo: prev.comporta.apoioFundoLiso ? h_topo : parseFloat(h_topo.toFixed(3))
                           }
                         };
-                      })} min={1} max={90} step={1} />
+                      })} min={1} max={90} step="any" />
                   </div>
 
                   <div className="pt-4 border-t border-blue-50 dark:border-slate-800/80">
@@ -410,7 +496,7 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                           <div className="pt-2 border-t border-blue-50/50 dark:border-slate-800/60">
                                <div className="flex items-center justify-between mb-3">
                                    <label className={labelClass + " !mb-0 flex items-center gap-1"}><Link className="w-3 h-3" /> Tirante / Escora</label>
-                                   <input type="checkbox" checked={config.comporta.temTirante} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, temTirante: e.target.checked}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
+                                   <input type="checkbox" checked={config.comporta.temTirante} onChange={(e) => setConfig(prev => ({...prev, comporta: {...prev.comporta, temTirante: e.target.checked, apoioParedeLisa: e.target.checked ? false : prev.comporta.apoioParedeLisa}}))} className="accent-blue-600 w-4 h-4 cursor-pointer" />
                                </div>
                                
                                {config.comporta.temTirante && (
@@ -424,6 +510,98 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                                            <NumberInput value={config.comporta.anguloTirante} min={-90} max={90} step={5} onChange={(val) => setConfig(prev => ({...prev, comporta: {...prev.comporta, anguloTirante: val}}))} />
                                        </div>
                                    </div>
+                               )}
+                           </div>
+
+                           <div className="pt-2 border-t border-blue-50/50 dark:border-slate-800/60">
+                               <div className="flex items-center justify-between mb-2">
+                                   <label className={labelClass + " !mb-0"}>Apoio em Parede Lisa (Topo A)</label>
+                                   <input
+                                     type="checkbox"
+                                     checked={Boolean(config.comporta.apoioParedeLisa)}
+                                     onChange={(e) => {
+                                       const checked = e.target.checked;
+                                       setConfig(prev => ({
+                                         ...prev,
+                                         comporta: {
+                                           ...prev.comporta,
+                                           apoioParedeLisa: checked,
+                                           apoioFundoLiso: checked ? false : prev.comporta.apoioFundoLiso,
+                                           temTirante: checked ? false : prev.comporta.temTirante,
+                                           posicaoDobradica:
+                                             checked && prev.comporta.posicaoDobradica === PosicaoDobradica.NONE
+                                               ? PosicaoDobradica.BOTTOM
+                                               : prev.comporta.posicaoDobradica,
+                                         },
+                                       }));
+                                     }}
+                                     className="accent-blue-600 w-4 h-4 cursor-pointer"
+                                   />
+                               </div>
+                               {config.comporta.apoioParedeLisa && (
+                                 <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 text-[10px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                                   Contato em parede vertical lisa no ponto <strong>A</strong> (reação horizontal <strong>P</strong>, sem atrito) e articulação fixa em <strong>B</strong> (<strong>B<sub>x</sub></strong>, <strong>B<sub>y</sub></strong>).
+                                 </div>
+                               )}
+                           </div>
+
+                           <div className="pt-2 border-t border-blue-50/50 dark:border-slate-800/60">
+                               <div className="flex items-center justify-between mb-2">
+                                   <label className={labelClass + " !mb-0"}>Apoio em Fundo Liso (Base B)</label>
+                                   <input
+                                     type="checkbox"
+                                     checked={Boolean(config.comporta.apoioFundoLiso)}
+                                     onChange={(e) => {
+                                       const checked = e.target.checked;
+                                       setConfig(prev => {
+                                         const sinT = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                         const hTopoFloor = Math.max(0, prev.fluidoMontante.nivel - prev.comporta.altura * sinT);
+                                         return {
+                                           ...prev,
+                                           comporta: {
+                                             ...prev.comporta,
+                                             apoioFundoLiso: checked,
+                                             apoioParedeLisa: checked ? false : prev.comporta.apoioParedeLisa,
+                                             temTirante: checked ? false : prev.comporta.temTirante,
+                                             resolverProfundidadeRbZero: checked ? true : prev.comporta.resolverProfundidadeRbZero,
+                                             posicaoDobradica: checked ? PosicaoDobradica.TOP : prev.comporta.posicaoDobradica,
+                                             profundidadeTopo: checked ? hTopoFloor : prev.comporta.profundidadeTopo,
+                                           },
+                                         };
+                                       });
+                                     }}
+                                     className="accent-blue-600 w-4 h-4 cursor-pointer"
+                                   />
+                               </div>
+                               {config.comporta.apoioFundoLiso && (
+                                 <div className="space-y-2 p-2.5 rounded-xl bg-cyan-50/70 dark:bg-cyan-950/30 border border-cyan-200/70 dark:border-cyan-800/50 text-[10px] text-cyan-900 dark:text-cyan-200 leading-relaxed">
+                                   <div>
+                                     Articulação no topo <strong>A</strong> (<strong>A<sub>x</sub></strong>, <strong>A<sub>y</sub></strong>) e contato sem atrito sobre fundo horizontal liso em <strong>B</strong> (reação normal vertical <strong>R<sub>B</sub></strong>).
+                                   </div>
+                                   <label className="flex items-center justify-between gap-2 pt-1.5 border-t border-cyan-200/60 dark:border-cyan-800/50 cursor-pointer font-bold">
+                                     <span>Calcular h para R<sub>B</sub> = 0</span>
+                                     <input
+                                       type="checkbox"
+                                       checked={Boolean(config.comporta.resolverProfundidadeRbZero)}
+                                       onChange={(e) => setConfig(prev => ({
+                                         ...prev,
+                                         comporta: {
+                                           ...prev.comporta,
+                                           resolverProfundidadeRbZero: e.target.checked,
+                                         },
+                                         fluidoJusante: {
+                                           ...prev.fluidoJusante,
+                                           ativo: e.target.checked ? true : prev.fluidoJusante.ativo,
+                                           nivel:
+                                             !e.target.checked && props.liveH_eq !== undefined
+                                               ? Number(props.liveH_eq.toFixed(3))
+                                               : prev.fluidoJusante.nivel,
+                                         },
+                                       }))}
+                                       className="accent-cyan-600 w-4 h-4 cursor-pointer"
+                                     />
+                                   </label>
+                                 </div>
                                )}
                            </div>
 
@@ -443,7 +621,6 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                        </div>
                    </div>
                </div>
-           )}
        </div>
 
       {/* Níveis e Fluidos */}
@@ -484,19 +661,30 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                       <div className="flex gap-3 mt-2">
                           <div className="flex-1">
                               <label className="text-[10px] font-medium text-slate-400 mb-1 block">Densidade (kg/m³)</label>
-                              <NumberInput value={config.fluidoMontante.densidade} min={1} max={20000} step={10} onChange={(val) => setConfig(prev => ({
+                              <NumberInput value={config.fluidoMontante.densidade} min={1} max={20000} step="any" onChange={(val) => setConfig(prev => ({
                                   ...prev, 
-                                  fluidoMontante: {...prev.fluidoMontante, densidade: val, chave: 'personalizado'}
+                                  fluidoMontante: {...prev.fluidoMontante, densidade: val, chave: 'personalizado', pesoEspecifico: undefined}
                               }))} />
                           </div>
                           <div className="w-24">
                               <label className="text-[10px] font-medium text-slate-400 mb-1 block">Nível (m)</label>
-                              <NumberInput value={config.fluidoMontante.nivel} min={0} max={props.maxWaterLevel} step={0.5} onChange={(val) => setConfig(prev => ({
+                              <NumberInput value={config.fluidoMontante.nivel} min={0} max={props.maxWaterLevel} step="any" onChange={(val) => setConfig(prev => {
+                                const sinT = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+                                const nextProfTopo = prev.comporta.apoioFundoLiso
+                                  ? Math.max(0, val - prev.comporta.altura * sinT)
+                                  : Math.min(prev.comporta.profundidadeTopo, val);
+                                return {
                                   ...prev, 
                                   fluidoMontante: {...prev.fluidoMontante, nivel: val},
-                                  fluidoJusante: {...prev.fluidoJusante, nivel: Math.min(prev.fluidoJusante.nivel, val)},
-                                  comporta: {...prev.comporta, profundidadeTopo: Math.min(prev.comporta.profundidadeTopo, val)}
-                              }))} />
+                                  fluidoJusante: {
+                                    ...prev.fluidoJusante,
+                                    nivel: prev.comporta.apoioFundoLiso
+                                      ? prev.fluidoJusante.nivel
+                                      : Math.min(prev.fluidoJusante.nivel, val),
+                                  },
+                                  comporta: {...prev.comporta, profundidadeTopo: nextProfTopo}
+                                };
+                              })} />
                           </div>
                       </div>
                   </div>
@@ -519,11 +707,40 @@ export const PainelControles: React.FC<PainelControlesProps> = (props) => {
                           <div className="flex gap-3 mt-2">
                               <div className="flex-1">
                                   <label className="text-[10px] font-medium text-slate-400 mb-1 block">Densidade (kg/m³)</label>
-                                  <NumberInput value={config.fluidoJusante.densidade} min={1} max={20000} step={10} onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, densidade: val, chave: 'personalizado'}}))} />
+                                  <NumberInput value={config.fluidoJusante.densidade} min={1} max={20000} step="any" onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, densidade: val, chave: 'personalizado', pesoEspecifico: undefined}}))} />
                               </div>
                               <div className="w-24">
-                                  <label className="text-[10px] font-medium text-slate-400 mb-1 block">Nível (m)</label>
-                                  <NumberInput value={Math.min(config.fluidoJusante.nivel, config.fluidoMontante.nivel)} min={0} max={config.fluidoMontante.nivel} step={0.5} onChange={(val) => setConfig(prev => ({...prev, fluidoJusante: {...prev.fluidoJusante, nivel: Math.min(val, prev.fluidoMontante.nivel)}}))} />
+                                  <label className="text-[10px] font-medium text-slate-400 mb-1 block">
+                                    {config.comporta.apoioFundoLiso && config.comporta.resolverProfundidadeRbZero
+                                      ? 'h (R_B = 0)'
+                                      : 'Nível (m)'}
+                                  </label>
+                                  {config.comporta.apoioFundoLiso && config.comporta.resolverProfundidadeRbZero ? (
+                                    <div className="h-9 px-2.5 rounded-lg border border-cyan-200 dark:border-cyan-800/70 bg-cyan-50/70 dark:bg-cyan-950/40 flex items-center justify-between text-xs font-bold font-mono text-cyan-800 dark:text-cyan-200">
+                                      <span>{(props.liveH_eq ?? config.fluidoJusante.nivel).toFixed(3)}</span>
+                                      <span className="text-[10px] opacity-75">m</span>
+                                    </div>
+                                  ) : (
+                                    <NumberInput
+                                      value={
+                                        config.comporta.apoioFundoLiso
+                                          ? config.fluidoJusante.nivel
+                                          : Math.min(config.fluidoJusante.nivel, config.fluidoMontante.nivel)
+                                      }
+                                      min={0}
+                                      max={config.comporta.apoioFundoLiso ? props.maxWaterLevel : config.fluidoMontante.nivel}
+                                      step="any"
+                                      onChange={(val) => setConfig(prev => ({
+                                        ...prev,
+                                        fluidoJusante: {
+                                          ...prev.fluidoJusante,
+                                          nivel: prev.comporta.apoioFundoLiso
+                                            ? Math.max(0, val)
+                                            : Math.min(val, prev.fluidoMontante.nivel)
+                                        }
+                                      }))}
+                                    />
+                                  )}
                               </div>
                           </div>
                       </div>

@@ -24,6 +24,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   const [damHeight, setDamHeight] = useState<number>(15);
   const [damCrestWidth, setDamCrestWidth] = useState<number>(4);
   const [damBaseWidth, setDamBaseWidth] = useState<number>(12);
+  const [damWidth, setDamWidth] = useState<number>(1);
+  const [concreteSpecificGravity, setConcreteSpecificGravity] = useState<number>(2.4);
+  const [fluidKey, setFluidKey] = useState<'agua' | 'agua20C'>('agua');
   const [inclinationAngle, setInclinationAngle] = useState<number>(90);
   const [downstreamAngle, setDownstreamAngle] = useState<number>(45);
   const [buttressAngle, setButtressAngle] = useState<number>(45);
@@ -36,10 +39,14 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   const [hasMudLayer, setHasMudLayer] = useState<boolean>(false);
   const [mudHeight, setMudHeight] = useState<number>(3);
   const [mudDensity, setMudDensity] = useState<number>(1500);
+  const [hasPercolation, setHasPercolation] = useState<boolean>(false);
+  const [upliftFactorUp, setUpliftFactorUp] = useState<number>(1.0);
+  const [upliftFactorDown, setUpliftFactorDown] = useState<number>(0.0);
+  const [showTriangularMode, setShowTriangularMode] = useState<boolean>(false);
   const [unitSystem, setUnitSystem] = useState<SistemaUnidadesBarragem>('SI');
   const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
 
-  const [density] = useState<number>(1000);
+  const density = fluidKey === 'agua20C' ? 998.2 : 1000;
   const [gravity] = useState<number>(9.81);
 
   // UI STATE
@@ -49,6 +56,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   // LOGIC
   const handleDamTypeChange = (newType: TipoBarragem) => {
     setActivePresetKey(null);
+    setShowTriangularMode(false);
     setDamType(newType);
     const defaults = registroTiposBarragem[newType].getDefaults(damHeight);
     setInclinationAngle(defaults.inclinationAngle);
@@ -66,6 +74,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     setDamHeight(preset.damHeight);
     setDamBaseWidth(preset.damBaseWidth);
     setDamCrestWidth(preset.damCrestWidth);
+    setDamWidth(preset.damWidth ?? 1);
+    setConcreteSpecificGravity(preset.concreteSpecificGravity ?? 2.4);
+    setFluidKey(preset.fluidKey ?? 'agua');
     setInclinationAngle(preset.inclinationAngle);
     if (preset.downstreamAngle !== undefined) setDownstreamAngle(preset.downstreamAngle);
     if (preset.buttressAngle !== undefined) setButtressAngle(preset.buttressAngle);
@@ -76,6 +87,10 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     setHasMudLayer(!!preset.hasMudLayer);
     setMudHeight(preset.mudHeight ?? 0);
     setMudDensity(preset.mudDensity ?? 1500);
+    setHasPercolation(!!preset.hasPercolation);
+    setUpliftFactorUp(preset.upliftFactorUp ?? 1.0);
+    setUpliftFactorDown(preset.upliftFactorDown ?? 0.0);
+    setShowTriangularMode(!!preset.showTriangularMode);
     setUnitSystem(preset.unitSystem ?? 'SI');
   };
 
@@ -85,6 +100,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     setDamHeight(15);
     setDamBaseWidth(12);
     setDamCrestWidth(4);
+    setDamWidth(1);
+    setConcreteSpecificGravity(2.4);
+    setFluidKey('agua');
     setInclinationAngle(90);
     setDownstreamAngle(45);
     setButtressAngle(45);
@@ -95,6 +113,10 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     setHasMudLayer(false);
     setMudHeight(3);
     setMudDensity(1500);
+    setHasPercolation(false);
+    setUpliftFactorUp(1.0);
+    setUpliftFactorDown(0.0);
+    setShowTriangularMode(false);
     setUnitSystem('SI');
     setAnalyzedResults(null);
   };
@@ -133,6 +155,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     damHeight,
     damBaseWidth: effectiveBaseWidth,
     damCrestWidth,
+    damWidth,
+    concreteSpecificGravity: showTriangularMode ? concreteSpecificGravity : undefined,
+    fluidKey,
     inclinationAngle,
     downstreamAngle,
     buttressAngle,
@@ -142,6 +167,10 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     hasMudLayer,
     mudHeight: effectiveMudHeight,
     mudDensity,
+    hasPercolation,
+    upliftFactorUp,
+    upliftFactorDown,
+    showTriangularMode,
     density,
     gravity,
     unitSystem,
@@ -154,6 +183,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
       damHeight,
       effectiveBaseWidth,
       damCrestWidth,
+      damWidth,
+      concreteSpecificGravity,
+      fluidKey,
       inclinationAngle,
       downstreamAngle,
       buttressAngle,
@@ -163,15 +195,26 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
       hasMudLayer,
       effectiveMudHeight,
       mudDensity,
+      hasPercolation,
+      upliftFactorUp,
+      upliftFactorDown,
+      showTriangularMode,
       density,
       gravity,
       unitSystem,
     ]
   );
 
+  // Quando o usuário alterna Percolação (com/sem) e já analisou, atualiza analyzedResults instantaneamente
+  useEffect(() => {
+    setAnalyzedResults((prev) => (prev ? liveResults : null));
+  }, [hasPercolation, upliftFactorUp, upliftFactorDown]);
+
+  // Se mudar geometria/fluido, exige novo clique em Analisar (exceto quando acabado de atualizar percolação)
+  const geomSignature = `${damType}-${damHeight}-${effectiveBaseWidth}-${damCrestWidth}-${damWidth}-${concreteSpecificGravity}-${fluidKey}-${inclinationAngle}-${downstreamAngle}-${buttressAngle}-${archRadius}-${effectiveUpstreamLevel}-${effectiveDownstreamLevel}-${hasMudLayer}-${effectiveMudHeight}-${mudDensity}-${unitSystem}`;
   useEffect(() => {
     setAnalyzedResults(null);
-  }, [liveResults]);
+  }, [geomSignature]);
 
   const handleCalculate = () => {
     setAnalyzedResults(liveResults);
@@ -192,9 +235,11 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
           'Altura (m)': damHeight,
           'Largura Base (m)': liveResults.normalizedInputs.damBaseWidth,
           'Largura Crista (m)': damCrestWidth,
+          ...(damWidth > 1 ? { 'Largura Longitudinal (m)': damWidth } : {}),
           'Nível Montante (m)': effectiveUpstreamLevel,
           ...(hasDownstream ? { 'Nível Jusante (m)': effectiveDownstreamLevel } : {}),
           ...(hasMudLayer ? { 'Camada de Lama (m)': effectiveMudHeight, 'ρ Lama (kg/m³)': mudDensity } : {}),
+          ...(hasPercolation ? { 'Percolação / Subpressão': `Ativa (kB=${(upliftFactorUp * 100).toFixed(0)}%)` } : {}),
         },
         resultados: {
           empuxo: liveResults.forceData.FR_net,
@@ -214,15 +259,17 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
 
   const contextString = useMemo(
     () =>
-      `LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${liveResults.normalizedInputs.damBaseWidth}m, Largura Crista=${damCrestWidth}m, θ=${inclinationAngle}°, Nível Montante=${effectiveUpstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m${hasMudLayer ? `, Lama=${effectiveMudHeight}m (ρ=${mudDensity} kg/m³)` : ''}`,
+      `LABORATÓRIO DE HIDROSTÁTICA: Barragem: ${damType}, H=${damHeight}m, Largura Base=${liveResults.normalizedInputs.damBaseWidth}m, Largura Crista=${damCrestWidth}m, b=${damWidth}m, θ=${inclinationAngle}°, Nível Montante=${effectiveUpstreamLevel}m, Nível Jusante=${effectiveDownstreamLevel}m, Percolação=${hasPercolation ? 'SIM' : 'NÃO'}${hasMudLayer ? `, Lama=${effectiveMudHeight}m (ρ=${mudDensity} kg/m³)` : ''}`,
     [
       damType,
       damHeight,
       liveResults.normalizedInputs.damBaseWidth,
       damCrestWidth,
+      damWidth,
       inclinationAngle,
       effectiveUpstreamLevel,
       effectiveDownstreamLevel,
+      hasPercolation,
       hasMudLayer,
       effectiveMudHeight,
       mudDensity,
@@ -242,6 +289,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
       altura: damHeight,
       larguraBase: liveResults.normalizedInputs.damBaseWidth,
       larguraCrista: damCrestWidth,
+      larguraLongitudinal: damWidth,
       inclinacao: inclinationAngle,
       nivelMontante: effectiveUpstreamLevel,
       nivelJusante: effectiveDownstreamLevel,
@@ -276,6 +324,15 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
           setDamBaseWidth={setDamBaseWidth}
           damCrestWidth={damCrestWidth}
           setDamCrestWidth={setDamCrestWidth}
+          damWidth={damWidth}
+          setDamWidth={setDamWidth}
+          concreteSpecificGravity={concreteSpecificGravity}
+          setConcreteSpecificGravity={(val) => {
+            setConcreteSpecificGravity(val);
+            setShowTriangularMode(true);
+          }}
+          fluidKey={fluidKey}
+          setFluidKey={setFluidKey}
           upstreamLevel={upstreamLevel}
           setUpstreamLevel={setUpstreamLevel}
           hasDownstream={hasDownstream}
@@ -288,6 +345,13 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
           setMudHeight={setMudHeight}
           mudDensity={mudDensity}
           setMudDensity={setMudDensity}
+          hasPercolation={hasPercolation}
+          setHasPercolation={setHasPercolation}
+          upliftFactorUp={upliftFactorUp}
+          setUpliftFactorUp={setUpliftFactorUp}
+          upliftFactorDown={upliftFactorDown}
+          setUpliftFactorDown={setUpliftFactorDown}
+          showTriangularMode={showTriangularMode}
           unitSystem={unitSystem}
           setUnitSystem={setUnitSystem}
           maxWaterLevel={maxWaterLevel}
@@ -310,6 +374,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
             damHeight={damHeight}
             damBaseWidth={effectiveBaseWidth}
             damCrestWidth={damCrestWidth}
+            damWidth={damWidth}
             inclinationAngle={inclinationAngle}
             downstreamAngle={downstreamAngle}
             buttressAngle={buttressAngle}
@@ -319,6 +384,10 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
             hasMudLayer={hasMudLayer}
             mudHeight={effectiveMudHeight}
             mudDensity={mudDensity}
+            hasPercolation={hasPercolation}
+            upliftFactorUp={upliftFactorUp}
+            upliftFactorDown={upliftFactorDown}
+            showTriangularMode={showTriangularMode}
             unitSystem={unitSystem}
             gravity={gravity}
             force={analyzedResults ? analyzedResults.forceData.FR_net : 0}
@@ -343,6 +412,9 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
           setShowDetails={setShowDetails}
           unitSystem={unitSystem}
           gravity={gravity}
+          hasPercolation={hasPercolation}
+          setHasPercolation={setHasPercolation}
+          showTriangularMode={showTriangularMode}
         />
       </div>
 

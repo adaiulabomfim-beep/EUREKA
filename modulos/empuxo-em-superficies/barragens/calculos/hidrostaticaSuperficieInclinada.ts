@@ -1,4 +1,5 @@
 import {
+  AnaliseMomentoPontoCBarragem,
   ResultadoEstabilidadeBarragem,
   ResultadoForcaLiquidaBarragem,
   ResultadoSuperficieRetangular,
@@ -303,6 +304,12 @@ export function calculateNetForce(
 
 export interface OpcoesEstabilidade {
   gammaMaterial?: number;
+  concreteSpecificGravity?: number;
+  damWidth?: number;
+  gammaFluid?: number;
+  hasPercolation?: boolean;
+  upliftFactorUp?: number;
+  upliftFactorDown?: number;
   mu?: number;
   volumeFactor?: number;
   customArea?: number;
@@ -321,6 +328,12 @@ export function calcularEstabilidadeBarragem(
 ): ResultadoEstabilidadeBarragem {
   const {
     gammaMaterial = 24000,
+    concreteSpecificGravity,
+    damWidth = 1.0,
+    gammaFluid = 9810,
+    hasPercolation = false,
+    upliftFactorUp = 1.0,
+    upliftFactorDown = 0.0,
     mu = 0.7,
     volumeFactor = 1.0,
     customArea,
@@ -330,6 +343,7 @@ export function calcularEstabilidadeBarragem(
     archRadius = 30,
   } = opcoes;
 
+  const bLong = Math.max(1e-3, damWidth);
   const xToeUp = profile.length > 0 ? profile[0].x : 0;
   const xToeDown = profile.length >= 4 ? profile[3].x : xToeUp;
   const actualBaseWidth = Math.max(EPS, xToeDown - xToeUp);
@@ -341,10 +355,10 @@ export function calcularEstabilidadeBarragem(
 
   const weight = area * gammaMaterial;
 
-  const { up, down, FH_net, FV_net, p_max_up } = forceData;
+  const { up, down, FH_net, FV_net, p_max_up, p_max_down, thetaUp } = forceData;
   const pushingToDownstream = FH_net >= 0;
 
-  // Ponto de tombamento: pé de jusante (quando empurrada para jusante) ou pé de montante
+  // Ponto de tombamento C: pé de jusante (quando empurrada para jusante) ou pé de montante
   const xPivot = pushingToDownstream ? xToeDown : xToeUp;
   const lever_arm_weight = Math.abs(xPivot - x_cg);
 
@@ -356,12 +370,87 @@ export function calcularEstabilidadeBarragem(
   const moment_resisting_water_v =
     up.FV * Math.abs(xPivot - x_cp_up) + down.FV * Math.abs(xPivot - x_cp_down);
 
-  const moment_resisting = moment_weight + moment_resisting_water_v;
-  const moment_overturning = pushingToDownstream
+  // Momentos individuais sobre a face inclinada AB em relação ao ponto C (x = xToeDown, y = 0)
+  // Convenção: Horário (tombante) = + ; Anti-horário (estabilizante) = -
+  const M_FH_C_por_metro = up.FH * up.y_cp - down.FH * down.y_cp;
+  const M_FV_C_por_metro = -moment_resisting_water_v;
+  const M_hidro_C_por_metro = M_FH_C_por_metro + M_FV_C_por_metro;
+  const M_hidro_C_total = M_hidro_C_por_metro * bLong;
+
+  const braco_FR_C =
+    up.FR > EPS ? Math.abs(M_hidro_C_por_metro) / up.FR : 0;
+
+  const sentidoMomentoHidro: 'HORARIO_TOMBANTE' | 'ANTI_HORARIO_ESTABILIZANTE' | 'NULO' =
+    Math.abs(M_hidro_C_por_metro) <= 1e-3
+      ? 'NULO'
+      : M_hidro_C_por_metro > 0
+      ? 'HORARIO_TOMBANTE'
+      : 'ANTI_HORARIO_ESTABILIZANTE';
+
+  // Modelo de Subpressão (Percolação sob a fundação BC)
+  // Hipótese didática adotada: distribuição linear/triangular entre B (p_B = k_B · p_max_up) e C (p_C = k_C · p_max_down)
+  const kB = Math.max(0, Math.min(1, upliftFactorUp));
+  const kC = Math.max(0, Math.min(1, upliftFactorDown));
+  const p_B = p_max_up * kB;
+  const p_C = p_max_down * kC;
+
+  // Para qualquer distribuição trapezoidal linear entre B (x=0) e C (x=B):
+  const U_calc_por_metro = 0.5 * (p_B + p_C) * actualBaseWidth;
+  const x_U_calc =
+    p_B + p_C > EPS
+      ? (actualBaseWidth * (p_B + 2 * p_C)) / (3 * (p_B + p_C))
+      : actualBaseWidth / 3;
+  const braco_U_C_calc = Math.max(0, actualBaseWidth - x_U_calc);
+  // Momento de U com braço B/3 = x_U (referência bibliográfica clássica: 20 m -> ~14,10 × 10⁶ kN·m)
+  const M_U_ref_por_metro_calc = U_calc_por_metro * x_U_calc;
+  // Momento geométrico de U em relação ao vértice C (braço B - x_U = 40 m -> ~28,20 × 10⁶ kN·m)
+  const M_U_C_por_metro_calc = U_calc_por_metro * braco_U_C_calc;
+
+  const subpressao = {
+    ativa: Boolean(hasPercolation),
+    fatorMontante: kB,
+    fatorJusante: kC,
+    p_B,
+    p_C,
+    U_por_metro: U_calc_por_metro,
+    U_total: U_calc_por_metro * bLong,
+    x_U: x_U_calc,
+    braco_U_C: braco_U_C_calc,
+    M_U_ref_por_metro: M_U_ref_por_metro_calc,
+    M_U_ref_total: M_U_ref_por_metro_calc * bLong,
+    M_U_C_por_metro: M_U_C_por_metro_calc,
+    M_U_C_total: M_U_C_por_metro_calc * bLong,
+  };
+
+  // Condição A: Sem percolação (U = 0)
+  const M_est_sem_por_metro = moment_weight + moment_resisting_water_v;
+  const M_tomb_sem_por_metro = pushingToDownstream
     ? Math.max(0, up.FH * up.y_cp - down.FH * down.y_cp)
     : Math.max(0, down.FH * down.y_cp - up.FH * up.y_cp);
+  const M_liq_sem_percolacao_por_metro = M_est_sem_por_metro - M_tomb_sem_por_metro;
+  const fs_tomb_sem_percolacao =
+    M_tomb_sem_por_metro > 1e-6 ? M_est_sem_por_metro / M_tomb_sem_por_metro : 99.99;
+  const estavel_sem_percolacao = M_liq_sem_percolacao_por_metro >= 0;
 
-  const total_vertical_force = weight + FV_net;
+  // Condição B: Com percolação (Subpressão U ativa na base BC)
+  const M_est_com_percolacao_por_metro = M_est_sem_por_metro;
+  const M_tomb_com_percolacao_por_metro = M_tomb_sem_por_metro + M_U_ref_por_metro_calc;
+  const M_liq_com_percolacao_por_metro =
+    M_est_com_percolacao_por_metro - M_tomb_com_percolacao_por_metro;
+  const fs_tomb_com_percolacao =
+    M_tomb_com_percolacao_por_metro > 1e-6
+      ? M_est_com_percolacao_por_metro / M_tomb_com_percolacao_por_metro
+      : 99.99;
+  const estavel_com_percolacao = M_liq_com_percolacao_por_metro >= 0;
+
+  // Estado ativo refletido nos cartões principais e vetores
+  const U_active = hasPercolation ? U_calc_por_metro : 0;
+  const M_U_active = hasPercolation ? M_U_ref_por_metro_calc : 0;
+
+  const moment_resisting = M_est_sem_por_metro;
+  const moment_overturning = M_tomb_sem_por_metro + M_U_active;
+
+  const total_vertical_force = Math.max(0, weight + FV_net - U_active);
   const absFH = Math.abs(FH_net);
 
   const fs_tomb =
@@ -381,6 +470,51 @@ export function calcularEstabilidadeBarragem(
   const archStressBase =
     isArchDam && actualBaseWidth > EPS ? (p_max_up * archRadius) / actualBaseWidth : undefined;
 
+  const thetaUpRad = (Math.max(1, thetaUp) * Math.PI) / 180;
+  const sinThetaUp = Math.sin(thetaUpRad);
+  const cosThetaUp = Math.cos(thetaUpRad);
+  const L_AB = damHeight / Math.max(EPS, sinThetaUp);
+  const projecao_AD = damHeight * sinThetaUp;
+  const projecao_BD = actualBaseWidth * cosThetaUp;
+  const p_cg = gammaFluid * up.h_cg;
+
+  const analisePontoC: AnaliseMomentoPontoCBarragem = {
+    larguraLongitudinal: bLong,
+    L_AB,
+    areaMolhadaTotal: up.area * bLong,
+    p_cg,
+    x_cp_B: up.x_cp_offset,
+    y_cp_B: up.y_cp,
+    projecao_AD,
+    projecao_BD,
+    braco_FR_C,
+    F_R_total: up.FR * bLong,
+    F_H_total: up.FH * bLong,
+    F_V_total: up.FV * bLong,
+    M_FH_C_por_metro,
+    M_FV_C_por_metro,
+    M_hidro_C_por_metro,
+    M_hidro_C_total,
+    sentidoMomentoHidro,
+    hidroIsoladaTomba: M_hidro_C_por_metro > moment_weight,
+    W_total: weight * bLong,
+    M_W_C_por_metro: moment_weight,
+    M_W_C_total: moment_weight * bLong,
+    M_liq_sem_percolacao_por_metro,
+    M_liq_sem_percolacao_total: M_liq_sem_percolacao_por_metro * bLong,
+    fs_tomb_sem_percolacao,
+    estavel_sem_percolacao,
+    subpressao,
+    M_tomb_com_percolacao_por_metro,
+    M_tomb_com_percolacao_total: M_tomb_com_percolacao_por_metro * bLong,
+    M_est_com_percolacao_por_metro,
+    M_est_com_percolacao_total: M_est_com_percolacao_por_metro * bLong,
+    M_liq_com_percolacao_por_metro,
+    M_liq_com_percolacao_total: M_liq_com_percolacao_por_metro * bLong,
+    fs_tomb_com_percolacao,
+    estavel_com_percolacao,
+  };
+
   return {
     area,
     weight,
@@ -388,6 +522,8 @@ export function calcularEstabilidadeBarragem(
     y_cg,
     lever_arm_weight,
     gammaMaterial,
+    concreteSpecificGravity,
+    damWidth: bLong,
     mu,
     actualBaseWidth,
     moment_resisting,
@@ -402,7 +538,10 @@ export function calcularEstabilidadeBarragem(
     archThrust,
     archStressBase,
     volumeFactor,
-    upliftAssumption: 'Subpressão desconsiderada (U = 0, base impermeável)',
+    upliftAssumption: hasPercolation
+      ? `Subpressão ativa (hipótese adotada: distribuição linear sob BC, k_B = ${(kB * 100).toFixed(0)}%, k_C = ${(kC * 100).toFixed(0)}%)`
+      : 'Sem percolação sob a base (U = 0, fundação impermeável)',
+    analisePontoC,
   };
 }
 

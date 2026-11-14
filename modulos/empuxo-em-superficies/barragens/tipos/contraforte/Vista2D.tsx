@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { renderizarEstabilidade2D } from '../../visual/overlayEstabilidade';
 import { RenderizadorBarragensProps } from '../../dominio/tipos';
 import { construirGeometria } from './geometria';
@@ -10,7 +10,7 @@ import {
   criarBaseTerra,
   gerarVetoresBarragem2D,
 } from '../../visual/auxiliaresGeometriaCena';
-import { useSceneEngine } from '../../visual/motorCena3D';
+import { calcularEscala2D, useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer } from '../../visual/ContainerCena';
 
 export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, setIs3D: any, showVectors: boolean, setShowVectors: any }> = (props) => {
@@ -28,20 +28,59 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
   const ORIGIN_Y = SVG_H * 0.82;
   const CHANNEL_WIDTH = 40;
 
-  const { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX } = useMemo(() => {
+  const [visibleXBounds, setVisibleXBounds] = useState<{ leftScreenX: number; rightScreenX: number }>({
+    leftScreenX: -800,
+    rightScreenX: 1800,
+  });
+
+  const { wallProfile, buttressProfile2D, profile, actualBaseWidth, toWorldX, getDamXAtY } = useMemo(() => {
     const { wallProfile, buttressProfile2D, actualBaseWidth } = construirGeometria(damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle);
     const profile = wallProfile;
     const toWorldX = (x: number) => x - actualBaseWidth / 2;
-
     const getDamXAtY = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => {
       return getDamXAtYGeneric(wallProfile, y, side);
     };
+    return { wallProfile, buttressProfile2D, profile, actualBaseWidth, toWorldX, getDamXAtY };
+  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle]);
 
+  const autoFitParams = useMemo(() => {
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+
+    const zs = [-CHANNEL_WIDTH / 2, CHANNEL_WIDTH / 2];
+    const fullProfile = [...profile, { x: actualBaseWidth, y: 0 }];
+    fullProfile.forEach((p: any) => {
+      zs.forEach((z) => {
+        const wx = toWorldX(p.x);
+        minX = Math.min(minX, wx);
+        maxX = Math.max(maxX, wx);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y);
+        minZ = Math.min(minZ, z);
+        maxZ = Math.max(maxZ, z);
+      });
+    });
+
+    return { minX, maxX, minY, maxY, minZ, maxZ };
+  }, [profile, actualBaseWidth, toWorldX]);
+
+  const { farLeft, farRight } = useMemo(() => {
+    const scale2D = calcularEscala2D(autoFitParams, SVG_W, SVG_H);
+    const worldLeftEdge = (visibleXBounds.leftScreenX - ORIGIN_X) / scale2D;
+    const worldRightEdge = (visibleXBounds.rightScreenX - ORIGIN_X) / scale2D;
+    const damUpstreamToe = getDamXAtY(0, 'UPSTREAM');
+    const damDownstreamToe = Math.max(getDamXAtY(0, 'DOWNSTREAM'), actualBaseWidth);
+    return {
+      farLeft: Math.min(damUpstreamToe - damHeight * 1.5, worldLeftEdge + actualBaseWidth / 2),
+      farRight: Math.max(damDownstreamToe + damHeight * 1.5, worldRightEdge + actualBaseWidth / 2),
+    };
+  }, [autoFitParams, visibleXBounds.leftScreenX, visibleXBounds.rightScreenX, ORIGIN_X, getDamXAtY, actualBaseWidth, damHeight]);
+
+  const worldGeometry = useMemo(() => {
     const maxH = Math.max(damHeight, upstreamLevel, downstreamLevel);
-    const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
-    const farRight = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
 
-    const worldGeometry = [
+    const faces = [
       ...criarBaseTerra(maxH, farLeft, farRight, CHANNEL_WIDTH * 1.5, toWorldX),
       ...criarPrisma(
         wallProfile,
@@ -72,13 +111,13 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     ];
 
     if (upstreamLevel > 0) {
-      worldGeometry.push(
+      faces.push(
         ...criarAguaMontanteComLama({
           upstreamLevel,
           hasMudLayer,
           mudHeight,
           channelWidth: CHANNEL_WIDTH,
-          farLeft: getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5,
+          farLeft,
           getDamXAtY,
           toWorldX,
         })
@@ -86,11 +125,11 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     }
 
     if (downstreamLevel > 0) {
-      worldGeometry.push(
+      faces.push(
         ...caixaAgua3D(
           downstreamLevel,
           CHANNEL_WIDTH,
-          getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5,
+          farRight,
           'DOWNSTREAM',
           getDamXAtY,
           toWorldX,
@@ -100,30 +139,8 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       );
     }
 
-    return { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX };
-  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, buttressAngle, upstreamLevel, downstreamLevel, hasMudLayer, mudHeight]);
-
-  const autoFitParams = useMemo(() => {
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-    let minZ = Infinity, maxZ = -Infinity;
-
-    const zs = [-CHANNEL_WIDTH / 2, CHANNEL_WIDTH / 2];
-    const fullProfile = [...profile, { x: actualBaseWidth, y: 0 }];
-    fullProfile.forEach((p: any) => {
-      zs.forEach((z) => {
-        const wx = toWorldX(p.x);
-        minX = Math.min(minX, wx);
-        maxX = Math.max(maxX, wx);
-        minY = Math.min(minY, p.y);
-        maxY = Math.max(maxY, p.y);
-        minZ = Math.min(minZ, z);
-        maxZ = Math.max(maxZ, z);
-      });
-    });
-
-    return { minX, maxX, minY, maxY, minZ, maxZ };
-  }, [profile, actualBaseWidth, toWorldX]);
+    return faces;
+  }, [damHeight, upstreamLevel, downstreamLevel, hasMudLayer, mudHeight, farLeft, farRight, wallProfile, buttressProfile2D, getDamXAtY, toWorldX]);
 
   const { renderedFaces, project, SCALE, pan, handlers, resetView } = useSceneEngine(
     false, worldGeometry, SVG_W, SVG_H, ORIGIN_X, ORIGIN_Y, autoFitParams
@@ -164,10 +181,9 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     const dims: React.ReactNode[] = [];
 
     if (upstreamLevel > 0) {
-      const farX = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
-      const xLeft = project({ x: toWorldX(farX), y: upstreamLevel, z: 0 }).x;
+      const xLeft = project({ x: toWorldX(farLeft), y: upstreamLevel, z: 0 }).x;
       const xRight = project({ x: toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM')), y: upstreamLevel, z: 0 }).x;
-      const yTop = project({ x: toWorldX(farX), y: upstreamLevel, z: 0 }).y;
+      const yTop = project({ x: toWorldX(farLeft), y: upstreamLevel, z: 0 }).y;
       const rippleHeight = Math.min(30, upstreamLevel * SCALE);
 
       dims.push(
@@ -179,10 +195,9 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
     }
 
     if (downstreamLevel > 0) {
-      const farX = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
       const xLeft = project({ x: toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM')), y: downstreamLevel, z: 0 }).x;
-      const xRight = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).x;
-      const yTop = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).y;
+      const xRight = project({ x: toWorldX(farRight), y: downstreamLevel, z: 0 }).x;
+      const yTop = project({ x: toWorldX(farRight), y: downstreamLevel, z: 0 }).y;
       const rippleHeight = Math.min(30, downstreamLevel * SCALE);
 
       dims.push(
@@ -357,6 +372,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
         xToeWorld: toWorldX(getDamXAtY(0, 'UPSTREAM')),
         svgW: SVG_W,
         showVectors: props.showVectors,
+        forceH: forceH ?? force,
       })
     );
 
@@ -371,6 +387,7 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       resetView={resetView} handlers={handlers}
       renderedFaces={renderedFaces} vectors={vectors}
       SVG_W={SVG_W} SVG_H={SVG_H} ORIGIN_X={originProj.x} ORIGIN_Y={originProj.y} pan={pan}
+      onVisibleXBoundsChange={setVisibleXBounds}
     >
       {renderDimensions()}
     </SceneContainer>

@@ -14,6 +14,7 @@ interface RenderizadorComportaProps {
   gravity?: number;
   liveResults?: ResultadoSimulacaoComporta;
   hasGate: boolean;
+  gateOpeningPercent?: number;
   gateShape: FormaComporta;
   gateWidth: number;
   gateHeight: number;
@@ -23,6 +24,8 @@ interface RenderizadorComportaProps {
   s_cp: number;
   hingePosition: PosicaoDobradica;
   hasTieRod: boolean;
+  hasSmoothWallSupport?: boolean;
+  hasSmoothFloorSupport?: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
   gateWeight?: number;
@@ -32,6 +35,8 @@ interface RenderizadorComportaProps {
   onReset: () => void;
   is3D: boolean;
   setIs3D: (v: boolean) => void;
+  isFrontalView: boolean;
+  setIsFrontalView: (v: boolean) => void;
   showVectors: boolean;
   setShowVectors: (v: boolean) => void;
   wallDims: { height: number; thickness: number; width: number; };

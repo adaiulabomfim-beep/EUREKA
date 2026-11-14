@@ -36,6 +36,12 @@ interface PainelControlesProps {
   setDamBaseWidth: (val: number) => void;
   damCrestWidth: number;
   setDamCrestWidth: (val: number) => void;
+  damWidth?: number;
+  setDamWidth?: (val: number) => void;
+  concreteSpecificGravity?: number;
+  setConcreteSpecificGravity?: (val: number) => void;
+  fluidKey?: 'agua' | 'agua20C';
+  setFluidKey?: (val: 'agua' | 'agua20C') => void;
   upstreamLevel: number;
   setUpstreamLevel: (val: number) => void;
   hasDownstream: boolean;
@@ -48,6 +54,13 @@ interface PainelControlesProps {
   setMudHeight: (val: number) => void;
   mudDensity: number;
   setMudDensity: (val: number) => void;
+  hasPercolation?: boolean;
+  setHasPercolation?: (val: boolean) => void;
+  upliftFactorUp?: number;
+  setUpliftFactorUp?: (val: number) => void;
+  upliftFactorDown?: number;
+  setUpliftFactorDown?: (val: number) => void;
+  showTriangularMode?: boolean;
   unitSystem: SistemaUnidadesBarragem;
   setUnitSystem: (val: SistemaUnidadesBarragem) => void;
   maxWaterLevel: number;
@@ -74,6 +87,12 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   setDamBaseWidth,
   damCrestWidth,
   setDamCrestWidth,
+  damWidth = 1,
+  setDamWidth,
+  concreteSpecificGravity = 2.4,
+  setConcreteSpecificGravity,
+  fluidKey = 'agua',
+  setFluidKey,
   upstreamLevel,
   setUpstreamLevel,
   hasDownstream,
@@ -86,6 +105,13 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   setMudHeight,
   mudDensity,
   setMudDensity,
+  hasPercolation = false,
+  setHasPercolation,
+  upliftFactorUp = 1.0,
+  setUpliftFactorUp,
+  upliftFactorDown = 0.0,
+  setUpliftFactorDown,
+  showTriangularMode = false,
   unitSystem,
   setUnitSystem,
   maxWaterLevel,
@@ -239,9 +265,21 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
           </div>
           <div>
             <label className={labelClass}>
-              {damType === TipoBarragem.TERRA_ENROCAMENTO ? 'Inclinação Montante (θ)' : 'Inclinação da Face (θ)'}
+              {damType === TipoBarragem.TERRA_ENROCAMENTO ? 'Inclinação Montante (θ)' : 'Inclinação da Face AB (θ)'}
             </label>
-            <NumberInput value={inclinationAngle} min={15} max={90} onChange={setInclinationAngle} />
+            <NumberInput
+              value={Number(inclinationAngle.toFixed(2))}
+              min={15}
+              max={90}
+              step="any"
+              onChange={(val) => {
+                setInclinationAngle(val);
+                if (showTriangularMode && damCrestWidth === 0 && val > 15 && val < 90) {
+                  const newBase = parseFloat((damHeight / Math.tan((val * Math.PI) / 180)).toFixed(2));
+                  setDamBaseWidth(newBase);
+                }
+              }}
+            />
           </div>
           {damType === TipoBarragem.TERRA_ENROCAMENTO && downstreamAngle !== undefined && setDownstreamAngle && (
             <div>
@@ -263,29 +301,86 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
           )}
           <div className="bg-slate-50/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-3">
             <div>
-              <label className={labelClass}>Altura Total (m)</label>
-              <NumberInput value={damHeight} min={1} max={200} onChange={setDamHeight} />
+              <label className={labelClass}>Altura Total AC (m)</label>
+              <NumberInput
+                value={damHeight}
+                min={1}
+                max={200}
+                onChange={(val) => {
+                  setDamHeight(val);
+                  if (showTriangularMode && damCrestWidth === 0 && damBaseWidth > 0) {
+                    const ang = (Math.atan2(val, damBaseWidth) * 180) / Math.PI;
+                    setInclinationAngle(ang);
+                  }
+                }}
+              />
             </div>
             {damType !== TipoBarragem.CONTRAFORTE && damType !== TipoBarragem.TERRA_ENROCAMENTO && (
               <div>
                 <label className={labelClass}>
-                  {damType === TipoBarragem.ARCO ? 'Espessura na Base (m)' : 'Largura da Base (m)'}
+                  {damType === TipoBarragem.ARCO ? 'Espessura na Base (m)' : 'Largura da Base BC (m)'}
                 </label>
-                <NumberInput value={damBaseWidth} min={1} max={200} step="any" onChange={setDamBaseWidth} />
+                <NumberInput
+                  value={damBaseWidth}
+                  min={1}
+                  max={200}
+                  step="any"
+                  onChange={(val) => {
+                    setDamBaseWidth(val);
+                    if (showTriangularMode && damCrestWidth === 0 && val > 0) {
+                      const ang = (Math.atan2(damHeight, val) * 180) / Math.PI;
+                      setInclinationAngle(ang);
+                    }
+                  }}
+                />
               </div>
             )}
             <div>
               <label className={labelClass}>Largura da Crista (m)</label>
               <NumberInput value={damCrestWidth} min={0} max={100} onChange={setDamCrestWidth} />
             </div>
+            {damType === TipoBarragem.GRAVIDADE && setDamWidth && (
+              <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                <div>
+                  <label className={labelClass}>Largura Long. b (m)</label>
+                  <NumberInput value={damWidth} min={1} max={500} step="any" onChange={setDamWidth} />
+                </div>
+                {setConcreteSpecificGravity && (
+                  <div>
+                    <label className={labelClass}>Dens. Relativa Concreto (d)</label>
+                    <NumberInput
+                      value={concreteSpecificGravity}
+                      min={1.8}
+                      max={3.2}
+                      step={0.1}
+                      onChange={setConcreteSpecificGravity}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Water Levels */}
+      {/* Water Levels & Percolation */}
       <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200 shrink-0">
-        <SectionHeader icon={<Layers className="w-4 h-4" />} title="Níveis D'água" />
+        <SectionHeader icon={<Layers className="w-4 h-4" />} title="Fluido, Níveis e Percolação" />
         <div className="space-y-4">
+          {setFluidKey && (
+            <div>
+              <label className={labelClass}>Propriedade do Fluido</label>
+              <select
+                className={selectClass}
+                value={fluidKey}
+                onChange={(e) => setFluidKey(e.target.value as 'agua' | 'agua20C')}
+              >
+                <option value="agua">Água Doce Padrão (ρ = 1.000 kg/m³ · γ = 9,81 kN/m³)</option>
+                <option value="agua20C">Água a 20 °C (ρ = 998,2 kg/m³ · γ ≈ 9,79 kN/m³)</option>
+              </select>
+            </div>
+          )}
+
           <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
             <input
               type="checkbox"
@@ -306,7 +401,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
           <div className="space-y-3 relative">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Montante (m)
+                Profundidade Montante (m)
               </label>
               <NumberInput
                 min={0}
@@ -334,6 +429,75 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                   onChange={(val) => setDownstreamLevel(Math.min(val, upstreamLevel))}
                 />
               </div>
+            </div>
+          )}
+
+          {/* Percolação / Subpressão sob a fundação BC */}
+          {damType === TipoBarragem.GRAVIDADE && setHasPercolation && (
+            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+              <div className="flex items-center justify-between gap-2 p-2.5 bg-purple-50/70 dark:bg-purple-950/30 rounded-xl border border-purple-200/70 dark:border-purple-800/50 transition-colors">
+                <div className="flex items-center gap-2.5 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={hasPercolation}
+                    onChange={(e) => setHasPercolation(e.target.checked)}
+                    id="percolacao-toggle"
+                    className="accent-purple-700 w-4 h-4 cursor-pointer rounded"
+                  />
+                  <label
+                    htmlFor="percolacao-toggle"
+                    className="text-[10px] font-bold text-purple-900 dark:text-purple-200 cursor-pointer select-none uppercase tracking-widest flex-1"
+                  >
+                    Percolação sob a Base (Subpressão U)
+                  </label>
+                </div>
+                <span
+                  className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                    hasPercolation
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {hasPercolation ? 'Ativa' : 'Sem Percolação'}
+                </span>
+              </div>
+
+              {hasPercolation && setUpliftFactorUp && setUpliftFactorDown && (
+                <div className="bg-purple-50/40 dark:bg-purple-950/20 p-3 rounded-xl border border-purple-200/50 dark:border-purple-900/40 space-y-2.5">
+                  <div className="text-[10px] text-purple-900 dark:text-purple-200 font-semibold leading-snug">
+                    Hipótese adotada de cálculo: distribuição linear de subpressão entre B (montante) e C (jusante).
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[9px] font-bold text-purple-900/80 dark:text-purple-300 uppercase tracking-wider block mb-1">
+                        Fator em B (k_B)
+                      </label>
+                      <NumberInput
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={upliftFactorUp}
+                        onChange={setUpliftFactorUp}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-purple-900/80 dark:text-purple-300 uppercase tracking-wider block mb-1">
+                        Fator em C (k_C)
+                      </label>
+                      <NumberInput
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={upliftFactorDown}
+                        onChange={setUpliftFactorDown}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-[9.5px] text-purple-800/90 dark:text-purple-300/90">
+                    Para distribuição triangular clássica: k_B = 1,00 (carga total em B) e k_C = 0,00 (pressão nula em C).
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

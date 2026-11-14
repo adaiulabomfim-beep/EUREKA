@@ -81,14 +81,14 @@ export const BarragemArcoScene: React.FC<any> = ({
       {/* Upstream Water */}
       {upstreamGeometry && (
         <mesh geometry={upstreamGeometry} receiveShadow>
-          <AnimatedWaterMaterial />
+          <AnimatedWaterMaterial minY={0} maxY={upstreamLevel} />
         </mesh>
       )}
 
       {/* Downstream Water */}
       {downstreamGeometry && (
         <mesh geometry={downstreamGeometry} receiveShadow>
-          <AnimatedWaterMaterial />
+          <AnimatedWaterMaterial minY={0} maxY={downstreamLevel} />
         </mesh>
       )}
 

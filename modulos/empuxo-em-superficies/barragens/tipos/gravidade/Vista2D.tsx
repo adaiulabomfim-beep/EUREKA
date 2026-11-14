@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { renderizarEstabilidade2D } from '../../visual/overlayEstabilidade';
 import { RenderizadorBarragensProps } from '../../dominio/tipos';
 import { construirGeometria } from './geometria';
@@ -10,7 +10,7 @@ import {
   criarBaseTerra,
   gerarVetoresBarragem2D,
 } from '../../visual/auxiliaresGeometriaCena';
-import { useSceneEngine } from '../../visual/motorCena3D';
+import { calcularEscala2D, useSceneEngine } from '../../visual/motorCena3D';
 import { SceneContainer as ContainerCena } from '../../visual/ContainerCena';
 
 type GravityDam2DViewProps = RenderizadorBarragensProps & {
@@ -51,81 +51,24 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
   const ORIGIN_Y = SVG_H * 0.82;
   const CHANNEL_WIDTH = 40;
 
-  const { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX } = useMemo(() => {
+  const [visibleXBounds, setVisibleXBounds] = useState<{ leftScreenX: number; rightScreenX: number }>({
+    leftScreenX: -800,
+    rightScreenX: 1800,
+  });
+
+  const { profile, actualBaseWidth, toWorldX, getDamXAtY } = useMemo(() => {
     const { profile, actualBaseWidth } = construirGeometria(
       damHeight,
       damBaseWidth,
       damCrestWidth,
       inclinationAngle
     );
-
     const toWorldX = (x: number) => x - actualBaseWidth / 2;
-
     const getDamXAtY = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => {
       return getDamXAtYGeneric(profile, y, side);
     };
-
-    const maxH = Math.max(damHeight, upstreamLevel, downstreamLevel);
-    const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
-    const farRight = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
-
-    const worldGeometry = [
-      ...criarBaseTerra(maxH, farLeft, farRight, CHANNEL_WIDTH * 1.5, toWorldX),
-      ...criarPrisma(
-        profile,
-        CHANNEL_WIDTH,
-        '#9ca3af',
-        1,
-        '#6b7280',
-        1.2,
-        'DAM',
-        undefined,
-        0,
-        'url(#concretePattern)',
-        toWorldX
-      ),
-    ];
-
-    if (upstreamLevel > 0) {
-      worldGeometry.push(
-        ...criarAguaMontanteComLama({
-          upstreamLevel,
-          hasMudLayer,
-          mudHeight,
-          channelWidth: CHANNEL_WIDTH,
-          farLeft: getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5,
-          getDamXAtY,
-          toWorldX,
-        })
-      );
-    }
-
-    if (downstreamLevel > 0) {
-      worldGeometry.push(
-        ...caixaAgua3D(
-          downstreamLevel,
-          CHANNEL_WIDTH,
-          getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5,
-          'DOWNSTREAM',
-          getDamXAtY,
-          toWorldX,
-          undefined,
-          'B'
-        )
-      );
-    }
-
-    return { worldGeometry, getDamXAtY, profile, actualBaseWidth, toWorldX };
-  }, [
-    damHeight,
-    damBaseWidth,
-    damCrestWidth,
-    inclinationAngle,
-    upstreamLevel,
-    downstreamLevel,
-    hasMudLayer,
-    mudHeight,
-  ]);
+    return { profile, actualBaseWidth, toWorldX, getDamXAtY };
+  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle]);
 
   const autoFitParams = useMemo(() => {
     let minX = Infinity;
@@ -151,6 +94,81 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
 
     return { minX, maxX, minY, maxY, minZ, maxZ };
   }, [profile, toWorldX]);
+
+  const { farLeft, farRight } = useMemo(() => {
+    const scale2D = calcularEscala2D(autoFitParams, SVG_W, SVG_H);
+    const worldLeftEdge = (visibleXBounds.leftScreenX - ORIGIN_X) / scale2D;
+    const worldRightEdge = (visibleXBounds.rightScreenX - ORIGIN_X) / scale2D;
+    const damUpstreamToe = getDamXAtY(0, 'UPSTREAM');
+    const damDownstreamToe = Math.max(getDamXAtY(0, 'DOWNSTREAM'), actualBaseWidth);
+    return {
+      farLeft: Math.min(damUpstreamToe - damHeight * 1.5, worldLeftEdge + actualBaseWidth / 2),
+      farRight: Math.max(damDownstreamToe + damHeight * 1.5, worldRightEdge + actualBaseWidth / 2),
+    };
+  }, [autoFitParams, visibleXBounds.leftScreenX, visibleXBounds.rightScreenX, ORIGIN_X, getDamXAtY, actualBaseWidth, damHeight]);
+
+  const worldGeometry = useMemo(() => {
+    const maxH = Math.max(damHeight, upstreamLevel, downstreamLevel);
+
+    const faces = [
+      ...criarBaseTerra(maxH, farLeft, farRight, CHANNEL_WIDTH * 1.5, toWorldX),
+      ...criarPrisma(
+        profile,
+        CHANNEL_WIDTH,
+        '#9ca3af',
+        1,
+        '#6b7280',
+        1.2,
+        'DAM',
+        undefined,
+        0,
+        'url(#concretePattern)',
+        toWorldX
+      ),
+    ];
+
+    if (upstreamLevel > 0) {
+      faces.push(
+        ...criarAguaMontanteComLama({
+          upstreamLevel,
+          hasMudLayer,
+          mudHeight,
+          channelWidth: CHANNEL_WIDTH,
+          farLeft,
+          getDamXAtY,
+          toWorldX,
+        })
+      );
+    }
+
+    if (downstreamLevel > 0) {
+      faces.push(
+        ...caixaAgua3D(
+          downstreamLevel,
+          CHANNEL_WIDTH,
+          farRight,
+          'DOWNSTREAM',
+          getDamXAtY,
+          toWorldX,
+          undefined,
+          'B'
+        )
+      );
+    }
+
+    return faces;
+  }, [
+    damHeight,
+    upstreamLevel,
+    downstreamLevel,
+    hasMudLayer,
+    mudHeight,
+    farLeft,
+    farRight,
+    profile,
+    getDamXAtY,
+    toWorldX,
+  ]);
 
   const { renderedFaces, project, SCALE, pan, handlers, resetView } = useSceneEngine(
     false,
@@ -215,10 +233,9 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     const dims: React.ReactNode[] = [];
 
     if (upstreamLevel > 0) {
-      const farX = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
-      const xLeft = project({ x: toWorldX(farX), y: upstreamLevel, z: 0 }).x;
+      const xLeft = project({ x: toWorldX(farLeft), y: upstreamLevel, z: 0 }).x;
       const xRight = project({ x: toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM')), y: upstreamLevel, z: 0 }).x;
-      const yTop = project({ x: toWorldX(farX), y: upstreamLevel, z: 0 }).y;
+      const yTop = project({ x: toWorldX(farLeft), y: upstreamLevel, z: 0 }).y;
       const rippleHeight = Math.min(30, upstreamLevel * SCALE);
 
       dims.push(
@@ -245,10 +262,9 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     }
 
     if (downstreamLevel > 0) {
-      const farX = getDamXAtY(0, 'DOWNSTREAM') + damHeight * 1.5;
       const xLeft = project({ x: toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM')), y: downstreamLevel, z: 0 }).x;
-      const xRight = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).x;
-      const yTop = project({ x: toWorldX(farX), y: downstreamLevel, z: 0 }).y;
+      const xRight = project({ x: toWorldX(farRight), y: downstreamLevel, z: 0 }).x;
+      const yTop = project({ x: toWorldX(farRight), y: downstreamLevel, z: 0 }).y;
       const rippleHeight = Math.min(30, downstreamLevel * SCALE);
 
       dims.push(
@@ -396,9 +412,9 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
 
     const effMud = hasMudLayer && mudHeight > 0 ? Math.min(mudHeight, upstreamLevel) : 0;
     if (effMud > 0) {
-      const farLeft = getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5;
       const pL = project({ x: toWorldX(farLeft), y: effMud, z: 0 });
       const pR = project({ x: toWorldX(getDamXAtY(effMud, 'UPSTREAM')), y: effMud, z: 0 });
+      const mudLabelX = Math.max(pL.x + 8, Math.min(pR.x - 165, 28));
       dims.push(
         <g key="mud-interface" pointerEvents="none">
           <line
@@ -412,7 +428,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
             opacity="0.85"
           />
           <text
-            x={pL.x + 8}
+            x={mudLabelX}
             y={pL.y - 5}
             fill="#fef3c7"
             fontSize="10"
@@ -446,6 +462,143 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       );
     }
 
+    const isTriangularABC = Boolean(
+      props.showTriangularMode || (damCrestWidth <= 0.01 && (props.damWidth ?? 1) > 1.001)
+    );
+
+    if (isTriangularABC) {
+      const ptB = project({ x: toWorldX(0), y: 0, z: 0 });
+      const ptC = project({ x: toWorldX(actualBaseWidth), y: 0, z: 0 });
+      const ptA = project({ x: toWorldX(actualBaseWidth), y: damHeight, z: 0 });
+      const L_AB = Math.hypot(actualBaseWidth, damHeight);
+      const bLong = props.damWidth ?? props.stability?.damWidth ?? 30;
+      const dConc = props.stability?.concreteSpecificGravity ?? 2.4;
+
+      // Cota inclinada AB = 100 m ao longo da face de montante
+      const midAB = { x: (ptA.x + ptB.x) / 2 - 36, y: (ptA.y + ptB.y) / 2 - 22 };
+      const abLabel = `AB = ${L_AB.toFixed(1)} m (${inclinationAngle.toFixed(2)}°)`;
+      const abBoxW = abLabel.length * 6.3 + 14;
+
+      dims.push(
+        <g key="abc-labels-and-dims" pointerEvents="none">
+          {/* Cota do comprimento inclinado AB */}
+          <rect
+            x={midAB.x - abBoxW / 2}
+            y={midAB.y - 10}
+            width={abBoxW}
+            height={20}
+            rx={6}
+            fill="white"
+            stroke="#2563eb"
+            strokeWidth="1.2"
+            opacity="0.95"
+          />
+          <text
+            x={midAB.x}
+            y={midAB.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize="11"
+            fontWeight="800"
+            fill="#1d4ed8"
+          >
+            {abLabel}
+          </text>
+
+          {/* Vértice A (Topo) */}
+          <g transform={`translate(${ptA.x + 14}, ${ptA.y - 14})`}>
+            <circle cx={0} cy={0} r={11} fill="#0f172a" stroke="white" strokeWidth="2" />
+            <text x={0} y={0} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="900" fill="white">
+              A
+            </text>
+          </g>
+
+          {/* Vértice B (Pé de Montante) */}
+          <g transform={`translate(${ptB.x - 16}, ${ptB.y + 16})`}>
+            <circle cx={0} cy={0} r={11} fill="#0f172a" stroke="white" strokeWidth="2" />
+            <text x={0} cy={0} y={0} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="900" fill="white">
+              B
+            </text>
+          </g>
+
+          {/* Vértice C (Pé de Jusante / Ponto de Referência de Momento) */}
+          <circle cx={ptC.x} cy={ptC.y} r={6} fill="#ea580c" stroke="white" strokeWidth="2" />
+          <g transform={`translate(${ptC.x + 18}, ${ptC.y + 16})`}>
+            <circle cx={0} cy={0} r={12} fill="#ea580c" stroke="white" strokeWidth="2" />
+            <text x={0} y={0} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="900" fill="white">
+              C
+            </text>
+          </g>
+
+          {/* Etiqueta informativa de Largura Longitudinal b e Concreto d */}
+          <g transform={`translate(${SVG_W / 2}, ${ptA.y - 34})`}>
+            <rect
+              x={-135}
+              y={-11}
+              width={270}
+              height={22}
+              rx={8}
+              fill="#f8fafc"
+              stroke="#cbd5e1"
+              strokeWidth="1.2"
+              opacity="0.95"
+            />
+            <text
+              x={0}
+              y={0}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize="10.5"
+              fontWeight="800"
+              fill="#334155"
+            >
+              {`Largura b = ${bLong.toFixed(1)} m  |  Concreto d = ${dConc.toFixed(1)}`}
+            </text>
+          </g>
+
+          {/* Marcador do Centro de Pressão (CP) sobre a face AB */}
+          {isAnalyzed && up && up.FR > 0 && (
+            (() => {
+              const xCpWorld = toWorldX(getDamXAtY(up.y_cp, 'UPSTREAM'));
+              const ptCP = project({ x: xCpWorld, y: up.y_cp, z: 0 });
+              const fTotalKn = ((up.FR * bLong) / 1000).toLocaleString('pt-BR', {
+                maximumFractionDigits: 0,
+              });
+              const cpBadgeText = `CP (s=${up.s_cp.toFixed(1)}m) | FR=${fTotalKn} kN`;
+              const cpBoxW = cpBadgeText.length * 5.8 + 14;
+              return (
+                <g key="cp-marker-ab">
+                  <circle cx={ptCP.x} cy={ptCP.y} r={5} fill="#2563eb" stroke="white" strokeWidth="1.8" />
+                  <rect
+                    x={ptCP.x - cpBoxW - 10}
+                    y={ptCP.y - 24}
+                    width={cpBoxW}
+                    height={19}
+                    rx={5}
+                    fill="#eff6ff"
+                    stroke="#3b82f6"
+                    strokeWidth="1.2"
+                    opacity="0.96"
+                  />
+                  <text
+                    x={ptCP.x - cpBoxW / 2 - 10}
+                    y={ptCP.y - 14.5}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize="10"
+                    fontWeight="800"
+                    fill="#1e40af"
+                  >
+                    {cpBadgeText}
+                  </text>
+                </g>
+              );
+            })()
+          )}
+        </g>
+      );
+    }
+
     dims.push(
       ...renderizarEstabilidade2D({
         stability: props.stability,
@@ -456,6 +609,8 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         xToeWorld: toWorldX(getDamXAtY(0, 'UPSTREAM')),
         svgW: SVG_W,
         showVectors: props.showVectors,
+        forceH: forceH ?? force,
+        showTriangularMode: isTriangularABC,
       })
     );
 
@@ -480,6 +635,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       ORIGIN_X={originProj.x}
       ORIGIN_Y={originProj.y}
       pan={pan}
+      onVisibleXBoundsChange={setVisibleXBounds}
     >
       {renderDimensions()}
     </ContainerCena>

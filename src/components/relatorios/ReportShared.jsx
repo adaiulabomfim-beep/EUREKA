@@ -172,6 +172,19 @@ export const buildSimulationDataRows = (
     pushUniqueRow(d.label, `${d.label}:`, d.value);
   });
 
+  if (dados.tipo === 'corpos-imersos' && dados.inverseSpecificWeightMode) {
+    pushUniqueRow('Peso real no ar', <>Peso real no ar (P):</>, dados.pesoFmt);
+    pushUniqueRow('Peso aparente', <>Peso aparente (P<sub>ap</sub>):</>, dados.pesoAparenteFmt);
+    pushUniqueRow('Peso específico do fluido', <>Peso específico do fluido (&gamma;<sub>f</sub>):</>, dados.pesoEspecificoFluidoFmt);
+    pushUniqueRow('Peso específico do bloco', <>Peso específico médio (&gamma;<sub>c</sub>):</>, dados.pesoEspecificoCorpoFmt);
+    pushUniqueRow('Densidade média do bloco', <>Massa específica média (&rho;<sub>c</sub>):</>, dados.densidadeObjetoFmt);
+    pushUniqueRow('Aceleração da gravidade', 'Aceleração da gravidade (g):', dados.gravidade);
+    if (includeCalculated && dados.volumeDeslocadoFmt) {
+      pushUniqueRow('Volume deslocado', 'Volume deslocado (V):', dados.volumeDeslocadoFmt);
+    }
+    return rows;
+  }
+
   if (dados.tipo === 'corpos-imersos') {
     pushUniqueRow(
       'Densidade do objeto',

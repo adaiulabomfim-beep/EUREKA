@@ -4,8 +4,88 @@ import { calculateMass, calculateWeight } from './massa';
 import { calculateBuoyancyForce, calculateApparentWeight } from './empuxo';
 import { calculateDeltaH, calculateTankBaseArea } from './deslocamento';
 import { calcularEquilibrio, calcularSubmersao, criarCorpo, Camadas } from './equilibrio';
+import { calcularPesoEspecificoCorpoImerso } from './pesoEspecificoImerso';
 
 export const simularCorposImersos = (props: any) => {
+  if (props?.inverseSpecificWeightMode) {
+    const {
+      realWeightN = 445,
+      apparentWeightN = 267,
+      fluidSpecificWeight = 9802,
+      gravity = 9.81,
+      tankWidth = 90,
+      tankDepth = 90,
+      depthA = 80,
+      h_in_A = 0,
+    } = props;
+
+    const inv = calcularPesoEspecificoCorpoImerso({
+      realWeightN,
+      apparentWeightN,
+      fluidSpecificWeight,
+      gravity,
+      tankWidthCm: tankWidth,
+      tankDepthCm: tankDepth,
+    });
+
+    const sideM = inv.illustrativeCubeSideCm / 100;
+    const immersedH_cm = Math.min(inv.illustrativeCubeSideCm, Math.max(0, h_in_A));
+    const status = !inv.isValidInput
+      ? 'DADOS INVÁLIDOS (P ≤ Pap)'
+      : inv.apparentWeightN > 0
+      ? 'TOTALMENTE IMERSO (SUSPENSO)'
+      : 'EQUILÍBRIO HIDROSTÁTICO (P = E)';
+
+    return {
+      inverseSpecificWeightMode: true,
+      inverseValid: inv.isValidInput,
+      volume: inv.displacedVolumeM3,
+      baseArea: sideM * sideM,
+      H_cm: inv.illustrativeCubeSideCm,
+      illustrativeSideCm: inv.illustrativeCubeSideCm,
+      objectDensity: inv.bodyDensity,
+      objectSpecificWeight: inv.bodySpecificWeight,
+      fluidSpecificWeight: inv.fluidSpecificWeight,
+      objectWeight: inv.realWeightN,
+      objectWeight1: inv.realWeightN,
+      objectMass: inv.bodyMassKg,
+      objectMass1: inv.bodyMassKg,
+      objectMass2: 0,
+      equivalentDensity: inv.bodyDensity,
+      status,
+      isShallowTank: false,
+      h_sub_actual: immersedH_cm > 0 ? immersedH_cm : inv.illustrativeCubeSideCm,
+      h_in_A: immersedH_cm > 0 ? immersedH_cm : inv.illustrativeCubeSideCm,
+      h_in_B: 0,
+      vol_sub_A: inv.displacedVolumeM3,
+      vol_sub_B: 0,
+      vol_deslocado: inv.displacedVolumeM3,
+      deltaH_cm: inv.deltaH_cm,
+      deltaH_B_cm: 0,
+      tankBaseArea: inv.tankBaseAreaM2,
+      E_A: inv.buoyancyForceN,
+      E_B: 0,
+      E_1: inv.buoyancyForceN,
+      E_2: 0,
+      cordTension: inv.apparentWeightN,
+      buoyancyForce: inv.buoyancyForceN,
+      apparentWeight: inv.apparentWeightN,
+      d_eq: Math.min(depthA - 8, Math.max(inv.illustrativeCubeSideCm + 12, depthA * 0.55 + inv.illustrativeCubeSideCm * 0.5)),
+      centerOfBuoyancyY: inv.illustrativeCubeSideCm / 2,
+      H2_cm: 0,
+      volume2: 0,
+      objectWeight2: 0,
+      extraWeight: 0,
+      actualCordLength: 0,
+      twoBlocks: false,
+      rhoA: inv.fluidDensity,
+      rhoB: 0,
+      eqVolDeslocado: inv.displacedVolumeM3,
+      eqHSubActual: inv.illustrativeCubeSideCm,
+      eqBuoyancyForce: inv.buoyancyForceN,
+    };
+  }
+
   const {
     shape, dim1, dim2, objectDensity,
     rhoA, rhoB,

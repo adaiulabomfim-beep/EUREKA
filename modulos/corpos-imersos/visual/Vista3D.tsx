@@ -63,6 +63,9 @@ interface Vista3DProps {
   extraWeight?: number;
   shape2?: ObjectShape;
   visualWidth2?: number;
+  inverseSpecificWeightMode?: boolean;
+  apparentWeight?: number;
+  vol_deslocado?: number;
 }
 
 type FaceDef = {
@@ -110,6 +113,9 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   extraWeight = 0,
   shape2 = ObjectShape.CUBE,
   visualWidth2 = 0,
+  inverseSpecificWeightMode = false,
+  apparentWeight = 0,
+  vol_deslocado = 0,
 }) => {
   // câmera do 3D
   const [rotX, setRotX] = useState<number>(15);
@@ -265,15 +271,17 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     fill: string,
     opacity: number = 1,
     stroke: string = 'none',
-    strokeWidth: number = 0
+    strokeWidth: number = 0,
+    fillOpacity?: number
   ) => {
     const d = `M${pts.map((p) => `${p.x},${p.y}`).join(' L')} Z`;
     return (
       <path
         d={d}
         fill={fill}
-        opacity={opacity}
+        fillOpacity={fillOpacity !== undefined ? fillOpacity : opacity}
         stroke={stroke}
+        strokeOpacity={stroke !== 'none' ? opacity : undefined}
         strokeWidth={strokeWidth}
         strokeLinejoin="round"
       />
@@ -343,7 +351,7 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   };
 
   const renderEnvironmentFaces = (isFrontGroup: boolean) => {
-    const tankFaces = getBoxFaces(tankPts, 'url(#glassGradient)', 0.2, TANK_BORDER_COLOR, 2, 'tank', true);
+    const tankFaces = getBoxFaces(tankPts, 'url(#glassGradient)', 0.55, TANK_BORDER_COLOR, 2, 'tank', true);
     
     const ptsB = getPoints(0, 0, currentTankW, effectiveHB_px, 0, visualTankDepth);
     const fluidBFaces = enableTwoFluids ? getBoxFaces(ptsB, 'url(#fluidDepthB)', 1, 'none', 0, 'fluidB') : [];
@@ -376,9 +384,18 @@ export const Vista3D: React.FC<Vista3DProps> = ({
       <g pointerEvents="none">
         {filteredFaces.map(f => {
           const fill = (f.isTank && !f.isFront) ? 'none' : f.fill;
+          const strokeOpacity = f.isTank ? (f.isFront ? 0.65 : 0.35) : f.opacity;
+          const fillOpacity = f.isTank
+            ? (f.isFront ? 0.05 : 0)
+            : f.isFront
+              ? 0.78
+              : f.id.endsWith('-bottom')
+                ? 0.42
+                : 0.36;
+
           return (
             <g key={f.id}>
-              {drawPoly(f.pts, fill, f.opacity, f.stroke, f.strokeWidth)}
+              {drawPoly(f.pts, fill, strokeOpacity, f.stroke, f.strokeWidth, fillOpacity)}
             </g>
           );
         })}
@@ -390,11 +407,11 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     const ptsADynamic = getPoints(0, tankBottomY - fluidSurfaceY, currentTankW, 0, 0, visualTankDepth);
     return (
       <g>
-        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#fluidDepthA)', 1)}
+        {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#surfaceGradientA)', 0.80)}
         {drawPoly([ptsADynamic.p1, ptsADynamic.p2, ptsADynamic.p6, ptsADynamic.p5], 'url(#ripplePattern)', 1)}
-        <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p5.x} y2={ptsADynamic.p5.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-        <line x1={ptsADynamic.p2.x} y1={ptsADynamic.p2.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-        <line x1={ptsADynamic.p5.x} y1={ptsADynamic.p5.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+        <line x1={ptsADynamic.p1.x} y1={ptsADynamic.p1.y} x2={ptsADynamic.p5.x} y2={ptsADynamic.p5.y} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+        <line x1={ptsADynamic.p2.x} y1={ptsADynamic.p2.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+        <line x1={ptsADynamic.p5.x} y1={ptsADynamic.p5.y} x2={ptsADynamic.p6.x} y2={ptsADynamic.p6.y} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
       </g>
     );
   };
@@ -601,6 +618,85 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   };
 
   const Vectors = () => {
+    if (inverseSpecificWeightMode) {
+      const centerTop = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
+      const centerMid = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight / 2), 0);
+      const hookPt = project(0, tankBottomY - currentTankH - 42, 0);
+      const baseLen = 78;
+      const pLen = objectWeight > 0 ? baseLen : 0;
+      const eLen = objectWeight > 0 ? Math.max(18, baseLen * (buoyancyForce / objectWeight)) : 0;
+      const papLen = objectWeight > 0 ? Math.max(18, baseLen * (apparentWeight / objectWeight)) : 0;
+      const xOff = Math.min(18, visualWidth * 0.24);
+      const pStart = { x: centerMid.x - xOff, y: centerMid.y };
+      const eStart = { x: centerMid.x + xOff, y: centerMid.y };
+      const papX = centerMid.x + visualWidth / 2 + 32;
+      const papYStart = centerMid.y - papLen / 2;
+      const papYEnd = papYStart + papLen;
+
+      return (
+        <g pointerEvents="none">
+          {/* Cabo e Dinamômetro */}
+          <line x1={hookPt.x - 16} y1={hookPt.y} x2={hookPt.x + 16} y2={hookPt.y} stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+          <line x1={hookPt.x} y1={hookPt.y} x2={centerTop.x} y2={centerTop.y} stroke="#475569" strokeWidth="1.8" strokeDasharray="4,2" />
+          <circle cx={centerTop.x} cy={centerTop.y} r={3.5} fill="#475569" />
+          <g transform={`translate(${hookPt.x}, ${hookPt.y + 18})`}>
+            <rect x="-72" y="-11" width="144" height="22" rx="11" fill="#ffffff" stroke="#2563eb" strokeWidth="1.4" opacity="0.96" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1e3a8a" fontSize="10.5" fontWeight="bold">
+              {isSimulating
+                ? `Dinamômetro: ${apparentWeight.toFixed(1).replace('.', ',')} N`
+                : `No ar (P): ${objectWeight.toFixed(1).replace('.', ',')} N`}
+            </text>
+          </g>
+
+          {showFBD && (
+            <>
+              <circle cx={pStart.x} cy={pStart.y} r={3} fill="#ef4444" />
+              <line x1={pStart.x} y1={pStart.y} x2={pStart.x} y2={pStart.y + pLen} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow-red-3d)" />
+              <g transform={`translate(${pStart.x - 84}, ${pStart.y + pLen * 0.55})`}>
+                <rect x="0" y="-10" width="76" height="20" fill="white" opacity="0.93" stroke="#fca5a5" strokeWidth="1" rx="6" />
+                <text x="38" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10.5" fontWeight="bold">
+                  P = {objectWeight.toFixed(0)} N
+                </text>
+              </g>
+
+              {isSimulating && h_sub_actual > 0.001 && (
+                <>
+                  <circle cx={eStart.x} cy={eStart.y} r={3} fill="#16a34a" />
+                  <line x1={eStart.x} y1={eStart.y} x2={eStart.x} y2={eStart.y - eLen} stroke="#16a34a" strokeWidth="3" markerEnd="url(#arrow-green-3d)" />
+                  <g transform={`translate(${eStart.x + 8}, ${eStart.y - eLen - 12})`}>
+                    <rect x="0" y="-10" width="76" height="20" fill="white" opacity="0.93" stroke="#86efac" strokeWidth="1" rx="6" />
+                    <text x="38" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10.5" fontWeight="bold">
+                      E = {buoyancyForce.toFixed(0)} N
+                    </text>
+                  </g>
+
+                  {apparentWeight > 0.01 && (
+                    <>
+                      <circle cx={papX} cy={papYStart} r={3} fill="#2563eb" />
+                      <line x1={papX} y1={papYStart} x2={papX} y2={papYEnd} stroke="#2563eb" strokeWidth="3" markerEnd="url(#arrow-blue-3d)" />
+                      <g transform={`translate(${papX + 8}, ${(papYStart + papYEnd) / 2})`}>
+                        <rect x="0" y="-11" width="108" height="22" fill="white" opacity="0.95" stroke="#93c5fd" strokeWidth="1.2" rx="6" />
+                        <text x="54" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1d4ed8" fontSize="10" fontWeight="bold">
+                          P<tspan baselineShift="sub" fontSize="7.5">ap</tspan> = {apparentWeight.toFixed(0)} N (Result.)
+                        </text>
+                      </g>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          <g transform={`translate(${tankOffsetX + currentTankW / 2}, ${tankBottomY + 46})`}>
+            <rect x="-155" y="-10" width="310" height="20" rx="10" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#475569" fontSize="10" fontWeight="600">
+              {`Geometria ilustrativa (V = ${vol_deslocado.toFixed(5).replace('.', ',')} m³) — sem dimensões no enunciado`}
+            </text>
+          </g>
+        </g>
+      );
+    }
+
     if (!showFBD) return null;
 
     const centerTop = project(0, tankBottomY - (objBottomDistFromTankBottom + visualHeight), 0);
@@ -728,6 +824,17 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         preserveAspectRatio="xMidYMid meet"
       >
         <SvgDefs colorA={colorA} colorB={colorB} />
+        <defs>
+          <marker id="arrow-red-3d" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#ef4444" />
+          </marker>
+          <marker id="arrow-green-3d" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#16a34a" />
+          </marker>
+          <marker id="arrow-blue-3d" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+            <path d="M0,0 L6,2 L0,4 Z" fill="#2563eb" />
+          </marker>
+        </defs>
 
         <g transform={`translate(${nav.pan.x}, ${nav.pan.y}) scale(${nav.zoom})`}>
           <SceneLayers />

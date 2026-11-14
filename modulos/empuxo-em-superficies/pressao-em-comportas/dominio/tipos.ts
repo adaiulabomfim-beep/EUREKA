@@ -20,6 +20,12 @@ export enum SistemaUnidades {
   TECNICO_KGF = 'TECNICO_KGF',  // kgf, kgf/m², kgf/m³
 }
 
+export enum EstadoOperacionalComporta {
+  FECHADA = 'FECHADA',
+  PARCIALMENTE_ABERTA = 'PARCIALMENTE_ABERTA',
+  ABERTA = 'ABERTA',
+}
+
 // --- Biblioteca de Fluidos ---
 
 export interface FluidoInfo {
@@ -38,9 +44,23 @@ export const FLUIDOS_PREDEFINIDOS: Record<string, FluidoInfo> = {
     corSecundaria: '#2563eb',
     corSuperficie: '#60a5fa',
   },
+  agua20C: {
+    nome: 'Água (20 °C)',
+    densidade: 998.2,
+    corPrimaria: '#3b82f6',
+    corSecundaria: '#2563eb',
+    corSuperficie: '#60a5fa',
+  },
   glicerina: {
     nome: 'Glicerina',
     densidade: 1260,
+    corPrimaria: '#a78bfa',
+    corSecundaria: '#7c3aed',
+    corSuperficie: '#c4b5fd',
+  },
+  glicerina20C: {
+    nome: 'Glicerina (20 °C)',
+    densidade: 1261.3,
     corPrimaria: '#a78bfa',
     corSecundaria: '#7c3aed',
     corSuperficie: '#c4b5fd',
@@ -65,6 +85,13 @@ export const FLUIDOS_PREDEFINIDOS: Record<string, FluidoInfo> = {
     corPrimaria: '#fb923c',
     corSecundaria: '#ea580c',
     corSuperficie: '#fdba74',
+  },
+  aguaDoMar: {
+    nome: 'Água do mar',
+    densidade: Number((10054 / 9.81).toFixed(4)),
+    corPrimaria: '#3b82f6',
+    corSecundaria: '#2563eb',
+    corSuperficie: '#60a5fa',
   },
   personalizado: {
     nome: 'Personalizado',

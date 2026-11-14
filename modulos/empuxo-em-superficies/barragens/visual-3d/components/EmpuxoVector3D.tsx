@@ -19,6 +19,8 @@ interface EmpuxoVectorProps {
   zOffset?: number;
   unitSystem?: 'SI' | 'TECNICO_KGF';
   gravity?: number;
+  damWidth?: number;
+  showTriangularMode?: boolean;
 }
 
 export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
@@ -36,6 +38,8 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
   zOffset = 0,
   unitSystem = 'SI',
   gravity = 9.81,
+  damWidth = 1,
+  showTriangularMode = false,
 }) => {
   const { arrowMat, markerMat } = useMemo(() => {
     return {
@@ -107,6 +111,15 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
     forceDir
   );
 
+  const isTotalMode = Boolean(showTriangularMode || damWidth > 1.001);
+  const formattedForce = isTotalMode
+    ? unitSystem === 'TECNICO_KGF'
+      ? `FR = ${((absForce * damWidth) / gravity).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kgf`
+      : `FR = ${((absForce * damWidth) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kN`
+    : unitSystem === 'TECNICO_KGF'
+    ? `E = ${(absForce / gravity).toFixed(0)} kgf/m`
+    : `E = ${(absForce / 1000).toFixed(1)} kN/m`;
+
   return (
     <group>
       <Sphere args={[0.25, 16, 16]} position={cpPosition} material={markerMat} />
@@ -132,12 +145,7 @@ export const EmpuxoVector3D: React.FC<EmpuxoVectorProps> = ({
             style={{ color, borderColor: `${color}55` }}
           >
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
-            <span>
-              E ={' '}
-              {unitSystem === 'TECNICO_KGF'
-                ? `${(absForce / gravity).toFixed(0)} kgf/m`
-                : `${(absForce / 1000).toFixed(1)} kN/m`}
-            </span>
+            <span>{formattedForce}</span>
           </div>
         </Html>
       )}

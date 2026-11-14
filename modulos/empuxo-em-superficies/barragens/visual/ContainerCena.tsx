@@ -55,6 +55,7 @@ interface SceneContainerProps {
   ORIGIN_X: number;
   ORIGIN_Y: number;
   pan?: { x: number; y: number };
+  onVisibleXBoundsChange?: (bounds: { leftScreenX: number; rightScreenX: number }) => void;
   children?: React.ReactNode;
 }
 
@@ -75,6 +76,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
   ORIGIN_X,
   ORIGIN_Y,
   pan,
+  onVisibleXBoundsChange,
   children,
 }) => {
   const nav = useSvgPanZoom({
@@ -84,6 +86,76 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
     maxZoom: 4.0,
     allowRightDragPan: is3D,
   });
+
+  const [svgViewport, setSvgViewport] = React.useState<{ width: number; height: number }>({
+    width: 1200,
+    height: 600,
+  });
+
+  React.useEffect(() => {
+    const targetEl = nav.svgRef.current ?? nav.containerRef.current;
+    if (!targetEl) return;
+
+    const updateSize = () => {
+      const rect = targetEl.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setSvgViewport((prev) =>
+          Math.abs(prev.width - rect.width) > 1 || Math.abs(prev.height - rect.height) > 1
+            ? { width: rect.width, height: rect.height }
+            : prev
+        );
+      }
+    };
+
+    updateSize();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(updateSize);
+      ro.observe(targetEl);
+      return () => ro.disconnect();
+    }
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, [nav.svgRef, nav.containerRef]);
+
+  const lastBoundsRef = React.useRef<{ leftScreenX: number; rightScreenX: number } | null>(null);
+
+  React.useEffect(() => {
+    if (!onVisibleXBoundsChange) return;
+
+    const meetScale = Math.min(
+      Math.max(1, svgViewport.width) / SVG_W,
+      Math.max(1, svgViewport.height) / SVG_H
+    );
+    const viewSpanW = Math.max(SVG_W, svgViewport.width / Math.max(1e-4, meetScale));
+    const viewMinX = SVG_W / 2 - viewSpanW / 2;
+    const viewMaxX = SVG_W / 2 + viewSpanW / 2;
+    const safeZoom = Math.max(0.1, nav.zoom);
+    const scenePanX = pan?.x ?? 0;
+    const visibleMinX = (viewMinX - nav.pan.x) / safeZoom - scenePanX;
+    const visibleMaxX = (viewMaxX - nav.pan.x) / safeZoom - scenePanX;
+    const bleedMargin = 260 / Math.max(0.25, safeZoom);
+
+    const rawLeft = Math.min(-320, visibleMinX - bleedMargin);
+    const rawRight = Math.max(SVG_W + 320, visibleMaxX + bleedMargin);
+    const leftScreenX = Math.floor(rawLeft / 200) * 200;
+    const rightScreenX = Math.ceil(rawRight / 200) * 200;
+
+    const prev = lastBoundsRef.current;
+    if (!prev || prev.leftScreenX !== leftScreenX || prev.rightScreenX !== rightScreenX) {
+      const next = { leftScreenX, rightScreenX };
+      lastBoundsRef.current = next;
+      onVisibleXBoundsChange(next);
+    }
+  }, [
+    svgViewport.width,
+    svgViewport.height,
+    SVG_W,
+    SVG_H,
+    nav.zoom,
+    nav.pan.x,
+    pan?.x,
+    onVisibleXBoundsChange,
+  ]);
 
   const handleFullReset = () => {
     nav.resetView();

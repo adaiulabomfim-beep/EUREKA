@@ -28,7 +28,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
     setShowVectors,
   } = props;
 
-  const CHANNEL_WIDTH = 40;
+  const CHANNEL_WIDTH = props.damWidth && props.damWidth > 1.001 ? props.damWidth : 40;
   const cameraControlRef = useRef<Camera3DHandle | null>(null);
   const [zoomPercent, setZoomPercent] = useState(100);
 
@@ -58,6 +58,7 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
             damHeight={damHeight}
             damBaseWidth={damBaseWidth}
             damCrestWidth={damCrestWidth}
+            damWidth={props.damWidth}
             inclinationAngle={inclinationAngle}
             channelWidth={CHANNEL_WIDTH}
             upstreamLevel={upstreamLevel}
@@ -65,6 +66,9 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
             hasMudLayer={props.hasMudLayer}
             mudHeight={props.mudHeight}
             mudDensity={props.mudDensity}
+            hasPercolation={props.hasPercolation}
+            showTriangularMode={props.showTriangularMode}
+            stability={props.stability}
             unitSystem={props.unitSystem}
             gravity={props.gravity}
             force={props.force}

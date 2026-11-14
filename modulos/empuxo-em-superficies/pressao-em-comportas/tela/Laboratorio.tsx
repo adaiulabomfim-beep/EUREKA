@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Maximize, AlertCircle, AlertTriangle } from 'lucide-react';
 import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from '../dominio/tipos';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
-import { simularComportas } from '../calculos/simulador';
+import { resolverGrauAberturaPercent, simularComportas } from '../calculos/simulador';
 import { getGateYBarTotal } from '../calculos/hidrostatica';
 import { CenaPressaoComporta } from '../visual/CenaPressaoComporta';
 import { PRESETS, CONFIG_PADRAO_COMPORTA } from '../dominio/presets';
@@ -39,11 +39,14 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       angulo: gateInclination, 
       posicaoDobradica: hingePosition, 
       temTirante: hasTieRod, 
+      apoioParedeLisa: hasSmoothWallSupport,
       posicaoTiranteRelativa: tieRodPosRel, 
       anguloTirante: tieRodAngle, 
       pesoProprio: gateWeight, 
       pesoProprioAtivo: gateWeightEnabled 
   } = comporta;
+
+  const gateOpeningPercent = resolverGrauAberturaPercent(comporta);
   
   const setHasDownstream = (val: boolean) => setConfigManual(prev => ({ 
     ...prev, 
@@ -52,24 +55,25 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       ativo: val,
       nivel: (val && prev.fluidoJusante.nivel === 0)
         ? Math.max(0.5, Number((prev.fluidoMontante.nivel * 0.5).toFixed(1)))
+        : prev.comporta.apoioFundoLiso
+        ? prev.fluidoJusante.nivel
         : Math.min(prev.fluidoJusante.nivel, prev.fluidoMontante.nivel)
     } 
   }));
   
   // LOGIC
   const maxGateHeight = Math.max(0.1, 20 - config.comporta.profundidadeTopo);
-  const maxWaterLevel = 25; 
+  const maxWaterLevel = 25;
 
-  // Handler for toggling gate
-  const toggleGate = (active: boolean) => {
-      setConfigManual(prev => ({ 
-          ...prev, 
-          comporta: { ...prev.comporta, ativa: active },
-          // Se ativar a comporta e a jusante estiver em 0, dá um nível inicial pra facilitar a visualização
-          fluidoJusante: { 
-            ...prev.fluidoJusante, 
-            nivel: (active && prev.fluidoJusante.nivel === 0) ? 3 : prev.fluidoJusante.nivel 
-          }
+  const setGateOpeningPercent = (percent: number) => {
+      const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+      setConfigManual(prev => ({
+          ...prev,
+          comporta: {
+            ...prev.comporta,
+            ativa: true,
+            aberturaPercent: clamped,
+          },
       }));
   };
 
@@ -78,6 +82,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       if (preset) {
           setConfig(preset);
           setActivePresetKey(key);
+          setAnalyzedResults(null);
       }
   };
 
@@ -100,12 +105,16 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     setAnalyzedResults(liveResults);
     if (liveResults) {
       const weightN = gateWeightEnabled ? gateWeight * gravity : 0;
+      const opLabel = liveResults.operacao
+        ? `${liveResults.operacao.estadoLabel} (${liveResults.operacao.grauAberturaPercent}%)`
+        : 'Fechada (0%)';
       salvarNoHistorico({
         modulo: 'comportas',
         moduloNome: 'Comportas',
         titulo: `Comporta ${gateShape} (${gateHeight}m × ${gateWidth}m)`,
         parametros: {
           'Forma': gateShape,
+          'Estado': opLabel,
           'Altura (m)': gateHeight,
           'Largura (m)': gateWidth,
           'Inclinação (°)': gateInclination,
@@ -118,7 +127,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
           peso: gateWeightEnabled ? weightN : undefined,
           pesoFormatado: gateWeightEnabled ? `${(weightN / 1000).toFixed(2)} kN (${gateWeight.toFixed(0)} kg)` : undefined,
           centroPressao: `s_cp = ${(liveResults.forceData.s_cp_net).toFixed(2)} m`,
-          segurancaOuStatus: 'Análise Concluída',
+          segurancaOuStatus: opLabel,
         },
       });
     }
@@ -127,7 +136,10 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   useEffect(() => {
       if (onContextUpdate) {
           if (analyzedResults) {
-              onContextUpdate(`LABORATÓRIO DE HIDROSTÁTICA: Comporta: ${gateShape}, H=${gateHeight}m, Larg=${gateWidth}m, θ=${gateInclination}°, Força Hidrostática Resultante: ${(analyzedResults.forceData.FR_net/1000).toFixed(2)} kN, CP ao longo da comporta: ${(analyzedResults.forceData.s_cp_net).toFixed(2)}m`);
+              const opInfo = analyzedResults.operacao
+                ? `Estado=${analyzedResults.operacao.estadoLabel} (${analyzedResults.operacao.grauAberturaPercent}%)`
+                : '';
+              onContextUpdate(`LABORATÓRIO DE HIDROSTÁTICA: Comporta: ${gateShape}, ${opInfo}, H=${gateHeight}m, Larg=${gateWidth}m, θ=${gateInclination}°, Força Hidrostática Referência: ${(analyzedResults.forceData.FR_net/1000).toFixed(2)} kN, CP ao longo da comporta: ${(analyzedResults.forceData.s_cp_net).toFixed(2)}m`);
           }
       }
   }, [analyzedResults, onContextUpdate, gateHeight, gateWidth, gateInclination, gateShape, upstreamLevel, downstreamLevel]);
@@ -138,7 +150,34 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
           let newWidth = prev.comporta.largura;
           if (prev.comporta.forma === FormaComporta.CIRCULAR) { newWidth = val; }
           if (prev.comporta.forma === FormaComporta.SEMI_CIRCULAR) { newWidth = val * 2; }
-          return { ...prev, comporta: { ...prev.comporta, altura: val, largura: newWidth } };
+          const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+          const ybarTotal = getGateYBarTotal(prev.comporta.forma, val);
+          if (prev.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && prev.comporta.y_cg_direto !== undefined) {
+              const h_topo = prev.comporta.y_cg_direto * sinTheta - ybarTotal * sinTheta;
+              return {
+                  ...prev,
+                  comporta: {
+                      ...prev.comporta,
+                      altura: val,
+                      largura: newWidth,
+                      profundidadeTopo: parseFloat(h_topo.toFixed(3)),
+                  },
+              };
+          }
+          const calculatedY_CG = prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + ybarTotal;
+          const nextProfTopo = prev.comporta.apoioFundoLiso
+            ? Math.max(0, prev.fluidoMontante.nivel - val * sinTheta)
+            : prev.comporta.profundidadeTopo;
+          return {
+              ...prev,
+              comporta: {
+                  ...prev.comporta,
+                  altura: val,
+                  largura: newWidth,
+                  profundidadeTopo: nextProfTopo,
+                  y_cg_direto: parseFloat(calculatedY_CG.toFixed(3)),
+              },
+          };
       });
   };
 
@@ -147,7 +186,30 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
           let newWidth = prev.comporta.largura;
           if (newShape === FormaComporta.CIRCULAR) { newWidth = prev.comporta.altura; }
           if (newShape === FormaComporta.SEMI_CIRCULAR) { newWidth = prev.comporta.altura * 2; }
-          return { ...prev, comporta: { ...prev.comporta, forma: newShape, largura: newWidth } };
+          const sinTheta = Math.sin(((prev.comporta.angulo || 90) * Math.PI) / 180);
+          const ybarTotal = getGateYBarTotal(newShape, prev.comporta.altura);
+          if (prev.comporta.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO && prev.comporta.y_cg_direto !== undefined) {
+              const h_topo = prev.comporta.y_cg_direto * sinTheta - ybarTotal * sinTheta;
+              return {
+                  ...prev,
+                  comporta: {
+                      ...prev.comporta,
+                      forma: newShape,
+                      largura: newWidth,
+                      profundidadeTopo: parseFloat(h_topo.toFixed(3)),
+                  },
+              };
+          }
+          const calculatedY_CG = prev.comporta.profundidadeTopo / Math.max(0.01, sinTheta) + ybarTotal;
+          return {
+              ...prev,
+              comporta: {
+                  ...prev.comporta,
+                  forma: newShape,
+                  largura: newWidth,
+                  y_cg_direto: parseFloat(calculatedY_CG.toFixed(3)),
+              },
+          };
       });
   };
 
@@ -157,7 +219,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
     if (ang <= 0) {
       alerts.push('Ângulo de inclinação nulo ou negativo (θ ≤ 0°): risco de indeterminação física e divisão por zero (sen θ = 0).');
     }
-    if (hasDownstream && downstreamLevel > upstreamLevel) {
+    if (hasDownstream && downstreamLevel > upstreamLevel && !comporta.apoioFundoLiso) {
       alerts.push('Nível de jusante maior que o de montante: fluxo de escoamento reverso ou equilíbrio inviável.');
     }
     const ybarTotal = getGateYBarTotal(gateShape, gateHeight);
@@ -203,13 +265,15 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
             setHasDownstream={setHasDownstream} 
             maxGateHeight={maxGateHeight} 
             maxWaterLevel={maxWaterLevel} 
-            toggleGate={toggleGate} 
+            gateOpeningPercent={gateOpeningPercent}
+            setGateOpeningPercent={setGateOpeningPercent}
             loadPreset={loadPreset} 
             presets={PRESETS}
             activePresetKey={activePresetKey}
             onResetDefaults={resetDefaults}
             handleHeightChange={handleHeightChange} 
             handleShapeChange={handleShapeChange} 
+            liveH_eq={liveResults.equilibrium?.h_jusante_eq}
             wallDims={wallDims}
             setWallDims={setWallDims}
         />
@@ -231,11 +295,11 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
           )}
 
             <CenaPressaoComporta
-                upstreamLevel={upstreamLevel} downstreamLevel={hasDownstream ? downstreamLevel : 0}
+                upstreamLevel={upstreamLevel} downstreamLevel={hasDownstream ? (liveResults.hidraulica?.nivelJusanteEfetivo ?? downstreamLevel) : 0}
                 upstreamFluidKey={upstreamFluidKey} downstreamFluidKey={downstreamFluidKey}
                 upstreamDensity={density} downstreamDensity={fluidoJusante.densidade}
                 gravity={gravity} liveResults={liveResults}
-                hasGate={hasGate} gateShape={gateShape}
+                hasGate={hasGate} gateOpeningPercent={gateOpeningPercent} gateShape={gateShape}
                 gateWidth={gateWidth} gateHeight={gateHeight} gateDepthFromCrest={gateDepthFromCrest}
                 gateInclination={gateInclination}
                 wallDims={wallDims}
@@ -246,6 +310,8 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
                 s_cp={analyzedResults ? analyzedResults.forceData.s_cp_net : 0}
                 hingePosition={hingePosition}
                 hasTieRod={hasTieRod}
+                hasSmoothWallSupport={Boolean(hasSmoothWallSupport)}
+                hasSmoothFloorSupport={Boolean(comporta.apoioFundoLiso)}
                 tieRodPosRel={tieRodPosRel}
                 tieRodAngle={tieRodAngle}
                 gateWeight={gateWeight}
@@ -259,10 +325,13 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
         {/* --- RIGHT SIDEBAR: RESULTS --- */}
         <PainelResultados 
           analyzedResults={analyzedResults}
+          liveOperacao={liveResults.operacao}
           showDetails={showDetails}
           setShowDetails={setShowDetails}
           hingePosition={hingePosition}
           hasTieRod={hasTieRod}
+          hasSmoothWallSupport={Boolean(hasSmoothWallSupport)}
+          hasSmoothFloorSupport={Boolean(comporta.apoioFundoLiso)}
         />
       </div>
 

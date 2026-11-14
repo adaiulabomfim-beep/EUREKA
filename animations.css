@@ -199,3 +199,28 @@
   background: #475569;
 }
 
+/* Padronização tipográfica KaTeX nos Memoriais de Cálculo */
+.eureka-math {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-style: normal;
+}
+.eureka-math .katex {
+  line-height: 1.25;
+  color: inherit;
+  font-weight: 500;
+}
+.eureka-math-inline .katex {
+  font-size: 1.07em;
+}
+.eureka-math-display .katex {
+  font-size: 1.14em;
+}
+.eureka-math .katex-display {
+  margin: 0;
+}
+.eureka-math .katex .frac-line {
+  min-height: 1px;
+  border-bottom-width: max(1px, 0.055em) !important;
+}
+

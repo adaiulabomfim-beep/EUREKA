@@ -58,6 +58,61 @@ export interface ResultadoForcaLiquidaBarragem {
   down: ResultadoSuperficieRetangular;
 }
 
+export interface DetalheSubpressaoBarragem {
+  ativa: boolean;
+  fatorMontante: number;           // Fração da pressão hidrostática de montante em B (1.0 = carga total)
+  fatorJusante: number;            // Fração da pressão hidrostática de jusante em C (0.0 = atm)
+  p_B: number;                     // Pa (Pressão de subpressão no pé de montante B)
+  p_C: number;                     // Pa (Pressão de subpressão no pé de jusante C)
+  U_por_metro: number;             // N/m (Força de subpressão resultante por metro linear)
+  U_total: number;                 // N (Força de subpressão total na largura b)
+  x_U: number;                     // m (Posição do centroide do diagrama a partir de B, ex.: B/3 = 20 m)
+  braco_U_C: number;               // m (Distância de U até o vértice C: B - x_U = 40 m)
+  M_U_ref_por_metro: number;       // N·m/m (Momento de subpressão com braço B/3 = x_U da referência clássica)
+  M_U_ref_total: number;           // N·m (Momento total de subpressão com braço x_U = 20 m: ~14,10 × 10⁶ kN·m)
+  M_U_C_por_metro: number;         // N·m/m (Momento tombante de U em relação a C com braço B - x_U = 40 m)
+  M_U_C_total: number;             // N·m (Momento tombante total de U em relação a C com braço B - x_U)
+}
+
+export interface AnaliseMomentoPontoCBarragem {
+  larguraLongitudinal: number;     // m (Largura b da barragem, ex.: 30 m)
+  L_AB: number;                    // m (Comprimento total da face inclinada AB)
+  areaMolhadaTotal: number;        // m² (Área molhada total na largura b: L_molhado * b)
+  p_cg: number;                    // Pa (Pressão no centroide da face molhada AB)
+  x_cp_B: number;                  // m (Coordenada horizontal do CP a partir de B)
+  y_cp_B: number;                  // m (Coordenada vertical do CP a partir da base BC)
+  projecao_AD: number;             // m (Projeção de AC sobre AB a partir de A: H·sen(θ) = 64 m)
+  projecao_BD: number;             // m (Projeção de BC sobre AB a partir de B: B·cos(θ) = 36 m)
+  braco_FR_C: number;              // m (Distância perpendicular de C até a linha de ação de FR: |s_CP - AD| = 2,67 m)
+  F_R_total: number;               // N (Força hidrostática resultante total na face AB: FR * b)
+  F_H_total: number;               // N (Componente horizontal total: FH * b)
+  F_V_total: number;               // N (Componente vertical descendente total: FV * b)
+  M_FH_C_por_metro: number;        // N·m/m (Momento tombante horário de FH em C: +FH * y_cp)
+  M_FV_C_por_metro: number;        // N·m/m (Momento estabilizante anti-horário de FV em C: -FV * (B - x_cp))
+  M_hidro_C_por_metro: number;     // N·m/m (Momento líquido da força hidrostática em C: M_FH_C - |M_FV_C|)
+  M_hidro_C_total: number;         // N·m (Momento líquido total da força hidrostática em C na largura b)
+  sentidoMomentoHidro: 'HORARIO_TOMBANTE' | 'ANTI_HORARIO_ESTABILIZANTE' | 'NULO';
+  hidroIsoladaTomba: boolean;      // true somente se M_hidro_C > M_W_C (ou se M_hidro_C > 0 quando avaliado isoladamente)
+  W_total: number;                 // N (Peso próprio total na largura b: W * b)
+  M_W_C_por_metro: number;         // N·m/m (Momento estabilizante do peso próprio em C por metro)
+  M_W_C_total: number;             // N·m (Momento estabilizante total do peso próprio em C na largura b)
+  // Condição A: Sem percolação (U = 0)
+  M_liq_sem_percolacao_por_metro: number; // N·m/m (Momento estabilizante líquido sem percolação: M_W_C + |M_FV_C| - M_FH_C)
+  M_liq_sem_percolacao_total: number;     // N·m (Momento líquido total em C sem percolação)
+  fs_tomb_sem_percolacao: number;
+  estavel_sem_percolacao: boolean;
+  // Condição B: Com percolação (Subpressão U ativa)
+  subpressao: DetalheSubpressaoBarragem;
+  M_tomb_com_percolacao_por_metro: number; // N·m/m (M_FH_C + M_U_C)
+  M_tomb_com_percolacao_total: number;     // N·m
+  M_est_com_percolacao_por_metro: number;  // N·m/m (M_W_C + |M_FV_C|)
+  M_est_com_percolacao_total: number;      // N·m
+  M_liq_com_percolacao_por_metro: number;  // N·m/m (M_est - M_tomb)
+  M_liq_com_percolacao_total: number;      // N·m
+  fs_tomb_com_percolacao: number;
+  estavel_com_percolacao: boolean;
+}
+
 export interface ResultadoEstabilidadeBarragem {
   area: number;                     // m²/m (Área efetiva da seção transversal)
   weight: number;                   // N/m (Peso próprio da barragem por metro linear)
@@ -65,14 +120,16 @@ export interface ResultadoEstabilidadeBarragem {
   y_cg: number;                     // m (Posição vertical do CG a partir da base)
   lever_arm_weight: number;         // m (Braço do peso em relação ao ponto de tombamento)
   gammaMaterial: number;            // N/m³ (Peso específico do material da barragem)
+  concreteSpecificGravity?: number; // Densidade relativa do concreto (d = 2,4)
+  damWidth?: number;                // m (Largura longitudinal b da barragem)
   mu: number;                       // Coeficiente de atrito na fundação
   actualBaseWidth: number;          // m (Largura real da base usada na geometria e cálculo)
   moment_resisting: number;         // N·m/m (Momento estabilizante: W·braço + FV·braços)
-  moment_overturning: number;       // N·m/m (Momento tombador líquido)
+  moment_overturning: number;       // N·m/m (Momento tombador líquido na condição ativa)
   moment_resisting_water_v: number; // N·m/m (Contribuição estabilizante de FV)
-  total_vertical_force: number;     // N/m (ΣV = W + FV_net)
-  fs_tomb: number;                  // Fator de segurança ao tombamento
-  fs_desl: number;                  // Fator de segurança ao deslizamento
+  total_vertical_force: number;     // N/m (ΣV = W + FV_net - U)
+  fs_tomb: number;                  // Fator de segurança ao tombamento (condição ativa)
+  fs_desl: number;                  // Fator de segurança ao deslizamento (condição ativa)
   e: number;                        // m (Excentricidade da resultante na base em relação ao centro)
   stabilityApplicable: boolean;     // false para barragem em arco (efeito de arco)
   isArchDam?: boolean;
@@ -80,6 +137,7 @@ export interface ResultadoEstabilidadeBarragem {
   archStressBase?: number;          // Pa (Tensão média de compressão na base do arco)
   volumeFactor?: number;
   upliftAssumption: string;
+  analisePontoC?: AnaliseMomentoPontoCBarragem;
 }
 
 export interface RenderizadorBarragensProps {
@@ -87,6 +145,7 @@ export interface RenderizadorBarragensProps {
   damHeight: number;
   damBaseWidth: number;
   damCrestWidth: number;
+  damWidth?: number;
   inclinationAngle: number;
   downstreamAngle?: number;
   buttressAngle?: number;
@@ -96,6 +155,10 @@ export interface RenderizadorBarragensProps {
   hasMudLayer?: boolean;
   mudHeight?: number;
   mudDensity?: number;
+  hasPercolation?: boolean;
+  upliftFactorUp?: number;
+  upliftFactorDown?: number;
+  showTriangularMode?: boolean;
   unitSystem?: SistemaUnidadesBarragem;
   gravity?: number;
   force: number;
@@ -136,6 +199,9 @@ export interface ConfiguracaoSimulacaoBarragem {
   damHeight: number;
   damBaseWidth: number;
   damCrestWidth: number;
+  damWidth?: number;                // m (Largura longitudinal b; padrão 1 m ou 30 m no Problema 2.66)
+  concreteSpecificGravity?: number; // Densidade relativa do concreto (d = 2,4)
+  fluidKey?: 'agua' | 'agua20C';
   inclinationAngle: number;
   downstreamAngle?: number;
   buttressAngle?: number;
@@ -145,6 +211,10 @@ export interface ConfiguracaoSimulacaoBarragem {
   hasMudLayer?: boolean;
   mudHeight?: number;
   mudDensity?: number;
+  hasPercolation?: boolean;         // Ativa subpressão sob a base BC
+  upliftFactorUp?: number;          // Coeficiente de carga em B (padrão 1.0 = triangular plena)
+  upliftFactorDown?: number;        // Coeficiente de carga em C (padrão 0.0 = nula em C)
+  showTriangularMode?: boolean;     // Ativa visualização didática ABC + largura total b
   density: number;
   gravity: number;
   unitSystem?: SistemaUnidadesBarragem;

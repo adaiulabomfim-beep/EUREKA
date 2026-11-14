@@ -19,6 +19,13 @@ export interface DamPreset {
   hasMudLayer?: boolean;
   mudHeight?: number;
   mudDensity?: number;
+  damWidth?: number;
+  concreteSpecificGravity?: number;
+  fluidKey?: 'agua' | 'agua20C';
+  hasPercolation?: boolean;
+  upliftFactorUp?: number;
+  upliftFactorDown?: number;
+  showTriangularMode?: boolean;
   unitSystem?: SistemaUnidadesBarragem;
 }
 
@@ -109,6 +116,30 @@ export const DAM_PRESETS: { [key: string]: DamPreset } = {
     hasDownstream: false,
     downstreamLevel: 0,
     hasMudLayer: false,
+    unitSystem: 'SI',
+  },
+  sim6: {
+    id: 'sim6',
+    title: 'Problema 2.66 – Força Hidrostática e Estabilidade de Barragem de Gravidade',
+    subtitle: 'H = 80,00 m | BC = 60,00 m | b = 30,00 m | d_conc = 2,4 | Água 20 °C',
+    enunciado:
+      'A barragem ABC na Figura P2.66 tem 30 m de largura e é feita em concreto (d = 2,4). Calcule a força hidrostática sobre a superfície AB e seu momento em C. Considerando que não haja percolação de água por baixo da barragem, essa força poderia tombar a barragem? Qual é o seu momento se houver percolação por baixo da barragem?',
+    damType: TipoBarragem.GRAVIDADE,
+    damHeight: 80,
+    damBaseWidth: 60,
+    damCrestWidth: 0,
+    damWidth: 30,
+    concreteSpecificGravity: 2.4,
+    fluidKey: 'agua20C',
+    inclinationAngle: 53.13010235,
+    upstreamLevel: 80,
+    hasDownstream: false,
+    downstreamLevel: 0,
+    hasMudLayer: false,
+    hasPercolation: false,
+    upliftFactorUp: 1.0,
+    upliftFactorDown: 0.0,
+    showTriangularMode: true,
     unitSystem: 'SI',
   },
 };

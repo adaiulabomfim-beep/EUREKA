@@ -1,4 +1,4 @@
-import { SistemaUnidades, ModoPosicionamentoComporta } from './tipos';
+import { SistemaUnidades, ModoPosicionamentoComporta, EstadoOperacionalComporta } from './tipos';
 
 export interface HydroSideData {
   area: number;
@@ -15,6 +15,33 @@ export interface HydroSideData {
   p_top?: number;
   p_bot?: number;
   p_cg?: number;
+}
+
+export interface CondicaoOperacionalResultado {
+  estado: EstadoOperacionalComporta;
+  estadoLabel: string;
+  grauAberturaPercent: number;
+  alturaAberturaInclinada: number;
+  alturaLivreVertical: number;
+  areaAberturaLivre: number;
+  areaBloqueada: number;
+  passagemAgua: boolean;
+  condicaoPassagem: string;
+  sentidoEscoamento: string;
+  interpretacaoAutomatica: string;
+}
+
+export interface ComportamentoHidraulicoResultado {
+  alturaAbertura: number;
+  alturaAberturaInclinada: number;
+  areaLivrePassagem: number;
+  diferencaNivel: number;
+  nivelMontante: number;
+  nivelJusanteEfetivo: number;
+  jusanteAtiva: boolean;
+  regimeQualitativo: string;
+  descricaoHidraulica: string;
+  calculaVazao: boolean;
 }
 
 export interface ResultadoSimulacaoComporta {
@@ -35,5 +62,25 @@ export interface ResultadoSimulacaoComporta {
   equilibrium: {
     M_hinge: number;
     F_tie: number;
+    apoioParedeAtivo?: boolean;
+    apoioFundoAtivo?: boolean;
+    resolverProfundidadeRbZero?: boolean;
+    P_apoio?: number;
+    R_B?: number;
+    W_peso?: number;
+    h_jusante_eq?: number;
+    M_up_A?: number;
+    M_down_A?: number;
+    M_W_A?: number;
+    d_cp_up_A?: number;
+    d_cp_down_A?: number;
+    d_W_A?: number;
+    Rx_hinge?: number;
+    Ry_hinge?: number;
+    R_hinge?: number;
+    deltaX_BA?: number;
+    deltaY_BA?: number;
   };
+  operacao?: CondicaoOperacionalResultado;
+  hidraulica?: ComportamentoHidraulicoResultado;
 }

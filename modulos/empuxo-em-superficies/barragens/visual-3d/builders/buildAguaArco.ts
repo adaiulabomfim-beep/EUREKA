@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { construirGeometria } from '../../tipos/arco/geometria';
-import { interpolateX } from '../utils/geometryUtils';
+import { getHorizontalExtension3D, interpolateX } from '../utils/geometryUtils';
 
 export function buildAguaArcoGeometry(
   damHeight: number,
@@ -20,7 +20,7 @@ export function buildAguaArcoGeometry(
   );
 
   const offsetBase = actualBaseWidth / 2;
-  const farExtension = damHeight * 1.5;
+  const farExtension = getHorizontalExtension3D(damHeight, actualBaseWidth);
   let farX: number, X_front_base: number, X_front_top: number;
 
   if (side === 'UPSTREAM') {

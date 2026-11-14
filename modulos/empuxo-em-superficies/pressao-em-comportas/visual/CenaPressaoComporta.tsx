@@ -13,6 +13,7 @@ interface CenaProps {
   gravity?: number;
   liveResults?: ResultadoSimulacaoComporta;
   hasGate: boolean;
+  gateOpeningPercent?: number;
   gateShape: FormaComporta;
   gateWidth: number;
   gateHeight: number;
@@ -22,6 +23,8 @@ interface CenaProps {
   s_cp: number;
   hingePosition: PosicaoDobradica;
   hasTieRod: boolean;
+  hasSmoothWallSupport?: boolean;
+  hasSmoothFloorSupport?: boolean;
   tieRodPosRel: number;
   tieRodAngle: number;
   gateWeight: number;
@@ -37,6 +40,7 @@ interface CenaProps {
 
 export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
   const [is3D, setIs3D] = useState(false);
+  const [isFrontalView, setIsFrontalView] = useState(false);
   const [showVectors, setShowVectors] = useState(true);
 
   const handleCalculate = () => {
@@ -50,6 +54,8 @@ export const CenaPressaoComporta: React.FC<CenaProps> = (props) => {
       onCalculate={handleCalculate}
       is3D={is3D}
       setIs3D={setIs3D}
+      isFrontalView={isFrontalView}
+      setIsFrontalView={setIsFrontalView}
       showVectors={showVectors}
       setShowVectors={setShowVectors}
     />

@@ -25,12 +25,18 @@ export const simular = (config: ConfiguracaoSimulacaoBarragem): ResultadoSimulac
     damHeight,
     damBaseWidth,
     damCrestWidth,
+    damWidth,
+    concreteSpecificGravity,
     inclinationAngle,
     upstreamLevel,
     downstreamLevel,
     hasMudLayer,
     mudHeight,
     mudDensity,
+    hasPercolation,
+    upliftFactorUp,
+    upliftFactorDown,
+    showTriangularMode,
     density,
     gravity,
   } = config;
@@ -55,8 +61,23 @@ export const simular = (config: ConfiguracaoSimulacaoBarragem): ResultadoSimulac
     mudOpcoes
   );
 
+  // Para sim1/sim2 legadas (sem showTriangularMode nem d explícito), mantém γ_mat = 24000 N/m³;
+  // Quando showTriangularMode ou d_conc for informado, usa γ_conc = d_conc * ρ_ref * g (ou d_conc * γ_água)
+  const dConc = concreteSpecificGravity ?? 2.4;
+  const gammaConcrete = showTriangularMode
+    ? dConc * 1000 * gravity
+    : concreteSpecificGravity !== undefined
+    ? dConc * 1000 * gravity
+    : 24000;
+
   const stabilityData = calcularEstabilidadeBarragem(damHeight, profile, forceData, {
-    gammaMaterial: 24000,
+    gammaMaterial: gammaConcrete,
+    concreteSpecificGravity: dConc,
+    damWidth: damWidth ?? 1.0,
+    gammaFluid: gamma,
+    hasPercolation: Boolean(hasPercolation),
+    upliftFactorUp: upliftFactorUp ?? 1.0,
+    upliftFactorDown: upliftFactorDown ?? 0.0,
     mu: 0.7,
   });
 

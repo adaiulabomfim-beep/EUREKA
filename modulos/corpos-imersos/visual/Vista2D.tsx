@@ -67,6 +67,9 @@ interface Vista2DProps {
   shape2?: ObjectShape;
   visualWidth2?: number;
 
+  inverseSpecificWeightMode?: boolean;
+  apparentWeight?: number;
+
   pan?: { x: number; y: number };
 }
 
@@ -200,12 +203,15 @@ export const Vista2D: React.FC<Vista2DProps> = ({
   extraWeight = 0,
   shape2 = ObjectShape.CUBE,
   visualWidth2 = 0,
+  inverseSpecificWeightMode = false,
+  apparentWeight = 0,
 }) => {
   const clipId = useId().replace(/:/g, '');
   const clipUnderWaterId = `clip-under-water-${clipId}`;
   const clipAboveWaterId = `clip-above-water-${clipId}`;
   const arrowRedId = `arrow-red-${clipId}`;
   const arrowGreenId = `arrow-green-${clipId}`;
+  const arrowBlueId = `arrow-blue-${clipId}`;
 
   const cx = tankOffsetX + currentTankW / 2 + pan.x;
   const cy = blockY + pan.y;
@@ -295,6 +301,10 @@ export const Vista2D: React.FC<Vista2DProps> = ({
 
         <marker id={arrowGreenId} markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
           <path d="M0,0 L6,2 L0,4 Z" fill="#16a34a" />
+        </marker>
+
+        <marker id={arrowBlueId} markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+          <path d="M0,0 L6,2 L0,4 Z" fill="#2563eb" />
         </marker>
 
         <clipPath id={clipUnderWaterId}>
@@ -724,8 +734,145 @@ export const Vista2D: React.FC<Vista2DProps> = ({
         </g>
       )}
 
+      {/* Cabo de suspensão e dinamômetro (modo ensaio de corpo totalmente imerso sem contato com fundo) */}
+      {inverseSpecificWeightMode && (
+        <g pointerEvents="none">
+          <line
+            x1={cx - 18}
+            y1={24}
+            x2={cx + 18}
+            y2={24}
+            stroke="#334155"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <line
+            x1={cx}
+            y1={24}
+            x2={cx}
+            y2={cy}
+            stroke="#475569"
+            strokeWidth="1.8"
+            strokeDasharray="4,2"
+          />
+          <circle cx={cx} cy={cy} r={3.5} fill="#475569" />
+          <g transform={`translate(${cx}, 46)`}>
+            <rect
+              x="-72"
+              y="-12"
+              width="144"
+              height="24"
+              rx="12"
+              fill="#ffffff"
+              stroke="#2563eb"
+              strokeWidth="1.4"
+              opacity="0.96"
+            />
+            <text
+              x="0"
+              y="0.5"
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#1e3a8a"
+              fontSize="10.5"
+              fontWeight="bold"
+            >
+              {isSimulating
+                ? `Dinamômetro: ${apparentWeight.toFixed(1).replace('.', ',')} N`
+                : `No ar (P): ${objectWeight.toFixed(1).replace('.', ',')} N`}
+            </text>
+          </g>
+          <g transform={`translate(${tankLeft + currentTankW / 2}, ${tankBottomY + pan.y + 48})`}>
+            <rect x="-155" y="-10" width="310" height="20" rx="10" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
+            <text x="0" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#475569" fontSize="10" fontWeight="600">
+              {`Geometria ilustrativa (V = ${(vol_deslocado ?? 0).toFixed(5).replace('.', ',')} m³) — sem dimensões no enunciado`}
+            </text>
+          </g>
+        </g>
+      )}
+
       {/* Vetores (renderizados no topo para nunca ficarem encobertos) */}
       {showFBD && (
+        inverseSpecificWeightMode ? (() => {
+          const baseLen = 78;
+          const pLen = objectWeight > 0 ? baseLen : 0;
+          const eLen = objectWeight > 0 ? Math.max(18, baseLen * (buoyancyForce / objectWeight)) : 0;
+          const papLen = objectWeight > 0 ? Math.max(18, baseLen * (apparentWeight / objectWeight)) : 0;
+          const xOff = Math.min(18, visualWidth * 0.24);
+          const pYStart = centerOfMass.y;
+          const pYEnd = pYStart + pLen;
+          const eYStart = centerOfMass.y;
+          const eYEnd = eYStart - eLen;
+          const papX = cx + visualWidth / 2 + 28;
+          const papYStart = centerOfMass.y - papLen / 2;
+          const papYEnd = papYStart + papLen;
+
+          return (
+            <g pointerEvents="none">
+              {/* Peso Real (P) apontando para baixo */}
+              <circle cx={cx - xOff} cy={pYStart} r={3} fill="#ef4444" />
+              <line
+                x1={cx - xOff}
+                y1={pYStart}
+                x2={cx - xOff}
+                y2={pYEnd}
+                stroke="#ef4444"
+                strokeWidth="3"
+                markerEnd={`url(#${arrowRedId})`}
+              />
+              <g transform={`translate(${cx - xOff - 84}, ${pYStart + pLen * 0.55})`}>
+                <rect x="0" y="-10" width="76" height="20" fill="white" opacity="0.93" stroke="#fca5a5" strokeWidth="1" rx="6" />
+                <text x="38" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#dc2626" fontSize="10.5" fontWeight="bold">
+                  P = {objectWeight.toFixed(0)} N
+                </text>
+              </g>
+
+              {showBuoyancyVector && (
+                <>
+                  {/* Empuxo (E) apontando para cima */}
+                  <circle cx={cx + xOff} cy={eYStart} r={3} fill="#16a34a" />
+                  <line
+                    x1={cx + xOff}
+                    y1={eYStart}
+                    x2={cx + xOff}
+                    y2={eYEnd}
+                    stroke="#16a34a"
+                    strokeWidth="3"
+                    markerEnd={`url(#${arrowGreenId})`}
+                  />
+                  <g transform={`translate(${cx + xOff + 8}, ${eYEnd - 12})`}>
+                    <rect x="0" y="-10" width="76" height="20" fill="white" opacity="0.93" stroke="#86efac" strokeWidth="1" rx="6" />
+                    <text x="38" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="10.5" fontWeight="bold">
+                      E = {buoyancyForce.toFixed(0)} N
+                    </text>
+                  </g>
+
+                  {/* Peso Aparente (Pap = P - E) representado como resultante para baixo */}
+                  {apparentWeight > 0.01 && (
+                    <>
+                      <line
+                        x1={papX}
+                        y1={papYStart}
+                        x2={papX}
+                        y2={papYEnd}
+                        stroke="#2563eb"
+                        strokeWidth="3"
+                        markerEnd={`url(#${arrowBlueId})`}
+                      />
+                      <circle cx={papX} cy={papYStart} r={3} fill="#2563eb" />
+                      <g transform={`translate(${papX + 8}, ${(papYStart + papYEnd) / 2})`}>
+                        <rect x="0" y="-11" width="108" height="22" fill="white" opacity="0.95" stroke="#93c5fd" strokeWidth="1.2" rx="6" />
+                        <text x="54" y="0.5" textAnchor="middle" dominantBaseline="central" fill="#1d4ed8" fontSize="10" fontWeight="bold">
+                          P<tspan baselineShift="sub" fontSize="7.5">ap</tspan> = {apparentWeight.toFixed(0)} N (Result.)
+                        </text>
+                      </g>
+                    </>
+                  )}
+                </>
+              )}
+            </g>
+          );
+        })() : (
         <g pointerEvents="none">
           {/* Peso (P) - Acima do bloco (ou do peso extra) apontando para baixo */}
           <line
@@ -767,6 +914,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
             </>
           )}
         </g>
+        )
       )}
     </g>
     </svg>

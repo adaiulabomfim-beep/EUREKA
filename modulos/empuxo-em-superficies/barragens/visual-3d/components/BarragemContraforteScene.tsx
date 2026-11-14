@@ -9,6 +9,7 @@ import { AnimatedWaterMaterial } from './AnimatedWater';
 import { GroundPlane } from './GroundPlane';
 import { EmpuxoVector3D } from './EmpuxoVector3D';
 import { PressureDistribution3D } from './PressureDistribution3D';
+import { getHorizontalExtension3D } from '../utils/geometryUtils';
 
 export const BarragemContraforteScene: React.FC<any> = ({
   damHeight,
@@ -49,11 +50,12 @@ export const BarragemContraforteScene: React.FC<any> = ({
     const toWorldX = (x: number) => x - actualBaseWidth / 2;
     const getDamXAtY = (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => getDamXAtYGeneric(wallProfile, y, side);
 
+    const farExtension = getHorizontalExtension3D(damHeight, actualBaseWidth);
     let upWaterShape = null;
     let downWaterShape = null;
 
     if (upstreamLevel > 0) {
-      const farLeft = toWorldX(getDamXAtY(0, 'UPSTREAM') - damHeight * 1.5);
+      const farLeft = toWorldX(getDamXAtY(0, 'UPSTREAM') - farExtension);
       const faceBase = toWorldX(getDamXAtY(0, 'UPSTREAM'));
       const faceTop = toWorldX(getDamXAtY(upstreamLevel, 'UPSTREAM'));
 
@@ -68,7 +70,7 @@ export const BarragemContraforteScene: React.FC<any> = ({
 
     if (downstreamLevel > 0) {
       const buttressEnd = toWorldX(actualBaseWidth);
-      const farRight = buttressEnd + damHeight * 1.5;
+      const farRight = buttressEnd + farExtension;
 
       const s = new THREE.Shape();
       s.moveTo(farRight, 0);
@@ -127,7 +129,7 @@ export const BarragemContraforteScene: React.FC<any> = ({
       {waterShapes.up && (
         <mesh position={[0, 0, -channelWidth / 2]} receiveShadow>
           <extrudeGeometry args={[waterShapes.up, waterExtrudeSettings]} />
-          <AnimatedWaterMaterial />
+          <AnimatedWaterMaterial minY={0} maxY={upstreamLevel} />
         </mesh>
       )}
 
@@ -135,7 +137,7 @@ export const BarragemContraforteScene: React.FC<any> = ({
       {waterShapes.down && (
         <mesh position={[0, 0, -channelWidth / 2]} receiveShadow>
           <extrudeGeometry args={[waterShapes.down, waterExtrudeSettings]} />
-          <AnimatedWaterMaterial />
+          <AnimatedWaterMaterial minY={0} maxY={downstreamLevel} />
         </mesh>
       )}
 

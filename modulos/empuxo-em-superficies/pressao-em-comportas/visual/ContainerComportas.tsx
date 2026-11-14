@@ -206,7 +206,7 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                   : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
               }
             `}
-            title={showFrontalView ? 'Ocultar formato frontal da comporta' : 'Exibir formato da comporta frontal (rebatimento 2D)'}
+            title={showFrontalView ? 'Ocultar vista frontal da comporta' : 'Exibir vista frontal da comporta'}
           >
             <CircleDot className="h-3.5 w-3.5" />
             VISTA FRONTAL
@@ -367,9 +367,12 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
             if (isWater || baseOpacity < 1) {
               strokeToUse = 'none';
               strokeWidthToUse = 0;
+            } else if (isDam) {
+              strokeToUse = baseFill;
+              strokeWidthToUse = 0.75;
             } else {
               strokeToUse = baseFill;
-              strokeWidthToUse = 0.2;
+              strokeWidthToUse = 0.5;
             }
           }
 
@@ -413,10 +416,12 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
               {overlayOpacity > 0 && (
                 <path
                   d={d}
-                  fill="#000000"
+                  fill={typeof f.brightness === 'number' && f.brightness > 1 ? '#ffffff' : '#000000'}
                   fillRule="evenodd"
                   opacity={overlayOpacity}
-                  stroke="none"
+                  stroke={typeof f.brightness === 'number' && f.brightness > 1 ? '#ffffff' : '#000000'}
+                  strokeWidth={isDam ? 0.75 : 0}
+                  vectorEffect="non-scaling-stroke"
                   style={{ mixBlendMode: overlayBlend }}
                   pointerEvents="none"
                   shapeRendering="geometricPrecision"

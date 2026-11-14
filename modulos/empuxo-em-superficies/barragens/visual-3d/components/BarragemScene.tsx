@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Edges } from '@react-three/drei';
+import { Edges, Html, Cylinder, Cone, Sphere } from '@react-three/drei';
 import { buildBarragemGravidade } from '../builders/buildBarragemGravidade';
 import { buildAguaGravidade } from '../builders/buildAguaGravidade';
 import { HatchMaterial } from '../core/materials';
@@ -14,6 +14,7 @@ export const BarragemScene: React.FC<any> = ({
   damHeight,
   damBaseWidth,
   damCrestWidth,
+  damWidth = 1,
   inclinationAngle,
   channelWidth = 40,
   upstreamLevel = 0,
@@ -21,6 +22,9 @@ export const BarragemScene: React.FC<any> = ({
   hasMudLayer = false,
   mudHeight = 0,
   mudDensity = 1500,
+  hasPercolation = false,
+  showTriangularMode = false,
+  stability,
   unitSystem = 'SI',
   gravity = 9.81,
   force,
@@ -72,6 +76,12 @@ export const BarragemScene: React.FC<any> = ({
     );
   }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, channelWidth, downstreamLevel]);
 
+  const isTriangularABC = Boolean(
+    showTriangularMode || (damCrestWidth <= 0.01 && damWidth > 1.001)
+  );
+  const offsetX = actualBaseWidth / 2;
+  const bLong = stability?.damWidth ?? damWidth ?? 1;
+
   return (
     <group>
       <GroundPlane damHeight={damHeight} damBaseWidth={damBaseWidth} channelWidth={channelWidth} actualBaseWidth={actualBaseWidth} />
@@ -92,15 +102,36 @@ export const BarragemScene: React.FC<any> = ({
       {/* Upstream Water */}
       {upstreamGeometry && (
         <mesh geometry={upstreamGeometry} receiveShadow>
-          <AnimatedWaterMaterial />
+          <AnimatedWaterMaterial minY={effMudHeight} maxY={upstreamLevel} />
         </mesh>
       )}
 
       {/* Downstream Water */}
       {downstreamGeometry && (
         <mesh geometry={downstreamGeometry} receiveShadow>
-          <AnimatedWaterMaterial />
+          <AnimatedWaterMaterial minY={0} maxY={downstreamLevel} />
         </mesh>
+      )}
+
+      {/* 3D Vertex Labels A, B, C for Triangular Dam Mode */}
+      {isTriangularABC && (
+        <group>
+          <Html position={[actualBaseWidth - offsetX, damHeight + 2.5, channelWidth / 2]} center style={{ pointerEvents: 'none' }}>
+            <div className="w-6 h-6 rounded-full bg-slate-900 text-white text-[11px] font-black flex items-center justify-center border-2 border-white shadow">
+              A
+            </div>
+          </Html>
+          <Html position={[-offsetX - 1.5, 2.0, channelWidth / 2]} center style={{ pointerEvents: 'none' }}>
+            <div className="w-6 h-6 rounded-full bg-slate-900 text-white text-[11px] font-black flex items-center justify-center border-2 border-white shadow">
+              B
+            </div>
+          </Html>
+          <Html position={[actualBaseWidth - offsetX + 2.0, 2.0, channelWidth / 2]} center style={{ pointerEvents: 'none' }}>
+            <div className="w-6 h-6 rounded-full bg-orange-600 text-white text-[11px] font-black flex items-center justify-center border-2 border-white shadow">
+              C
+            </div>
+          </Html>
+        </group>
       )}
 
       {/* Analysis Overlays */}
@@ -112,7 +143,7 @@ export const BarragemScene: React.FC<any> = ({
               maxPressureLevel={maxPressureLevel}
               inclinationAngle={inclinationAngle}
               actualBaseWidth={actualBaseWidth}
-              offsetX={actualBaseWidth / 2}
+              offsetX={offsetX}
               isUpstream={true}
               color="#2563eb"
               channelWidth={channelWidth}
@@ -127,7 +158,7 @@ export const BarragemScene: React.FC<any> = ({
               inclinationAngle={inclinationAngle}
               downstreamFaceAngle={downstreamFaceAngle}
               actualBaseWidth={actualBaseWidth}
-              offsetX={actualBaseWidth / 2}
+              offsetX={offsetX}
               isUpstream={false}
               color="#3b82f6"
               channelWidth={channelWidth}
@@ -146,13 +177,76 @@ export const BarragemScene: React.FC<any> = ({
               downstreamAngle={downstreamFaceAngle}
               damHeight={damHeight}
               actualBaseWidth={actualBaseWidth}
-              offsetX={actualBaseWidth / 2}
+              offsetX={offsetX}
               isUpstream={(forceH ?? force) >= 0}
               label={(forceH ?? force) >= 0 ? "Resultante (Net)" : "Resultante (Jusante)"}
               color={(forceH ?? force) >= 0 ? "#ef4444" : "#f59e0b"}
               unitSystem={unitSystem}
               gravity={gravity}
+              damWidth={bLong}
+              showTriangularMode={isTriangularABC}
             />
+          )}
+
+          {/* Peso Próprio W em 3D no CG */}
+          {stability && stability.weight > 0 && (
+            (() => {
+              const xCg3D = stability.x_cg - offsetX;
+              const yCg3D = stability.y_cg;
+              const wLen = Math.max(8, Math.min(18, damHeight * 0.22));
+              const wTotalText = isTriangularABC
+                ? unitSystem === 'TECNICO_KGF'
+                  ? `W = ${((stability.weight * bLong) / gravity).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kgf`
+                  : `W = ${((stability.weight * bLong) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kN`
+                : `W = ${(stability.weight / 1000).toFixed(1)} kN/m`;
+              return (
+                <group position={[xCg3D, yCg3D, 0]}>
+                  <Sphere args={[0.45, 16, 16]}>
+                    <meshStandardMaterial color="#b91c1c" emissive="#ffffff" emissiveIntensity={0.4} />
+                  </Sphere>
+                  <Cylinder args={[0.18, 0.18, wLen - 1.5, 12]} position={[0, -(wLen - 1.5) / 2, 0]}>
+                    <meshStandardMaterial color="#b91c1c" emissive="#b91c1c" emissiveIntensity={0.9} />
+                  </Cylinder>
+                  <Cone args={[0.45, 1.5, 12]} position={[0, -wLen + 0.75, 0]} rotation={[Math.PI, 0, 0]}>
+                    <meshStandardMaterial color="#b91c1c" emissive="#b91c1c" emissiveIntensity={0.9} />
+                  </Cone>
+                  <Html position={[0, 1.8, 0]} center style={{ pointerEvents: 'none' }}>
+                    <div className="bg-white/95 backdrop-blur-sm text-[10.5px] font-extrabold px-2 py-0.5 rounded-full shadow border border-red-300 text-red-800 whitespace-nowrap">
+                      CG • {wTotalText}
+                    </div>
+                  </Html>
+                </group>
+              );
+            })()
+          )}
+
+          {/* Subpressão U sob a base BC em 3D quando Percolação está ativa */}
+          {hasPercolation && stability?.analisePontoC?.subpressao?.ativa && (
+            (() => {
+              const sub = stability.analisePontoC.subpressao;
+              const xU3D = sub.x_U - offsetX;
+              const uLen = Math.max(8, Math.min(16, damHeight * 0.2));
+              const uTotalText = isTriangularABC
+                ? unitSystem === 'TECNICO_KGF'
+                  ? `U = ${(sub.U_total / gravity).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kgf`
+                  : `U = ${(sub.U_total / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kN`
+                : `U = ${(sub.U_por_metro / 1000).toFixed(1)} kN/m`;
+              return (
+                <group position={[xU3D, 0, 0]}>
+                  <Cylinder args={[0.18, 0.18, uLen - 1.5, 12]} position={[0, -(uLen + 1.5) / 2, 0]}>
+                    <meshStandardMaterial color="#7e22ce" emissive="#7e22ce" emissiveIntensity={0.9} />
+                  </Cylinder>
+                  <Cone args={[0.45, 1.5, 12]} position={[0, -0.75, 0]}>
+                    <meshStandardMaterial color="#7e22ce" emissive="#7e22ce" emissiveIntensity={0.9} />
+                  </Cone>
+                  <Html position={[0, -uLen - 1.2, 0]} center style={{ pointerEvents: 'none' }}>
+                    <div className="bg-white/95 backdrop-blur-sm text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full shadow border border-purple-300 text-purple-800 whitespace-nowrap">
+                      {uTotalText}
+                    </div>
+                  </Html>
+                </group>
+              );
+            })()
           )}
         </>
       )}

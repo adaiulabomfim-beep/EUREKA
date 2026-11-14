@@ -1,13 +1,15 @@
 import React from 'react';
 import { Edges } from '@react-three/drei';
 import { HatchMaterial } from '../core/materials';
+import { getHorizontalExtension3D } from '../utils/geometryUtils';
 
 export const GroundPlane: React.FC<any> = ({ damHeight, damBaseWidth, channelWidth, actualBaseWidth }) => {
     // If actualBaseWidth isn't provided (e.g. older scenes), fallback to an approximation
     const baseW = actualBaseWidth || damBaseWidth;
     
-    // Exactly cover the dam base + 1.5*damHeight of water on each side
-    const groundLength = baseW + damHeight * 3.0; 
+    // Prolongar o terreno horizontalmente além dos limites visíveis da cena 3D
+    const farExtension = getHorizontalExtension3D(damHeight, baseW);
+    const groundLength = baseW + farExtension * 2;
     const groundWidth = channelWidth; // Exactly match the channel width
     const groundThickness = Math.max(8, damHeight * 0.25); // Visible thickness
 

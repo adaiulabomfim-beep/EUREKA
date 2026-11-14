@@ -1,6 +1,5 @@
 import React from 'react';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+import { MathTex, texNum } from '../ui/MathTex';
 import {
   Cuboid,
   ListChecks,
@@ -28,30 +27,6 @@ import {
   calcularVolumeSubmersoTexto,
   renderDescricaoProblema,
 } from './ReportShared';
-
-const texNum = (valor) => String(valor ?? '').replace(/(\d),(\d)/g, '$1{,}$2');
-
-const MathTex = ({ tex, display = false, className = '' }) => {
-  const html = React.useMemo(
-    () =>
-      katex.renderToString(String(tex || ''), {
-        displayMode: display,
-        output: 'html',
-        throwOnError: false,
-        strict: 'ignore',
-      }),
-    [tex, display]
-  );
-
-  return (
-    <span
-      className={`eureka-math ${
-        display ? 'eureka-math-display flex max-w-full justify-center' : 'eureka-math-inline inline align-baseline'
-      } ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-};
 
 const FormulaRow = ({ label, children }) => (
   <div className="flex min-h-[46px] items-center gap-[8px] rounded-[8px] bg-[#f8fbff] px-[12px] py-[4px]">
@@ -569,16 +544,24 @@ export const RelatorioVisualEureka = ({
       const hCg = fd.up.h_cg ?? 0;
       const hCp = fd.up.h_cp ?? hCg;
       const hasTie = eq && Math.abs(eq.F_tie || 0) > 1e-6;
+      const hasWallSupport = Boolean(eq?.apoioParedeAtivo);
       return (
         <span>
           A força hidrostática resultante (<MathTex tex={`F_R = ${texNum(fmtBr(Math.abs(fd.FR_net || 0) / 1000))}\\text{ kN}`} />) atua no{' '}
           <strong className="font-black text-[#2563eb]">centro de pressão</strong> (<MathTex tex={`h_{\\text{cp}} = ${texNum(fmtBr(hCp))}\\text{ m}`} />), situado abaixo do centro de gravidade da área molhada (<MathTex tex={`h_{\\text{cg}} = ${texNum(fmtBr(hCg))}\\text{ m}`} />) devido ao acréscimo linear da pressão com a profundidade.
-          {hasTie && (
+          {hasWallSupport ? (
+            <>
+              {' '}Para o equilíbrio estático da comporta inclinada, a parede vertical lisa em A exerce reação horizontal{' '}
+              <MathTex tex={`P = ${texNum(fmtBr(Math.abs(eq.P_apoio || 0) / 1000))}\\text{ kN}`} />, enquanto a articulação B desenvolve{' '}
+              <MathTex tex={`B_x = ${texNum(fmtBr(Math.abs(eq.Rx_hinge || 0) / 1000))}\\text{ kN}`} /> e{' '}
+              <MathTex tex={`B_y = ${texNum(fmtBr(Math.abs(eq.Ry_hinge || 0) / 1000))}\\text{ kN}`} />.
+            </>
+          ) : hasTie ? (
             <>
               {' '}O equilíbrio estático exige força mínima no tirante de{' '}
               <MathTex tex={`F_{\\text{tirante}} = ${texNum(fmtBr(Math.abs(eq.F_tie) / 1000))}\\text{ kN}`} />.
             </>
-          )}
+          ) : null}
         </span>
       );
     }
@@ -625,6 +608,22 @@ export const RelatorioVisualEureka = ({
       );
     }
 
+    if (dados.tipo === 'corpos-imersos' && simulacao.inverseSpecificWeightMode) {
+      const pN = Number(simulacao.peso || 0);
+      const papN = Number(simulacao.pesoAparente ?? 0);
+      const eN = Number(simulacao.empuxo || 0);
+      const gammaF = Number(simulacao.pesoEspecificoFluido || 9802);
+      const vDesl = Number(simulacao.volumeDeslocado || 0);
+      const gammaC = Number(simulacao.pesoEspecificoCorpo || 0);
+      return (
+        <span>
+          A diferença entre o peso real no ar (<MathTex tex={`P = ${texNum(fmtBr(pN))}\\text{ N}`} />) e o peso aparente submerso (<MathTex tex={`P_{\\text{ap}} = ${texNum(fmtBr(papN))}\\text{ N}`} />) fornece o empuxo (<MathTex tex={`E = ${texNum(fmtBr(eN))}\\text{ N}`} />). Dividindo <MathTex tex="E" /> por <MathTex tex={`\\gamma_f = ${texNum(fmtBr(gammaF, 0, 0))}\\text{ N/m}^3`} />, obtém-se o volume do bloco (<MathTex tex={`V = ${texNum(fmtBr(vDesl, 5, 5))}\\text{ m}^3`} />) e, consequentemente, seu{' '}
+          <strong className="font-black text-[#2563eb]">peso específico médio</strong>{' '}
+          <MathTex tex={`\\gamma_c = ${texNum(fmtBr(gammaC, 0, 0))}\\text{ N/m}^3`} />.
+        </span>
+      );
+    }
+
     if (statusLabel === 'AFUNDA') {
       return (
         <span>
@@ -652,6 +651,73 @@ export const RelatorioVisualEureka = ({
   };
 
   const buildMemorialSteps = () => {
+    if (dados.tipo === 'corpos-imersos' && simulacao.inverseSpecificWeightMode) {
+      const pN = Number(simulacao.peso || 0);
+      const papN = Number(simulacao.pesoAparente ?? 0);
+      const eN = Number(simulacao.empuxo || 0);
+      const gammaF = Number(simulacao.pesoEspecificoFluido || 9802);
+      const vDesl = Number(simulacao.volumeDeslocado || 0);
+      const gammaC = Number(simulacao.pesoEspecificoCorpo || 0);
+      const rhoC = Number(simulacao.densidadeObjeto || gammaC / 9.81);
+      return [
+        {
+          number: 1,
+          title: 'Etapa 1 – Cálculo do Empuxo (E)',
+          equation: <MathTex display tex="E = P - P_{\text{ap}}" />,
+          variables: (
+            <>
+              <MathTex tex={`P = ${texNum(fmtBr(pN))}\\text{ N}`} />; <MathTex tex={`P_{\\text{ap}} = ${texNum(fmtBr(papN))}\\text{ N}`} />
+            </>
+          ),
+          substitution: (
+            <MathTex tex={`E = ${texNum(fmtBr(pN))} - ${texNum(fmtBr(papN))}`} />
+          ),
+          result: <MathTex tex={`E = ${texNum(fmtBr(eN))}\\text{ N}`} />,
+          note: 'O empuxo corresponde exatamente à redução aparente de peso durante a imersão total.',
+          tone: 'green',
+          estimatedHeight: 158,
+        },
+        {
+          number: 2,
+          title: 'Etapa 2 – Cálculo do Volume Deslocado (V)',
+          equation: <MathTex display tex="E = \gamma_f \cdot V \;\;\Rightarrow\;\; V = \frac{E}{\gamma_f}" />,
+          variables: (
+            <>
+              <MathTex tex={`E = ${texNum(fmtBr(eN))}\\text{ N}`} />; <MathTex tex={`\\gamma_f = ${texNum(fmtBr(gammaF, 0, 0))}\\text{ N/m}^3`} />
+            </>
+          ),
+          substitution: (
+            <MathTex tex={`V = \\frac{${texNum(fmtBr(eN))}}{${texNum(fmtBr(gammaF, 0, 0))}}`} />
+          ),
+          result: <MathTex tex={`V = ${texNum(fmtBr(vDesl, 5, 5))}\\text{ m}^3\\;(${texNum(fmtBr(vDesl * 1000))}\\text{ L})`} />,
+          note: 'Como o bloco está totalmente imerso, o volume deslocado é igual ao volume real do corpo.',
+          tone: 'cyan',
+          estimatedHeight: 164,
+        },
+        {
+          number: 3,
+          title: 'Etapa 3 – Peso Específico Médio (γ_c) e Densidade (ρ_c)',
+          equation: <MathTex display tex="\gamma_c = \frac{P}{V} \quad | \quad \rho_c = \frac{\gamma_c}{g}" />,
+          variables: (
+            <>
+              <MathTex tex={`P = ${texNum(fmtBr(pN))}\\text{ N}`} />; <MathTex tex={`V = ${texNum(fmtBr(vDesl, 5, 5))}\\text{ m}^3`} />; <MathTex tex="g = 9{,}81\text{ m/s}^2" />
+            </>
+          ),
+          substitution: (
+            <>
+              <MathTex tex={`\\gamma_c = \\frac{${texNum(fmtBr(pN))}}{${texNum(fmtBr(vDesl, 5, 5))}}`} />; <MathTex tex={`\\rho_c = \\frac{${texNum(fmtBr(gammaC, 0, 0))}}{9{,}81}`} />
+            </>
+          ),
+          result: (
+            <MathTex tex={`\\gamma_c = ${texNum(fmtBr(gammaC, 0, 0))}\\text{ N/m}^3\\;\\;|\\;\\;\\rho_c \\approx ${texNum(fmtBr(rhoC, 0, 0))}\\text{ kg/m}^3`} />
+          ),
+          note: 'Geometria 2D/3D na cena é meramente ilustrativa, pois o enunciado não informa dimensões lineares.',
+          tone: 'blue',
+          estimatedHeight: 170,
+        },
+      ];
+    }
+
     if (dados.tipo === 'corpos-imersos') {
       const dim = simulacao.dimensoes || {};
       const dim1Cm = Number(dim['Aresta/Raio (cm)'] || dim['Aresta/Raio'] || 0);
@@ -985,34 +1051,55 @@ export const RelatorioVisualEureka = ({
         },
         {
           number: 5,
-          title: 'Verificação do equilíbrio estático na articulação e tirante',
-          equation: (
+          title: eq.apoioParedeAtivo
+            ? 'Equilíbrio estático e reações nos apoios A e B'
+            : 'Verificação do equilíbrio estático na articulação e tirante',
+          equation: eq.apoioParedeAtivo ? (
+            <MathTex
+              display
+              tex="\Sigma M_B = 0 \;\Rightarrow\; P = \frac{F_R \cdot d_{\text{CP},B}}{\Delta y_{BA}} \quad | \quad B_x = P - F_R\operatorname{sen}\theta \quad | \quad B_y = F_R\cos\theta"
+            />
+          ) : (
             <MathTex
               display
               tex="\Sigma M_{\text{articulação}} = 0 \;\Rightarrow\; F_{\text{tirante}} = \frac{|M_{\text{articulação}}|}{d_{\text{tirante}} \cdot \operatorname{sen}(\alpha)}"
             />
           ),
-          variables: (
+          variables: eq.apoioParedeAtivo ? (
+            <>
+              <MathTex tex={`d_{\\text{CP},B} = ${texNum(fmtBr(Math.max(0, H - fd.s_cp_net), 3, 3))}\\text{ m}`} />;{' '}
+              <MathTex tex={`\\Delta y_{BA} = ${texNum(fmtBr(eq.deltaY_BA || H * Math.sin((theta * Math.PI) / 180), 3, 3))}\\text{ m}`} />
+            </>
+          ) : (
             <>
               <MathTex tex={`s_{\\text{cp}} = ${texNum(fmtBr(fd.s_cp_net, 3, 3))}\\text{ m}`} />; peso próprio <MathTex tex={`P = ${texNum(fmtBr(pesoComporta))}\\text{ N}`} />
             </>
           ),
-          substitution:
-            Math.abs(eq.M_hinge || 0) > 1e-6 || Math.abs(eq.F_tie || 0) > 1e-6 ? (
-              <>
-                <MathTex tex={`M_{\\text{articulação}} = ${texNum(fmtBr(Math.abs(eq.M_hinge) / (isKgf ? g : 1000)))}\\;${momentUnitTex}`} />; <MathTex tex="F_{\text{tirante}}" /> calculada pelo balanço estático de momentos
-              </>
-            ) : (
-              'Sem solicitação ativa no tirante ou articulação configurada sem momento líquido externo.'
-            ),
-          result:
-            Math.abs(eq.F_tie || 0) > 1e-6 ? (
-              <MathTex tex={`F_{\\text{tirante}} = ${texNum(fmtForce(Math.abs(eq.F_tie)))}\\;${forceUnitTex}\\;(${texNum(fmtBr(Math.abs(eq.F_tie), 1, 1))}\\text{ N})`} />
-            ) : (
-              <MathTex tex={`M_{\\text{articulação}} = ${texNum(fmtBr(Math.abs(eq.M_hinge) / (isKgf ? g : 1000)))}\\;${momentUnitTex} \\;\\;|\\;\\; F_{\\text{tirante}} = 0{,}00\\;${forceUnitTex}`} />
-            ),
-          note:
-            pesoComporta > 0
+          substitution: eq.apoioParedeAtivo ? (
+            <>
+              <MathTex tex={`P = ${texNum(fmtForce(Math.abs(eq.P_apoio || 0)))}\\;${forceUnitTex}`} />;{' '}
+              <MathTex tex={`B_x = ${texNum(fmtForce(Math.abs(eq.Rx_hinge || 0)))}\\;${forceUnitTex}`} />;{' '}
+              <MathTex tex={`B_y = ${texNum(fmtForce(Math.abs(eq.Ry_hinge || 0)))}\\;${forceUnitTex}`} />
+            </>
+          ) : Math.abs(eq.M_hinge || 0) > 1e-6 || Math.abs(eq.F_tie || 0) > 1e-6 ? (
+            <>
+              <MathTex tex={`M_{\\text{articulação}} = ${texNum(fmtBr(Math.abs(eq.M_hinge) / (isKgf ? g : 1000)))}\\;${momentUnitTex}`} />; <MathTex tex="F_{\text{tirante}}" /> calculada pelo balanço estático de momentos
+            </>
+          ) : (
+            'Sem solicitação ativa no tirante ou articulação configurada sem momento líquido externo.'
+          ),
+          result: eq.apoioParedeAtivo ? (
+            <MathTex
+              tex={`P = ${texNum(fmtForce(Math.abs(eq.P_apoio || 0)))}\\;${forceUnitTex} \\;\\;|\\;\\; B_x = ${texNum(fmtForce(Math.abs(eq.Rx_hinge || 0)))}\\;${forceUnitTex} \\;\\;|\\;\\; B_y = ${texNum(fmtForce(Math.abs(eq.Ry_hinge || 0)))}\\;${forceUnitTex}`}
+            />
+          ) : Math.abs(eq.F_tie || 0) > 1e-6 ? (
+            <MathTex tex={`F_{\\text{tirante}} = ${texNum(fmtForce(Math.abs(eq.F_tie)))}\\;${forceUnitTex}\\;(${texNum(fmtBr(Math.abs(eq.F_tie), 1, 1))}\\text{ N})`} />
+          ) : (
+            <MathTex tex={`M_{\\text{articulação}} = ${texNum(fmtBr(Math.abs(eq.M_hinge) / (isKgf ? g : 1000)))}\\;${momentUnitTex} \\;\\;|\\;\\; F_{\\text{tirante}} = 0{,}00\\;${forceUnitTex}`} />
+          ),
+          note: eq.apoioParedeAtivo
+            ? 'Parede vertical lisa em A impõe reação horizontal pura (sem atrito); articulação B absorve Bx e By.'
+            : pesoComporta > 0
               ? 'Momento resultante considera empuxo hidrostático e peso próprio da comporta.'
               : 'Peso próprio da comporta não habilitado nesta simulação.',
           tone: 'amber',
@@ -1686,9 +1773,15 @@ export const RelatorioVisualEureka = ({
   return (
     <div id="relatorio-eureka" ref={rootRef} className="flex flex-col gap-[16px]">
       <style>{`
+        .eureka-math {
+          text-transform: none !important;
+          letter-spacing: normal !important;
+          font-style: normal;
+        }
         .eureka-math .katex {
           line-height: 1.25;
           color: inherit;
+          font-weight: 500;
         }
         .eureka-math-inline .katex {
           font-size: 1.07em;
@@ -1776,7 +1869,20 @@ export const RelatorioVisualEureka = ({
               </SectionTitle>
 
               <div className="flex flex-1 flex-col justify-center space-y-[5px]">
-                {dados.tipo === 'corpos-imersos' && (
+                {dados.tipo === 'corpos-imersos' && simulacao.inverseSpecificWeightMode && (
+                  <>
+                    <FormulaRow label={<>Empuxo (<MathTex tex="E" />):</>}>
+                      <MathTex tex="E = P - P_{\text{ap}}" />
+                    </FormulaRow>
+                    <FormulaRow label={<>Volume (<MathTex tex="V" />):</>}>
+                      <MathTex tex="V = \frac{E}{\gamma_f}" />
+                    </FormulaRow>
+                    <FormulaRow label={<>Peso Esp. (<MathTex tex="\gamma_c" />):</>}>
+                      <MathTex tex="\gamma_c = \frac{P}{V} \quad | \quad \rho_c = \frac{\gamma_c}{g}" />
+                    </FormulaRow>
+                  </>
+                )}
+                {dados.tipo === 'corpos-imersos' && !simulacao.inverseSpecificWeightMode && (
                   <>
                     <FormulaRow label={<>Peso Real (<MathTex tex="P" />):</>}>
                       <MathTex tex="P = \rho_o \cdot g \cdot V_{\text{total}}" />
@@ -1830,7 +1936,31 @@ export const RelatorioVisualEureka = ({
               </SectionTitle>
 
               <div className="flex flex-1 flex-col justify-center space-y-[4px]">
-                {dados.tipo === 'corpos-imersos' && (
+                {dados.tipo === 'corpos-imersos' && simulacao.inverseSpecificWeightMode && (
+                  <>
+                    <ResultRow
+                      label={<>Peso Esp. Médio (<MathTex tex="\gamma_c" />):</>}
+                      value={<MathTex tex={`${texNum(fmtBr(dados.pesoEspecificoCorpoNum, 0, 0))}\\text{ N/m}^3`} />}
+                      tone="blue"
+                    />
+                    <ResultRow
+                      label={<>Empuxo (<MathTex tex="E" />):</>}
+                      value={<MathTex tex={`${texNum(fmtBr(empuxoNGlobal))}\\text{ N}`} />}
+                      tone="green"
+                    />
+                    <ResultRow
+                      label={<>Volume Deslocado (<MathTex tex="V" />):</>}
+                      value={<MathTex tex={`${texNum(fmtBr(dados.volumeDeslocadoNum, 5, 5))}\\text{ m}^3`} />}
+                      tone="blue"
+                    />
+                    <ResultRow
+                      label={<>Densidade Média (<MathTex tex="\rho_c" />):</>}
+                      value={<MathTex tex={`${texNum(fmtBr(rhoOGlobal, 0, 0))}\\text{ kg/m}^3`} />}
+                      tone="red"
+                    />
+                  </>
+                )}
+                {dados.tipo === 'corpos-imersos' && !simulacao.inverseSpecificWeightMode && (
                   <>
                     <ResultRow
                       label={<>Peso Real (<MathTex tex="P" />):</>}
@@ -1885,15 +2015,36 @@ export const RelatorioVisualEureka = ({
                       }
                       tone="blue"
                     />
-                    <ResultRow
-                      label={<>Força no Tirante (<MathTex tex="F_{\text{tirante}}" />):</>}
-                      value={
-                        dados.analyzedResults?.equilibrium
-                          ? <MathTex tex={`${texNum(fmtBr(Math.abs(dados.analyzedResults.equilibrium.F_tie) / 1000))}\\text{ kN}`} />
-                          : '-'
-                      }
-                      tone="red"
-                    />
+                    {dados.analyzedResults?.equilibrium?.apoioParedeAtivo ? (
+                      <>
+                        <ResultRow
+                          label={<>Reação em A (<MathTex tex="P" />):</>}
+                          value={
+                            <MathTex tex={`${texNum(fmtBr(Math.abs(dados.analyzedResults.equilibrium.P_apoio || 0) / 1000))}\\text{ kN}`} />
+                          }
+                          tone="red"
+                        />
+                        <ResultRow
+                          label={<>Reações em B (<MathTex tex="B_x, B_y" />):</>}
+                          value={
+                            <MathTex
+                              tex={`${texNum(fmtBr(Math.abs(dados.analyzedResults.equilibrium.Rx_hinge || 0) / 1000))}\\text{ / }${texNum(fmtBr(Math.abs(dados.analyzedResults.equilibrium.Ry_hinge || 0) / 1000))}\\text{ kN}`}
+                            />
+                          }
+                          tone="blue"
+                        />
+                      </>
+                    ) : (
+                      <ResultRow
+                        label={<>Força no Tirante (<MathTex tex="F_{\text{tirante}}" />):</>}
+                        value={
+                          dados.analyzedResults?.equilibrium
+                            ? <MathTex tex={`${texNum(fmtBr(Math.abs(dados.analyzedResults.equilibrium.F_tie) / 1000))}\\text{ kN}`} />
+                            : '-'
+                        }
+                        tone="red"
+                      />
+                    )}
                   </>
                 )}
                 {dados.tipo === 'barragens' && (() => {

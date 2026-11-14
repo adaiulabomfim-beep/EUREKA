@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { Edges, Html, Line } from '@react-three/drei';
-import { Play, RotateCcw, Box, ArrowLeftRight, Ruler, MousePointer2 } from 'lucide-react';
+import { Play, RotateCcw, Box, ArrowLeftRight, CircleDot, MousePointer2 } from 'lucide-react';
 import {
   FormaComporta,
   PosicaoDobradica,
@@ -14,10 +14,74 @@ import { ResultadoSimulacaoComporta } from '../dominio/resultado';
 
 // Shared 3D components and materials
 import { BarragemCanvas, Camera3DHandle } from '../../barragens/visual-3d/components/BarragemCanvas';
-import { HatchMaterial } from '../../barragens/visual-3d/core/materials';
+import { FrontalProjection3D } from './components/FrontalProjection3D';
+import { buildFlowGeometry } from './buildFlowGeometry';
 import { AnimatedWaterMaterial } from '../../barragens/visual-3d/components/AnimatedWater';
+import { HatchMaterial } from '../../barragens/visual-3d/core/materials';
 import { ControlesNavegacaoCena } from '../../../../src/components/ui/ControlesNavegacaoCena';
 import { CORES_MATERIAIS, ESTILOS_VETOR_3D } from '../../visual-compartilhado/identidadeVisual';
+
+const CameraFitRig: React.FC<{
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  channelWidth: number;
+  resetTrigger: string;
+}> = ({ minX, maxX, minY, maxY, channelWidth, resetTrigger }) => {
+  const { camera, controls, size } = useThree();
+  const lastFitRef = useRef<string>('');
+
+  useEffect(() => {
+    const key = `${resetTrigger}-${Math.round(size.width)}-${Math.round(size.height)}`;
+    if (lastFitRef.current === key) return;
+    lastFitRef.current = key;
+
+    const perspCam = camera as THREE.PerspectiveCamera;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const spanX = Math.max(2.5, maxX - minX);
+    const spanY = Math.max(2.0, maxY - minY);
+
+    const aspect = Math.max(0.5, size.width / Math.max(1, size.height));
+    const fovRad = ((perspCam.fov || 32) * Math.PI) / 180;
+    const tanHalfV = Math.tan(fovRad / 2);
+    const tanHalfH = tanHalfV * aspect;
+
+    const azim = (-18 * Math.PI) / 180;
+    const elev = (14 * Math.PI) / 180;
+    const effW = spanX * Math.cos(azim) + channelWidth * Math.abs(Math.sin(azim));
+    const effH = spanY * Math.cos(elev) + channelWidth * Math.sin(elev);
+    const distH = (effW * 0.48) / tanHalfH;
+    const distV = (effH * 0.50) / tanHalfV;
+    const dist = Math.max(distH, distV, 4.2) + channelWidth * 0.25;
+
+    const fitPos = new THREE.Vector3(
+      centerX + dist * Math.sin(azim) * Math.cos(elev),
+      centerY + dist * Math.sin(elev),
+      dist * Math.cos(azim) * Math.cos(elev)
+    );
+    const fitTarget = new THREE.Vector3(centerX, centerY, 0);
+
+    perspCam.near = 0.05;
+    perspCam.far = Math.max(500, dist * 10);
+    perspCam.position.copy(fitPos);
+    perspCam.lookAt(fitTarget);
+    perspCam.updateProjectionMatrix();
+
+    const orbit = controls as any;
+    if (orbit && typeof orbit.update === 'function') {
+      orbit.target.copy(fitTarget);
+      orbit.minDistance = Math.max(0.8, dist * 0.16);
+      orbit.maxDistance = Math.max(25, dist * 4.5);
+      orbit.position0?.copy(fitPos);
+      orbit.target0?.copy(fitTarget);
+      orbit.update();
+    }
+  }, [camera, controls, size.width, size.height, minX, maxX, minY, maxY, channelWidth, resetTrigger]);
+
+  return null;
+};
 
 interface Scene3DProps {
   upstreamLevel: number;
@@ -29,6 +93,7 @@ interface Scene3DProps {
   gravity?: number;
   liveResults?: ResultadoSimulacaoComporta;
   hasGate: boolean;
+  gateOpeningPercent?: number;
   gateShape: FormaComporta;
   gateWidth: number;
   gateHeight: number;
@@ -38,6 +103,7 @@ interface Scene3DProps {
   s_cp: number;
   hingePosition?: PosicaoDobradica;
   hasTieRod?: boolean;
+  hasSmoothWallSupport?: boolean;
   tieRodPosRel?: number;
   tieRodAngle?: number;
   gateWeight?: number;
@@ -45,6 +111,8 @@ interface Scene3DProps {
   isAnalyzed: boolean;
   is3D: boolean;
   setIs3D: (v: boolean) => void;
+  isFrontalView?: boolean;
+  setIsFrontalView?: (v: boolean) => void;
   showVectors: boolean;
   setShowVectors: (v: boolean) => void;
   onCalculate: () => void;
@@ -55,63 +123,6 @@ interface Scene3DProps {
   y_cg_direto?: number;
   [key: string]: any;
 }
-
-/** Ajusta automaticamente a câmera 3D e o OrbitControls ao aspect ratio real da janela */
-const CameraFitRig: React.FC<{
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-  channelWidth: number;
-  resetTrigger: string;
-}> = ({ minX, maxX, minY, maxY, channelWidth, resetTrigger }) => {
-  const { camera, size, controls } = useThree() as any;
-
-  useEffect(() => {
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    const spanX = Math.max(2.5, maxX - minX);
-    const spanY = Math.max(2.0, maxY - minY);
-
-    const aspect = Math.max(0.5, size.width / Math.max(1, size.height));
-    const fovRad = ((camera.fov || 32) * Math.PI) / 180;
-    const tanHalfV = Math.tan(fovRad / 2);
-    const tanHalfH = tanHalfV * aspect;
-
-    // Projeção com leve rotação isométrica/perspectiva (azimute -18°, elevação +14°)
-    const azim = (-18 * Math.PI) / 180;
-    const elev = (14 * Math.PI) / 180;
-
-    const effW = spanX * Math.cos(azim) + channelWidth * Math.abs(Math.sin(azim));
-    const effH = spanY * Math.cos(elev) + channelWidth * Math.sin(elev);
-
-    const distH = (effW * 0.48) / tanHalfH;
-    const distV = (effH * 0.50) / tanHalfV;
-    const dist = Math.max(distH, distV, 4.2) + channelWidth * 0.25;
-
-    const camX = centerX + dist * Math.sin(azim) * Math.cos(elev);
-    const camY = centerY + dist * Math.sin(elev);
-    const camZ = dist * Math.cos(azim) * Math.cos(elev);
-
-    camera.position.set(camX, camY, camZ);
-    camera.near = 0.05;
-    camera.far = Math.max(500, dist * 10);
-    camera.lookAt(centerX, centerY, 0);
-    camera.updateProjectionMatrix();
-
-    if (controls) {
-      controls.target.set(centerX, centerY, 0);
-      controls.minDistance = Math.max(0.8, dist * 0.16);
-      controls.maxDistance = Math.max(25, dist * 4.5);
-      controls.update();
-      if (typeof controls.saveState === 'function') {
-        controls.saveState();
-      }
-    }
-  }, [camera, controls, size.width, size.height, minX, maxX, minY, maxY, channelWidth, resetTrigger]);
-
-  return null;
-};
 
 export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const {
@@ -127,11 +138,14 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     gateInclination = 60,
     hingePosition = PosicaoDobradica.NONE,
     hasTieRod = false,
+    hasSmoothWallSupport = false,
     tieRodPosRel = 1,
     tieRodAngle = 0,
     isAnalyzed,
     is3D,
     setIs3D,
+    isFrontalView = false,
+    setIsFrontalView,
     showVectors,
     setShowVectors,
     onCalculate,
@@ -159,6 +173,14 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const thetaRad = (thetaDeg * Math.PI) / 180;
   const sinTheta = Math.sin(thetaRad);
   const cosTheta = Math.cos(thetaRad);
+  const openPercent =
+    typeof props.gateOpeningPercent === 'number'
+      ? Math.max(0, Math.min(100, props.gateOpeningPercent))
+      : hasGate
+      ? 0
+      : 100;
+  const openFraction = openPercent / 100;
+  const isGateClosed = openFraction <= 0;
 
   const isKgf = sistemaUnidades === SistemaUnidades.TECNICO_KGF;
   const fm = FLUIDOS_PREDEFINIDOS[upstreamFluidKey] || FLUIDOS_PREDEFINIDOS.agua;
@@ -237,34 +259,45 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const p_unit = isKgf ? 'kgf/m²' : 'kPa';
 
   // 2. SISTEMA DE COORDENADAS 3D (SEÇÃO TRANSVERSAL IDÊNTICA AO VISTA2D)
-  // No plano (X, Y) com +X p/ direita e +Y p/ cima:
-  // u_down (descendo a rampa p/ dentro da água à esquerda) = (-cosTheta, -sinTheta)
-  // n_out (normal apontando da água p/ a parede, baixo-direita) = (+sinTheta, -cosTheta)
   const u_down = { x: -cosTheta, y: -sinTheta };
   const n_out = { x: sinTheta, y: -cosTheta };
 
   const marginVertical = Math.max(0.65, H * 0.35);
-  const Y_bed_dist = Math.max(0, Y_top + H) + marginVertical / sinTheta;
-  const waterSurfaceY = Y_bed_dist * sinTheta; // P_bed_inc fica em Y = 0
+  const Y_bed_dist = Math.max(0, Y_top + H) + (hasSmoothWallSupport ? 0 : marginVertical / sinTheta);
+  const waterSurfaceY = hasSmoothWallSupport
+    ? Math.max(h_bot, upstreamLevel || 0)
+    : Y_bed_dist * sinTheta;
   const P_surf = { x: 0, y: waterSurfaceY };
 
-  const getInclinePt = (Y_dist: number) => ({
-    x: P_surf.x + u_down.x * Y_dist,
-    y: P_surf.y + u_down.y * Y_dist,
-  });
-
-  const Y_crest_above = marginVertical / sinTheta;
-  const P_crest = {
-    x: P_surf.x - u_down.x * Y_crest_above,
-    y: P_surf.y - u_down.y * Y_crest_above,
+  const getInclinePt = (Y_dist: number) => {
+    if (hasSmoothWallSupport) {
+      const sDist = Y_dist - Y_top;
+      return {
+        x: P_surf.x + u_down.x * sDist,
+        y: waterSurfaceY - h_top + u_down.y * sDist,
+      };
+    }
+    return {
+      x: P_surf.x + u_down.x * Y_dist,
+      y: P_surf.y + u_down.y * Y_dist,
+    };
   };
 
+  const Y_crest_above = marginVertical / sinTheta;
   const P_top = getInclinePt(Y_top);
   const P_bot = getInclinePt(Y_top + H);
   const P_mid = getInclinePt(Y_top + H / 2);
   const P_CG = getInclinePt(Y_CG);
   const P_CP = getInclinePt(Y_CP);
-  const P_bed_inc = getInclinePt(Y_bed_dist); // y = 0
+  const P_crest = hasSmoothWallSupport
+    ? { x: P_top.x, y: waterSurfaceY + marginVertical }
+    : {
+        x: P_surf.x - u_down.x * Y_crest_above,
+        y: P_surf.y - u_down.y * Y_crest_above,
+      };
+  const P_bed_inc = hasSmoothWallSupport
+    ? { x: P_bot.x, y: 0 }
+    : getInclinePt(Y_bed_dist); // y = 0
 
   // Proporções estruturais idênticas ao Vista2D
   const sceneSpan = Math.max(2.2, waterSurfaceY + marginVertical);
@@ -275,7 +308,11 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const P_bed_left = { x: P_bed_inc.x - stepLeft1, y: P_bed_inc.y };
 
   const leftBoundaryX = Math.min(P_bed_left.x - stepLeft2 - Math.max(2.8, sceneSpan * 1.15), -sceneSpan * 1.65);
-  const rightBoundaryX = P_crest.x + n_out.x * wallThick + Math.max(2.4, sceneSpan * 0.9);
+  const rightBoundaryX = Math.max(
+    P_crest.x + n_out.x * wallThick + Math.max(2.6, sceneSpan * 1.15),
+    P_bed_inc.x + wallThick / sinTheta + Math.max(2.6, sceneSpan * 1.15),
+    hasSmoothWallSupport ? P_top.x + wallThick + 2.4 : -Infinity
+  );
   const groundThick = Math.max(0.75, sceneSpan * 0.25);
 
   // Largura 3D do canal e da estrutura ampliada para melhor presença visual
@@ -296,8 +333,13 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   }, [cosTheta, sinTheta]);
 
   // 3. PARAMENTO DE ALVENARIA COM ABERTURA (BURACO) DA COMPORTA
-  const wallHorizThick = wallThick / sinTheta;
-  const rightSlabX = downstreamLevel > 0 ? rightBoundaryX : P_bed_inc.x + wallHorizThick;
+  const wallHorizThick = hasSmoothWallSupport ? wallThick : wallThick / sinTheta;
+  const rightSlabX =
+    downstreamLevel > 0
+      ? rightBoundaryX
+      : hasSmoothWallSupport
+      ? P_top.x + wallThick + 0.85
+      : P_bed_inc.x + wallHorizThick;
 
   // 3a. Laje horizontal de base (sob a água de montante e jusante)
   const baseSlabGeometry = useMemo(() => {
@@ -438,8 +480,8 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     return geo;
   }, [channelWidth, Y_top, H, W, Y_crest_above, Y_bed_dist, gateShape, P_mid.x, P_mid.y, cosTheta, sinTheta, wallHorizThick]);
 
-  // 4. SOLO DE FUNDAÇÃO (canal-bed-base idêntico ao 2D)
-  const foundationRightX = downstreamLevel > 0 ? rightBoundaryX : P_bed_inc.x + wallHorizThick + Math.max(0.6, sceneSpan * 0.2);
+  // 4. SOLO DE FUNDAÇÃO (canal-bed-base contínuo por toda a largura da cena, idêntico ao 2D e Barragens)
+  const foundationRightX = rightBoundaryX;
   const foundationLength = foundationRightX - leftBoundaryX;
   const foundationCenterX = (leftBoundaryX + foundationRightX) / 2;
   const foundationCenterY = -baseSlabThick - groundThick / 2;
@@ -448,10 +490,19 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const upstreamWaterGeometry = useMemo(() => {
     if (upstreamLevel <= 0) return null;
     const shape = new THREE.Shape();
-    shape.moveTo(leftBoundaryX, waterSurfaceY);
-    shape.lineTo(P_surf.x, P_surf.y);
-    shape.lineTo(P_bed_inc.x, P_bed_inc.y);
-    shape.lineTo(leftBoundaryX, P_bed_inc.y);
+    if (hasSmoothWallSupport) {
+      shape.moveTo(leftBoundaryX, waterSurfaceY);
+      shape.lineTo(P_top.x, waterSurfaceY);
+      shape.lineTo(P_top.x, P_top.y);
+      shape.lineTo(P_bot.x, P_bot.y);
+      shape.lineTo(P_bot.x, P_bed_inc.y);
+      shape.lineTo(leftBoundaryX, P_bed_inc.y);
+    } else {
+      shape.moveTo(leftBoundaryX, waterSurfaceY);
+      shape.lineTo(P_surf.x, P_surf.y);
+      shape.lineTo(P_bed_inc.x, P_bed_inc.y);
+      shape.lineTo(leftBoundaryX, P_bed_inc.y);
+    }
     shape.closePath();
 
     const geo = new THREE.ExtrudeGeometry(shape, {
@@ -461,7 +512,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     });
     geo.translate(0, 0, -(channelWidth - 0.02) / 2);
     return geo;
-  }, [upstreamLevel, leftBoundaryX, waterSurfaceY, P_surf.x, P_surf.y, P_bed_inc.x, P_bed_inc.y, channelWidth]);
+  }, [upstreamLevel, hasSmoothWallSupport, leftBoundaryX, waterSurfaceY, P_surf.x, P_surf.y, P_top.x, P_top.y, P_bot.x, P_bot.y, P_bed_inc.x, P_bed_inc.y, channelWidth]);
 
   // 6. CORPO DE ÁGUA DE JUSANTE (water-downstream-body idêntico ao 2D, apoiado na laje de alvenaria e na face traseira da rampa)
   const canalBedSurfaceY = P_bed_inc.y; // 0
@@ -659,12 +710,72 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     return geo;
   }, [channelWidth, Y_top, H, W, Y_crest_above, Y_bed_dist, gateShape, P_mid.x, P_mid.y, cosTheta, sinTheta, wallHorizThick]);
 
-  // Posição da comporta (fechada em P_mid, ou levantada 0.9*H ao longo da rampa como no 2D)
-  const liftDist = hasGate ? 0 : H * 0.9;
-  const gatePos = {
-    x: P_mid.x - u_down.x * liftDist,
-    y: P_mid.y - u_down.y * liftDist,
-  };
+  // Posição da comporta (fechada em P_mid, parcialmente aberta, ou levantada H ao longo da rampa como no 2D)
+  const liftDist = openFraction * H;
+  const gateLiftOffset: [number, number, number] = [
+    -u_down.x * liftDist,
+    -u_down.y * liftDist,
+    0,
+  ];
+
+  // Volume contínuo de escoamento 3D acompanhando exatamente a geometria da abertura livre
+  const flowVolumeGeometry = useMemo(() => {
+    const hasPositiveFlow =
+      !isGateClosed &&
+      upstreamLevel > 0 &&
+      h_bot > 0 &&
+      upstreamLevel > downstreamLevel;
+    if (!hasPositiveFlow) return null;
+
+    return buildFlowGeometry({
+      gateShape,
+      W,
+      H,
+      channelWidth,
+      openFraction,
+      P_mid,
+      P_bot,
+      cosTheta,
+      sinTheta,
+      wallHorizThick,
+      waterSurfaceY,
+      Y_top,
+      Y_crest_above,
+      Y_bed_dist,
+      downstreamLevel,
+      downSurfaceY,
+      downStartX,
+      canalBedSurfaceY,
+      baseSlabThick,
+      rightBoundaryX,
+    });
+  }, [
+    isGateClosed,
+    upstreamLevel,
+    downstreamLevel,
+    h_bot,
+    gateShape,
+    W,
+    H,
+    channelWidth,
+    openFraction,
+    P_mid.x,
+    P_mid.y,
+    P_bot.x,
+    P_bot.y,
+    cosTheta,
+    sinTheta,
+    wallHorizThick,
+    waterSurfaceY,
+    Y_top,
+    Y_crest_above,
+    Y_bed_dist,
+    downSurfaceY,
+    downStartX,
+    canalBedSurfaceY,
+    baseSlabThick,
+    rightBoundaryX,
+  ]);
 
   // 8. MALHA 3D DE SETAS DE PRESSÃO HIDROSTÁTICA (PADRÃO BARRAGENS: PressureDistribution3D + EmpuxoVector3D)
   const maxDiagWidth = Math.max(0.95, Math.min(2.4, sceneSpan * 0.36));
@@ -715,7 +826,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   }, [n_out.x, n_out.y]);
 
   const pressureArrows = useMemo(() => {
-    if (!hasGate || !isAnalyzed || !showVectors || upstreamLevel <= 0) return [];
+    if (!isGateClosed || !isAnalyzed || !showVectors || upstreamLevel <= 0) return [];
     const halfH = H / 2;
     const wClamped = Math.min(W, channelWidth * 0.92);
     const halfW = (gateShape === FormaComporta.CIRCULAR ? H : wClamped) / 2;
@@ -791,7 +902,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
       }
     }
     return items;
-  }, [hasGate, isAnalyzed, showVectors, upstreamLevel, gateShape, H, W, channelWidth, h_top, h_bot, sinTheta, cosTheta, P_mid.x, P_mid.y, n_out.x, n_out.y, maxDiagWidth]);
+  }, [isGateClosed, isAnalyzed, showVectors, upstreamLevel, gateShape, H, W, channelWidth, h_top, h_bot, sinTheta, cosTheta, P_mid.x, P_mid.y, n_out.x, n_out.y, maxDiagWidth]);
 
   // Ponto de início e fim do vetor Força Resultante E (apontando para P_CP na direção +n_out)
   const cpFaceOffset = 0.1;
@@ -859,6 +970,26 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           <ArrowLeftRight className="h-3.5 w-3.5" />
           VETORES
         </button>
+
+        {setIsFrontalView && (
+          <button
+            type="button"
+            onClick={() => setIsFrontalView(!isFrontalView)}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+              isFrontalView
+                ? 'bg-blue-100/80 text-blue-700 shadow-inner'
+                : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
+            }`}
+            title={
+              isFrontalView
+                ? 'Ocultar vista frontal da comporta'
+                : 'Exibir vista frontal da comporta'
+            }
+          >
+            <CircleDot className="h-3.5 w-3.5" />
+            VISTA FRONTAL
+          </button>
+        )}
       </div>
 
       {/* Botão Analisar / Reiniciar */}
@@ -914,18 +1045,15 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
       {/* Canvas Three.js */}
       <div className="w-full h-full" style={{ minHeight: 600 }}>
         <BarragemCanvas
-          targetY={centerSceneY}
           cameraPosition={[
             centerSceneX - camDist * 0.3,
             centerSceneY + camDist * 0.24,
             camDist * 0.92,
           ]}
-          fov={32}
           target={[centerSceneX, centerSceneY, 0]}
+          fov={32}
           controlRef={cameraControlRef}
           onZoomChange={setZoomPercent}
-          minDistance={Math.max(0.8, camDist * 0.16)}
-          maxDistance={Math.max(25, camDist * 4.5)}
         >
           <CameraFitRig
             minX={sceneMinX}
@@ -942,33 +1070,67 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
             <Edges color={CORES_MATERIAIS.terraStroke} threshold={15} opacity={0.45} transparent />
           </mesh>
 
-          {/* ── 2. Paramento de Concreto: Laje de Base + Parede Inclinada Vazada pelo Buraco da Comporta ── */}
+          {/* ── 2. Paramento de Concreto: Laje de Base + Parede Vertical Lisa (A) ou Parede Inclinada ── */}
           <mesh geometry={baseSlabGeometry} castShadow receiveShadow>
             <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
             <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
           </mesh>
-          <mesh geometry={inclinedWallGeometry} castShadow receiveShadow>
-            <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
-            <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
-          </mesh>
-          {/* Moldura e túnel interno escuro do buraco da comporta (visível de montante e de jusante) */}
-          <mesh geometry={holeLiningGeometry} castShadow receiveShadow>
-            <meshStandardMaterial
-              color="#1e293b"
-              roughness={0.45}
-              metalness={0.65}
-            />
-            <Edges color="#0f172a" threshold={15} opacity={0.95} transparent />
-          </mesh>
+          {hasSmoothWallSupport ? (() => {
+            const wallBottomY = P_top.y - 0.22;
+            const wallH = Math.max(0.4, P_crest.y - wallBottomY);
+            const wallCenterY = (P_crest.y + wallBottomY) / 2;
+            const wallCenterX = P_top.x + wallThick / 2;
+            return (
+              <group>
+                {/* Parede vertical lisa à direita apoiando o topo A */}
+                <mesh position={[wallCenterX, wallCenterY, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[wallThick, wallH, channelWidth]} />
+                  <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
+                  <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
+                </mesh>
+                {/* Placa lisa de contato + roletes no ponto A */}
+                <mesh position={[P_top.x - 0.02, P_top.y, 0]}>
+                  <boxGeometry args={[0.04, 0.26, Math.min(W, channelWidth * 0.92) + 0.1]} />
+                  <meshStandardMaterial color="#0f766e" roughness={0.25} metalness={0.6} />
+                </mesh>
+                <group position={[P_top.x - 0.06, P_top.y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <mesh>
+                    <cylinderGeometry args={[0.055, 0.055, Math.min(W, channelWidth * 0.92) + 0.08, 20]} />
+                    <meshStandardMaterial color="#10b981" roughness={0.3} metalness={0.6} />
+                    <Edges color="#065f46" threshold={15} />
+                  </mesh>
+                </group>
+              </group>
+            );
+          })() : (
+            <>
+              <mesh geometry={inclinedWallGeometry} castShadow receiveShadow>
+                <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
+                <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
+              </mesh>
+              {/* Moldura e túnel interno escuro do buraco da comporta (visível de montante e de jusante) */}
+              <mesh geometry={holeLiningGeometry} castShadow receiveShadow>
+                <meshStandardMaterial
+                  color="#1e293b"
+                  roughness={0.45}
+                  metalness={0.65}
+                />
+                <Edges color="#0f172a" threshold={15} opacity={0.95} transparent />
+              </mesh>
+            </>
+          )}
 
           {/* ── 3. Corpo de Água de Montante (water-upstream-body) ── */}
           {upstreamWaterGeometry && (
             <mesh geometry={upstreamWaterGeometry} receiveShadow>
               <AnimatedWaterMaterial
-                opacity={0.6}
+                opacity={0.66}
                 colorPrimaria={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaPrimaria : fm.corPrimaria}
                 colorSecundaria={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSecundaria : fm.corSecundaria}
                 colorSuperficie={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaProfunda : fm.corSecundaria}
+                colorCrista={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSuperficie : fm.corPrimaria}
+                minY={P_bed_inc.y}
+                maxY={waterSurfaceY}
               />
             </mesh>
           )}
@@ -977,54 +1139,51 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           {downstreamWaterGeometry && (
             <mesh geometry={downstreamWaterGeometry} receiveShadow>
               <AnimatedWaterMaterial
-                opacity={0.6}
+                opacity={0.66}
                 colorPrimaria={downstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaPrimaria : fj.corPrimaria}
                 colorSecundaria={downstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSecundaria : fj.corSecundaria}
                 colorSuperficie={downstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaProfunda : fj.corSecundaria}
+                colorCrista={downstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSuperficie : fj.corPrimaria}
+                minY={canalBedSurfaceY}
+                maxY={downSurfaceY}
               />
             </mesh>
           )}
 
-          {/* ── 5. Placa da Comporta Metálica Embutida no Buraco da Parede (quando ativa) ── */}
-          {hasGate && (
-            <mesh geometry={plateGeometry} castShadow receiveShadow>
-              <meshStandardMaterial
-                color="#94a3b8"
-                roughness={0.35}
-                metalness={0.65}
+          {/* ── 5. Placa da Comporta Metálica (fechada, parcialmente levantada ou aberta) ── */}
+          <mesh
+            geometry={plateGeometry}
+            position={gateLiftOffset}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial
+              color="#94a3b8"
+              roughness={0.35}
+              metalness={0.65}
+              transparent={openFraction >= 1}
+              opacity={openFraction >= 1 ? 0.88 : 1}
+            />
+            <Edges color="#0f172a" threshold={15} opacity={0.95} transparent />
+          </mesh>
+
+          {/* Volume contínuo 3D de escoamento pela abertura livre quando comporta está parcial ou totalmente aberta */}
+          {flowVolumeGeometry && (
+            <mesh geometry={flowVolumeGeometry} receiveShadow>
+              <AnimatedWaterMaterial
+                opacity={0.66}
+                colorPrimaria={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaPrimaria : fm.corPrimaria}
+                colorSecundaria={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSecundaria : fm.corSecundaria}
+                colorSuperficie={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaProfunda : fm.corSecundaria}
+                colorCrista={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSuperficie : fm.corPrimaria}
+                minY={downstreamLevel > 0 ? canalBedSurfaceY : canalBedSurfaceY - baseSlabThick}
+                maxY={waterSurfaceY}
               />
-              <Edges color="#0f172a" threshold={15} opacity={0.95} transparent />
             </mesh>
           )}
-
-          {/* Linhas de fluxo quando a comporta está aberta (!hasGate) */}
-          {!hasGate &&
-            [0.2, 0.5, 0.8].map((t, idx) => {
-              const ptStart = getInclinePt(Y_top + t * H);
-              const ptMid = { x: ptStart.x + n_out.x * (wallThick * 0.5), y: ptStart.y + n_out.y * (wallThick * 0.5) };
-              const ptEnd = {
-                x: ptStart.x + n_out.x * (wallThick + H * 0.8),
-                y: ptStart.y + n_out.y * (wallThick + H * 0.4) - H * 0.15,
-              };
-              return (
-                <Line
-                  key={`flow-3d-${idx}`}
-                  points={[
-                    [ptStart.x - 0.25, ptStart.y, 0],
-                    [ptMid.x, ptMid.y, 0],
-                    [ptEnd.x, ptEnd.y, 0],
-                  ]}
-                  color="#38bdf8"
-                  lineWidth={2.5}
-                  dashed
-                  dashSize={0.12}
-                  gapSize={0.08}
-                />
-              );
-            })}
 
           {/* ── 6. Dobradiça (Hinge) se configurada ── */}
-          {hasGate && hingePosition !== PosicaoDobradica.NONE && (() => {
+          {isGateClosed && hingePosition !== PosicaoDobradica.NONE && (() => {
             const hPt = hingePosition === PosicaoDobradica.TOP ? P_top : P_bot;
             const hingeR = Math.max(0.06, H * 0.045);
             return (
@@ -1039,7 +1198,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           })()}
 
           {/* ── 7. Tirante / Escora (Tie Rod) se configurado ── */}
-          {hasGate && hasTieRod && (() => {
+          {isGateClosed && hasTieRod && (() => {
             const tPt = getInclinePt(Y_top + tieRodPosRel * H);
             const rodAngRad = (tieRodAngle * Math.PI) / 180;
             const rodLen = Math.max(0.6, H * 0.65);
@@ -1070,7 +1229,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           })()}
 
           {/* ── 9. ELEMENTOS DE ANÁLISE HIDROSTÁTICA (SETAS DE PRESSÃO 3D IGUAIS A BARRAGENS + VETOR RESULTANTE) ── */}
-          {isAnalyzed && showVectors && (
+          {isGateClosed && isAnalyzed && showVectors && (
             <group>
               {/* Malha de Setas de Pressão Hidrostática sobre a Comporta (padrão Barragens) */}
               {pressureArrows.map((a) => (
@@ -1169,6 +1328,161 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
                 </Html>
               </group>
             </group>
+          )}
+
+          {/* ── 9b. Rótulos A/B e Vetores de Reação 3D (P, Bx, By) para Parede Lisa + Articulação ── */}
+          {hasSmoothWallSupport && (
+            <group>
+              <Html position={[P_top.x - 0.18, P_top.y + 0.25, frontZ * 0.6]} center style={{ pointerEvents: 'none' }}>
+                <div className="w-6 h-6 rounded-full bg-slate-900 text-white text-[11px] font-black flex items-center justify-center border-2 border-white shadow">
+                  A
+                </div>
+              </Html>
+              <Html position={[P_bot.x - 0.22, P_bot.y + 0.25, frontZ * 0.6]} center style={{ pointerEvents: 'none' }}>
+                <div className="w-6 h-6 rounded-full bg-slate-900 text-white text-[11px] font-black flex items-center justify-center border-2 border-white shadow">
+                  B
+                </div>
+              </Html>
+
+              {isGateClosed && isAnalyzed && showVectors && (() => {
+                const P_apoio_N = props.liveResults?.equilibrium?.P_apoio ?? 0;
+                const Bx_N = props.liveResults?.equilibrium?.Rx_hinge ?? 0;
+                const By_N = props.liveResults?.equilibrium?.Ry_hinge ?? 0;
+                const fmtF = (v: number) =>
+                  isKgf
+                    ? `${Math.round(Math.abs(v) / g).toLocaleString('pt-BR')} kgf`
+                    : `${(Math.abs(v) / 1000).toFixed(2).replace('.', ',')} kN`;
+                const reactColor = '#7c3aed';
+                const pArrowLen = Math.max(0.8, H * 0.38);
+                const rArrowLen = Math.max(0.7, H * 0.32);
+                const sRad = Math.max(0.032, H * 0.015);
+                const hRad = Math.max(0.08, H * 0.035);
+                const hLen = Math.max(0.2, H * 0.08);
+                return (
+                  <group>
+                    {/* Vetor P em A (horizontal para a esquerda quando P > 0) */}
+                    {Math.abs(P_apoio_N) > 1e-3 && (() => {
+                      const pSign = P_apoio_N >= 0 ? 1 : -1;
+                      const shaftLen = Math.max(0.2, pArrowLen - hLen);
+                      const tipX = P_top.x + wallThick;
+                      const conePosX = tipX + (hLen / 2) * pSign;
+                      const shaftPosX = tipX + (hLen + shaftLen / 2) * pSign;
+                      const rotZ = pSign > 0 ? Math.PI / 2 : -Math.PI / 2;
+                      return (
+                        <group>
+                          <mesh
+                            position={[shaftPosX, P_top.y, 0]}
+                            rotation={[0, 0, rotZ]}
+                            renderOrder={6}
+                          >
+                            <cylinderGeometry args={[sRad, sRad, shaftLen, 10]} />
+                            <meshStandardMaterial color={reactColor} />
+                          </mesh>
+                          <mesh
+                            position={[conePosX, P_top.y, 0]}
+                            rotation={[0, 0, rotZ]}
+                            renderOrder={6}
+                          >
+                            <coneGeometry args={[hRad, hLen, 12]} />
+                            <meshStandardMaterial color={reactColor} />
+                          </mesh>
+                          <Html position={[tipX + (pArrowLen + 0.15) * pSign, P_top.y + 0.28, 0]} center style={{ pointerEvents: 'none' }}>
+                            <div className="bg-white/95 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border border-purple-400 text-purple-700 whitespace-nowrap">
+                              P = {fmtF(P_apoio_N)}
+                            </div>
+                          </Html>
+                        </group>
+                      );
+                    })()}
+
+                    {/* Vetor Bx em B (horizontal para a direita quando Bx > 0) */}
+                    {Math.abs(Bx_N) > 1e-3 && (() => {
+                      const bxSign = Bx_N >= 0 ? 1 : -1;
+                      const shaftLen = Math.max(0.2, rArrowLen - hLen);
+                      const rotZ = bxSign > 0 ? -Math.PI / 2 : Math.PI / 2;
+                      return (
+                        <group>
+                          <mesh
+                            position={[P_bot.x + (shaftLen / 2) * bxSign, P_bot.y + 0.04, 0]}
+                            rotation={[0, 0, rotZ]}
+                            renderOrder={6}
+                          >
+                            <cylinderGeometry args={[sRad, sRad, shaftLen, 10]} />
+                            <meshStandardMaterial color={reactColor} />
+                          </mesh>
+                          <mesh
+                            position={[P_bot.x + (shaftLen + hLen / 2) * bxSign, P_bot.y + 0.04, 0]}
+                            rotation={[0, 0, rotZ]}
+                            renderOrder={6}
+                          >
+                            <coneGeometry args={[hRad, hLen, 12]} />
+                            <meshStandardMaterial color={reactColor} />
+                          </mesh>
+                          <Html position={[P_bot.x + (rArrowLen + 0.35) * bxSign, P_bot.y + 0.25, 0]} center style={{ pointerEvents: 'none' }}>
+                            <div className="bg-white/95 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border border-purple-400 text-purple-700 whitespace-nowrap">
+                              B<sub>x</sub> = {fmtF(Bx_N)}
+                            </div>
+                          </Html>
+                        </group>
+                      );
+                    })()}
+
+                    {/* Vetor By em B (vertical para cima quando By > 0) */}
+                    {Math.abs(By_N) > 1e-3 && (() => {
+                      const bySign = By_N >= 0 ? 1 : -1;
+                      const shaftLen = Math.max(0.2, rArrowLen - hLen);
+                      const rotZ = bySign > 0 ? 0 : Math.PI;
+                      return (
+                        <group>
+                          <mesh
+                            position={[P_bot.x, P_bot.y - (hLen + shaftLen / 2) * bySign, 0]}
+                            rotation={[0, 0, rotZ]}
+                            renderOrder={6}
+                          >
+                            <cylinderGeometry args={[sRad, sRad, shaftLen, 10]} />
+                            <meshStandardMaterial color={reactColor} />
+                          </mesh>
+                          <mesh
+                            position={[P_bot.x, P_bot.y - (hLen / 2) * bySign, 0]}
+                            rotation={[0, 0, rotZ]}
+                            renderOrder={6}
+                          >
+                            <coneGeometry args={[hRad, hLen, 12]} />
+                            <meshStandardMaterial color={reactColor} />
+                          </mesh>
+                          <Html position={[P_bot.x - 0.55, P_bot.y - rArrowLen * 0.65 * bySign, 0]} center style={{ pointerEvents: 'none' }}>
+                            <div className="bg-white/95 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border border-purple-400 text-purple-700 whitespace-nowrap">
+                              B<sub>y</sub> = {fmtF(By_N)}
+                            </div>
+                          </Html>
+                        </group>
+                      );
+                    })()}
+                  </group>
+                );
+              })()}
+            </group>
+          )}
+          {/* ── 10. REPRESENTAÇÃO FRONTAL ORTOGRÁFICA ADICIONAL DA COMPORTA (TOGGLE VISTA FRONTAL) ── */}
+          {isFrontalView && (
+            <FrontalProjection3D
+              gateShape={gateShape}
+              W={W}
+              H={H}
+              openFraction={openFraction}
+              isGateClosed={isGateClosed}
+              isAnalyzed={isAnalyzed}
+              P_top={P_top}
+              P_bot={P_bot}
+              P_mid={P_mid}
+              P_CG={P_CG}
+              P_CP={P_CP}
+              P_crest={P_crest}
+              wallHorizThick={wallHorizThick}
+              downSurfaceY={downSurfaceY}
+              canalBedSurfaceY={canalBedSurfaceY}
+              downstreamLevel={downstreamLevel}
+            />
           )}
         </BarragemCanvas>
       </div>

@@ -34,7 +34,15 @@ export const formatarDadosSimulacao = (simulacao) => {
   const peso = Number(simulacao.peso) || 0;
   const empuxo = Number(simulacao.empuxo) || 0;
   const volDesl = Number(simulacao.volumeDeslocado) || 0;
-  const pesoAp = Math.max(0, peso - empuxo);
+  const pesoAp = simulacao.pesoAparente !== undefined
+    ? Number(simulacao.pesoAparente) || 0
+    : Math.max(0, peso - empuxo);
+  const gammaFluido = Number(simulacao.pesoEspecificoFluido) || (fluidoDes * 9.81);
+  const gammaCorpo = Number(simulacao.pesoEspecificoCorpo) || (objDes * 9.81);
+
+  if (simulacao.inverseSpecificWeightMode) {
+    statusTexto = `Corpo totalmente imerso sob sustentação (P = ${formatNumber(peso)} N > E = ${formatNumber(empuxo)} N), resultando em peso específico médio γ_c = ${formatNumber(gammaCorpo, 0, 0)} N/m³.`;
+  }
 
   return {
     ...simulacao,
@@ -42,12 +50,16 @@ export const formatarDadosSimulacao = (simulacao) => {
     geometriaNome: geoNome,
     densidadeObjetoFmt: `${formatNumber(objDes,0,0)} kg/m³`,
     densidadeFluidoFmt: `${formatNumber(fluidoDes,0,0)} kg/m³`,
+    pesoEspecificoFluidoNum: gammaFluido,
+    pesoEspecificoFluidoFmt: `${formatNumber(gammaFluido, 0, 0)} N/m³`,
+    pesoEspecificoCorpoNum: gammaCorpo,
+    pesoEspecificoCorpoFmt: `${formatNumber(gammaCorpo, 0, 0)} N/m³`,
     pesoNum: peso,
     pesoFmt: `${formatNumber(peso)} N`,
     empuxoNum: empuxo,
     empuxoFmt: `${formatNumber(empuxo)} N`,
     volumeDeslocadoNum: volDesl,
-    volumeDeslocadoFmt: `${formatNumber(volDesl, 4, 4)} m³`,
+    volumeDeslocadoFmt: `${formatNumber(volDesl, simulacao.inverseSpecificWeightMode ? 5 : 4, simulacao.inverseSpecificWeightMode ? 5 : 4)} m³`,
     pesoAparenteNum: pesoAp,
     pesoAparenteFmt: `${formatNumber(pesoAp)} N`,
     gravidade: "9,81 m/s²",
@@ -108,6 +120,9 @@ export const obterDimensoesLimpas = (dados) => {
   const formatMetersFn = (val) => Number(val).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m';
   
   if (dados.tipo === 'corpos-imersos') {
+      if (dados.inverseSpecificWeightMode) {
+         return results;
+      }
       const dim1 = dim['Aresta/Raio (cm)'] || 0;
       const dim2 = dim['Comprimento (cm)'] || 0;
       const val1 = formatMetersFn(dim1 / 100);

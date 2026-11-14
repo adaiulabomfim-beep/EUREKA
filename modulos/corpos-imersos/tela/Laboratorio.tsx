@@ -16,6 +16,7 @@ import { Memorial } from './Memorial';
 import { Vista2D } from '../visual/Vista2D';
 import { Vista3D } from '../visual/Vista3D';
 import { simularCorposImersos } from '../calculos/simulador';
+import { calcularPesoEspecificoCorpoImerso } from '../calculos/pesoEspecificoImerso';
 import { getFluidColor } from '../visual/visualUtils';
 import { salvarNoHistorico } from '../../../interface/historicoGerenciador';
 import { ScrollablePanel } from '../../../interface/ScrollablePanel';
@@ -68,6 +69,12 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [currentEnunciado, setCurrentEnunciado] = useState<string | null>(null);
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
 
+  // --- STATE: MODO DETERMINAÇÃO DO PESO ESPECÍFICO (EXEMPLO 2.11) ---
+  const [inverseSpecificWeightMode, setInverseSpecificWeightMode] = useState<boolean>(false);
+  const [realWeightN, setRealWeightN] = useState<number>(445);
+  const [apparentWeightN, setApparentWeightN] = useState<number>(267);
+  const [fluidSpecificWeight, setFluidSpecificWeight] = useState<number>(9802);
+
   // --- LAYOUT CALCULATIONS ---
   const svgHeight = 600;
   const svgWidth = 700;
@@ -87,16 +94,35 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const tankOffsetX = (svgWidth - currentTankW) / 2 + 30;
   const originalFluidSurfaceY = tankBottomY - fluidTotalDepth * visualScaleFactor;
 
+  const inversePreCalc = useMemo(
+    () =>
+      inverseSpecificWeightMode
+        ? calcularPesoEspecificoCorpoImerso({
+            realWeightN,
+            apparentWeightN,
+            fluidSpecificWeight,
+            gravity,
+            tankWidthCm: tankWidth,
+            tankDepthCm: tankDepth,
+          })
+        : null,
+    [inverseSpecificWeightMode, realWeightN, apparentWeightN, fluidSpecificWeight, gravity, tankWidth, tankDepth]
+  );
+
+  const effectiveDim1 = inverseSpecificWeightMode
+    ? (inversePreCalc?.illustrativeCubeSideCm ?? 26.28)
+    : dim1;
+
   let visualWidth = 0;
   let visualHeight = 0;
   if (shape === ObjectShape.CUBE) {
-    visualWidth = dim1 * visualScaleFactor;
-    visualHeight = dim1 * visualScaleFactor;
+    visualWidth = effectiveDim1 * visualScaleFactor;
+    visualHeight = effectiveDim1 * visualScaleFactor;
   } else if (shape === ObjectShape.SPHERE) {
-    visualWidth = dim1 * 2 * visualScaleFactor;
-    visualHeight = dim1 * 2 * visualScaleFactor;
+    visualWidth = effectiveDim1 * 2 * visualScaleFactor;
+    visualHeight = effectiveDim1 * 2 * visualScaleFactor;
   } else {
-    visualWidth = dim1 * 2 * visualScaleFactor;
+    visualWidth = effectiveDim1 * 2 * visualScaleFactor;
     visualHeight = dim2 * visualScaleFactor;
   }
 
@@ -110,7 +136,11 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   }
 
   // --- PHYSICS CALCULATIONS ---
-  const rhoA = selectedFluid === 'Custom' ? customFluidDensity : (FLUIDS.find(f => f.name === selectedFluid)?.density || 0);
+  const rhoA = inverseSpecificWeightMode
+    ? fluidSpecificWeight / gravity
+    : selectedFluid === 'Custom'
+    ? customFluidDensity
+    : FLUIDS.find((f) => f.name === selectedFluid)?.density || 0;
   const rhoB = selectedFluidB === 'Custom' ? customFluidDensityB : (FLUIDS.find(f => f.name === selectedFluidB)?.density || 0);
 
   // --- ANIMATION STATE ---
@@ -124,14 +154,18 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
   // Initial physics for animation
   const initialPhysics = useMemo(() => simularCorposImersos({
-    shape, dim1, dim2, objectDensity: customObjDensity,
+    shape, dim1: effectiveDim1, dim2, objectDensity: customObjDensity,
     rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity,
     tankWidth, tankDepth, visualScaleFactor, visualHeight,
     fluidSurfaceY: originalFluidSurfaceY, h_in_A: 0, h_in_B: 0,
     h_in_A_2: 0, h_in_B_2: 0,
     extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2,
-    rigidRod: activeExerciseId === 'ex2'
-  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId]);
+    rigidRod: activeExerciseId === 'ex2',
+    inverseSpecificWeightMode,
+    realWeightN,
+    apparentWeightN,
+    fluidSpecificWeight,
+  }), [shape, effectiveDim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId, inverseSpecificWeightMode, realWeightN, apparentWeightN, fluidSpecificWeight]);
 
   const equilibriumBlockY = originalFluidSurfaceY + (initialPhysics.d_eq * visualScaleFactor) - (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0) - visualHeight;
   const totalInitialVisualH = visualHeight + (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0);
@@ -223,24 +257,34 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const h_in_B_2 = twoBlocks ? Math.max(0, overlapB2_end - overlapB2_start) : 0;
 
   const physics = useMemo(() => simularCorposImersos({
-    shape, dim1, dim2, objectDensity: customObjDensity,
+    shape, dim1: effectiveDim1, dim2, objectDensity: customObjDensity,
     rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity,
     tankWidth, tankDepth, visualScaleFactor, visualHeight,
     fluidSurfaceY: originalFluidSurfaceY, h_in_A, h_in_B,
     h_in_A_2, h_in_B_2,
     extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2,
-    rigidRod: activeExerciseId === 'ex2'
-  }), [shape, dim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId]);
+    rigidRod: activeExerciseId === 'ex2',
+    inverseSpecificWeightMode,
+    realWeightN,
+    apparentWeightN,
+    fluidSpecificWeight,
+  }), [shape, effectiveDim1, dim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId, inverseSpecificWeightMode, realWeightN, apparentWeightN, fluidSpecificWeight]);
 
   const exportData = useMemo(() => ({
     tipo: 'corpos-imersos',
-    geometria: shape,
-    dimensoes: { 
-      'Aresta/Raio (cm)': dim1, 
-      ...(shape !== ObjectShape.CUBE && shape !== ObjectShape.SPHERE ? { 'Comprimento (cm)': dim2 } : {}),
-      ...(twoBlocks ? { 'Aresta 2 (cm)': dim1_2 } : {})
-    },
-    densidadeObjeto: customObjDensity,
+    geometria: inverseSpecificWeightMode ? 'Bloco de Concreto (Ilustrativo)' : shape,
+    dimensoes: inverseSpecificWeightMode
+      ? {}
+      : {
+          'Aresta/Raio (cm)': dim1,
+          ...(shape !== ObjectShape.CUBE && shape !== ObjectShape.SPHERE ? { 'Comprimento (cm)': dim2 } : {}),
+          ...(twoBlocks ? { 'Aresta 2 (cm)': dim1_2 } : {}),
+        },
+    inverseSpecificWeightMode,
+    pesoEspecificoFluido: physics.fluidSpecificWeight ?? fluidSpecificWeight,
+    pesoEspecificoCorpo: physics.objectSpecificWeight ?? 0,
+    pesoAparente: physics.apparentWeight,
+    densidadeObjeto: inverseSpecificWeightMode ? physics.objectDensity : customObjDensity,
     densidadeEquivalente: physics.equivalentDensity,
     densidadeFluido: rhoA,
     status: physics.status,
@@ -250,7 +294,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     alturaSubmersa: physics.h_sub_actual / 100,
     isSimulating,
     isAnalyzed: isSimulating,
-  }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics, isSimulating]);
+  }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics, isSimulating, inverseSpecificWeightMode, fluidSpecificWeight]);
 
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
   const maxBlockY = tankBottomY - (twoBlocks ? (visualHeight + H2_cm_visual + initialPhysics.actualCordLength * visualScaleFactor) : visualHeight);
@@ -275,6 +319,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const handleResetSimulation = () => {
     setIsSimulating(false);
     setActiveExerciseId(null);
+    setInverseSpecificWeightMode(false);
     setCurrentEnunciado(null);
     setTwoBlocks(false);
     setExtraWeight(0);
@@ -313,6 +358,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       load: () => {
         setIsSimulating(false);
         setActiveExerciseId('sim1');
+        setInverseSpecificWeightMode(false);
         setCurrentEnunciado('Um cubo de madeira (Carvalho, ρ = 750 kg/m³) com aresta de 100 cm é colocado em um reservatório contendo Óleo de Soja (ρ = 920 kg/m³) com 400 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
         setTwoBlocks(false);
         setExtraWeight(0);
@@ -339,6 +385,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       load: () => {
         setIsSimulating(false);
         setActiveExerciseId('sim2');
+        setInverseSpecificWeightMode(false);
         setCurrentEnunciado('Um cubo de Ouro (ρ = 19300 kg/m³) com aresta de 200 cm é imerso em um reservatório de 600 × 600 cm contendo Mercúrio (ρ = 13534 kg/m³) com 600 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o peso aparente e o volume deslocado.');
         setTwoBlocks(false);
         setExtraWeight(0);
@@ -365,6 +412,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       load: () => {
         setIsSimulating(false);
         setActiveExerciseId('sim3');
+        setInverseSpecificWeightMode(false);
         setCurrentEnunciado('Uma esfera de Isopor (ρ = 30 kg/m³) com raio de 50 cm é colocada em um tanque de 500 × 500 cm contendo Óleo de Soja (ρ = 920 kg/m³). Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
         setTwoBlocks(false);
         setExtraWeight(0);
@@ -391,6 +439,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       load: () => {
         setIsSimulating(false);
         setActiveExerciseId('sim4');
+        setInverseSpecificWeightMode(false);
         setCurrentEnunciado('Uma esfera de Madeira (Pinho, ρ = 500 kg/m³) com raio de 150 cm é colocada em um tanque de 1000 × 1000 cm contendo Água do Mar (ρ = 1025 kg/m³) com 500 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
         setTwoBlocks(false);
         setExtraWeight(0);
@@ -417,6 +466,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
       load: () => {
         setIsSimulating(false);
         setActiveExerciseId('sim5');
+        setInverseSpecificWeightMode(false);
         setCurrentEnunciado('Um cubo de Concreto (ρ = 2400 kg/m³) com aresta de 100 cm é imerso em dois líquidos imiscíveis: Mel (superior, ρ = 1420 kg/m³, 300 cm) e Mercúrio (inferior, ρ = 13534 kg/m³, 100 cm). Determine o equilíbrio na interface e a fração submersa em cada fluido.');
         setTwoBlocks(false);
         setExtraWeight(0);
@@ -435,6 +485,35 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         setTankDepth(500);
         setTankHeight(500);
         setToastMsg('Simulação 5 Carregada!');
+        setTimeout(() => setToastMsg(null), 1500);
+      }
+    },
+    {
+      id: 'ex_2_11',
+      title: 'Exemplo 2.11 – Determinação do Peso Específico de um Corpo Imerso',
+      subtitle: 'Bloco de Concreto: P = 445 N, P_ap = 267 N em Água Doce (9.802 N/m³)',
+      enunciado: "Um bloco de concreto pesa 445 N no ar e 'pesa' apenas 267 N quando imerso em água doce (9.802 N/m³). Qual é o peso específico médio do bloco?",
+      load: () => {
+        setIsSimulating(false);
+        setActiveExerciseId('ex_2_11');
+        setInverseSpecificWeightMode(true);
+        setRealWeightN(445);
+        setApparentWeightN(267);
+        setFluidSpecificWeight(9802);
+        setCurrentEnunciado("Um bloco de concreto pesa 445 N no ar e 'pesa' apenas 267 N quando imerso em água doce (9.802 N/m³). Qual é o peso específico médio do bloco?");
+        setTwoBlocks(false);
+        setExtraWeight(0);
+        setShape(ObjectShape.CUBE);
+        setSelectedMaterial('Concreto');
+        setCustomObjDensity(2498);
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(9802 / 9.81);
+        setEnableTwoFluids(false);
+        setDepthA(80);
+        setTankWidth(90);
+        setTankDepth(90);
+        setTankHeight(100);
+        setToastMsg('Exemplo 2.11 Carregado!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     }
@@ -486,9 +565,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     dim2_2,
     cordLength,
     shape2,
+    inverseSpecificWeightMode,
+    realWeightN,
+    apparentWeightN,
+    fluidSpecificWeight,
   ]);
 
-  const objectWidthCm = shape === ObjectShape.CUBE ? dim1 : dim1 * 2;
+  const objectWidthCm = shape === ObjectShape.CUBE ? effectiveDim1 : effectiveDim1 * 2;
   const isObjectTooWide = objectWidthCm > tankWidth;
   const objColor = MATERIALS.find((m) => m.name === selectedMaterial)?.color || '#475569';
   const TANK_BORDER_COLOR = '#06b6d4';
@@ -504,7 +587,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
 
   const geom = {
     formula: shape === ObjectShape.CUBE ? 'L³' : shape === ObjectShape.SPHERE ? '4/3 · π · r³' : 'π · r² · h',
-    substitution: shape === ObjectShape.CUBE ? `${(dim1 / 100).toFixed(2)}³` : shape === ObjectShape.SPHERE ? `4/3 · π · ${(dim1 / 100).toFixed(2)}³` : `π · ${(dim1 / 100).toFixed(2)}² · ${(dim2 / 100).toFixed(2)}`
+    substitution: shape === ObjectShape.CUBE ? `${(effectiveDim1 / 100).toFixed(2)}³` : shape === ObjectShape.SPHERE ? `4/3 · π · ${(effectiveDim1 / 100).toFixed(2)}³` : `π · ${(effectiveDim1 / 100).toFixed(2)}² · ${(dim2 / 100).toFixed(2)}`
   };
 
   return (
@@ -590,7 +673,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             onDim2Change={setDim2}
             onFluidChange={(e) => {
                 setSelectedFluid(e.target.value);
-                if (e.target.value !== 'Custom') setCustomFluidDensity(FLUIDS.find((f) => f.name === e.target.value)?.density || 0);
+                if (e.target.value !== 'Custom') {
+                  const foundDensity = FLUIDS.find((f) => f.name === e.target.value)?.density || 0;
+                  setCustomFluidDensity(foundDensity);
+                  if (inverseSpecificWeightMode) {
+                    setFluidSpecificWeight(Math.round(foundDensity * gravity));
+                  }
+                }
             }}
             onCustomFluidDensityChange={setCustomFluidDensity}
             onDepthAChange={setDepthA}
@@ -605,28 +694,16 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             onTankDepthChange={setTankDepth}
             extraWeight={extraWeight}
             onExtraWeightChange={setExtraWeight}
-            twoBlocks={twoBlocks}
-            onTwoBlocksChange={setTwoBlocks}
-            selectedMaterial2={selectedMaterial2}
-            onMaterial2Change={(e) => {
-              setSelectedMaterial2(e.target.value);
-              if (e.target.value !== 'Custom') {
-                const mat = MATERIALS.find(m => m.name === e.target.value);
-                if (mat) setDensity2(mat.density);
-              }
-            }}
-            density2={density2}
-            onDensity2Change={setDensity2}
-            dim1_2={dim1_2}
-            onDim1_2Change={setDim1_2}
-            dim2_2={dim2_2}
-            onDim2_2Change={setDim2_2}
-            cordLength={cordLength}
-            onCordLengthChange={setCordLength}
-            shape2={shape2}
-            onShape2Change={setShape2}
             showFluidComparison={showFluidComparison}
             onToggleFluidComparison={() => setShowFluidComparison((prev) => !prev)}
+            inverseSpecificWeightMode={inverseSpecificWeightMode}
+            realWeightN={realWeightN}
+            apparentWeightN={apparentWeightN}
+            fluidSpecificWeight={fluidSpecificWeight}
+            gravity={gravity}
+            onRealWeightChange={setRealWeightN}
+            onApparentWeightChange={setApparentWeightN}
+            onFluidSpecificWeightChange={setFluidSpecificWeight}
           />
         </ScrollablePanel>
 
@@ -675,6 +752,9 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 extraWeight={extraWeight}
                 shape2={shape2}
                 visualWidth2={visualWidth2}
+                inverseSpecificWeightMode={inverseSpecificWeightMode}
+                apparentWeight={physics.apparentWeight}
+                vol_deslocado={physics.vol_deslocado}
               />
             ) : (
               <Vista2D
@@ -722,6 +802,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 extraWeight={extraWeight}
                 shape2={shape2}
                 visualWidth2={visualWidth2}
+                inverseSpecificWeightMode={inverseSpecificWeightMode}
+                apparentWeight={physics.apparentWeight}
               />
             )}
           </div>
@@ -780,23 +862,35 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                   salvarNoHistorico({
                     modulo: 'corpos-imersos',
                     moduloNome: 'Corpos Imersos',
-                    titulo: `Corpo ${shape} (${selectedMaterial || 'Personalizado'})`,
-                    parametros: {
-                      'Forma': shape,
-                      'Dimensão 1 (cm)': dim1,
-                      ...(shape !== ObjectShape.CUBE && shape !== ObjectShape.SPHERE ? { 'Dimensão 2 (cm)': dim2 } : {}),
-                      'Densidade Objeto': `${customObjDensity} kg/m³`,
-                      'Fluido': selectedFluid,
-                      'Densidade Fluido': `${rhoA} kg/m³`,
-                    },
+                    titulo: inverseSpecificWeightMode
+                      ? `Bloco Imerso (${selectedMaterial || 'Concreto'}) – Determinação de γ`
+                      : `Corpo ${shape} (${selectedMaterial || 'Personalizado'})`,
+                    parametros: inverseSpecificWeightMode
+                      ? {
+                          'Objeto': `Bloco (${selectedMaterial || 'Concreto'})`,
+                          'Peso Real (P)': `${realWeightN.toFixed(1)} N`,
+                          'Peso Aparente (P_ap)': `${apparentWeightN.toFixed(1)} N`,
+                          'Fluido': selectedFluid,
+                          'Peso Específico do Fluido (γ_f)': `${fluidSpecificWeight.toFixed(0)} N/m³`,
+                        }
+                      : {
+                          'Forma': shape,
+                          'Dimensão 1 (cm)': dim1,
+                          ...(shape !== ObjectShape.CUBE && shape !== ObjectShape.SPHERE ? { 'Dimensão 2 (cm)': dim2 } : {}),
+                          'Densidade Objeto': `${customObjDensity} kg/m³`,
+                          'Fluido': selectedFluid,
+                          'Densidade Fluido': `${rhoA} kg/m³`,
+                        },
                     resultados: {
                       empuxo: E_eq,
-                      empuxoFormatado: `${(E_eq / 1000).toFixed(2)} kN (${E_eq.toFixed(1)} N)`,
+                      empuxoFormatado: `${(E_eq / 1000).toFixed(3)} kN (${E_eq.toFixed(1)} N)`,
                       peso: physics.objectWeight,
-                      pesoFormatado: `${(physics.objectWeight / 1000).toFixed(2)} kN (${physics.objectWeight.toFixed(1)} N)`,
-                      volumeDeslocado: `${(V_eq * 1000).toFixed(2)} L (${V_eq.toFixed(4)} m³)`,
-                      alturaSubmersa: `${H_eq.toFixed(1)} cm`,
-                      segurancaOuStatus: physics.status.includes('AFUNDADO') ? 'Afunda (P > E)' : physics.status.includes('NEUTRO') ? 'Equilíbrio Neutro (E = P)' : 'Flutua (E = P)',
+                      pesoFormatado: `${(physics.objectWeight / 1000).toFixed(3)} kN (${physics.objectWeight.toFixed(1)} N)`,
+                      volumeDeslocado: `${(V_eq * 1000).toFixed(2)} L (${V_eq.toFixed(5)} m³)`,
+                      alturaSubmersa: inverseSpecificWeightMode ? 'Totalmente imerso' : `${H_eq.toFixed(1)} cm`,
+                      segurancaOuStatus: inverseSpecificWeightMode
+                        ? `γ_c = ${(physics.objectSpecificWeight ?? 0).toFixed(0)} N/m³ (ρ_c ≈ ${physics.objectDensity.toFixed(0)} kg/m³)`
+                        : physics.status.includes('AFUNDADO') ? 'Afunda (P > E)' : physics.status.includes('NEUTRO') ? 'Equilíbrio Neutro (E = P)' : 'Flutua (E = P)',
                     },
                   });
                 }

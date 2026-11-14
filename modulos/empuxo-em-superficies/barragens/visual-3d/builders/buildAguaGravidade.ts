@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { construirGeometria } from '../../tipos/gravidade/geometria';
-import { interpolateX } from '../utils/geometryUtils';
+import { getHorizontalExtension3D, interpolateX } from '../utils/geometryUtils';
 
 export function buildAguaGravidade(
   damHeight: number,
@@ -25,9 +25,10 @@ export function buildAguaGravidade(
 
   const shape = new THREE.Shape();
   const offset = actualBaseWidth / 2;
+  const farExtension = getHorizontalExtension3D(damHeight, actualBaseWidth);
 
   if (side === 'UPSTREAM') {
-    const farX = profile[0].x - damHeight * 1.5;
+    const farX = profile[0].x - farExtension;
     const damXAtBottom = interpolateX(y0, profile[0], profile[1]);
     const damXAtTop = interpolateX(y1, profile[0], profile[1]);
 
@@ -37,7 +38,7 @@ export function buildAguaGravidade(
     shape.lineTo(damXAtBottom, y0);
     shape.lineTo(farX, y0);
   } else {
-    const farX = profile[3].x + damHeight * 1.5;
+    const farX = profile[3].x + farExtension;
     const damXAtBottom = interpolateX(y0, profile[3], profile[2]);
     const damXAtTop = interpolateX(y1, profile[3], profile[2]);
 

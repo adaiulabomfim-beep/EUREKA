@@ -34,6 +34,19 @@ export interface Face {
   facingScore: number;
 }
 
+export function calcularEscala2D(
+  autoFitParams: { minX: number; maxX: number; minY: number; maxY: number },
+  SVG_W: number,
+  SVG_H: number
+): number {
+  const w = Math.max(1, autoFitParams.maxX - autoFitParams.minX);
+  const h = Math.max(1, autoFitParams.maxY - autoFitParams.minY);
+  const factor = 0.6;
+  const scaleX = (SVG_W * factor) / w;
+  const scaleY = (SVG_H * factor) / h;
+  return Math.min(scaleX, scaleY, 150);
+}
+
 export const useSceneEngine = (
   is3D: boolean,
   worldGeometry: WorldFace[],
@@ -94,7 +107,9 @@ export const useSceneEngine = (
     const scaleX = (SVG_W * factor) / effectiveWidth;
     const scaleY = (SVG_H * factor) / effectiveHeight;
 
-    const scale = Math.min(scaleX, scaleY, 150);
+    const scale = is3D
+      ? Math.min(scaleX, scaleY, 150)
+      : calcularEscala2D(autoFitParams, SVG_W, SVG_H);
 
     // Pequeno deslocamento para centralizar melhor a barragem
     const panX = is3D ? 20 : 0;

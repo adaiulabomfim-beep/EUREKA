@@ -19,6 +19,13 @@ export const montarEnunciado = (simulacao) => {
      return `Para uma ${simulacao.geometria} com altura total de **${altura}** e crista de **${crista}**, submetida a um nível d'água principal de **${submersa} m** (fluido com densidade **${densidadeFluido} kg/m³**). Considerando **g = 9,81 m/s²**, calcule os esforços principais, resultante, e realize a verificação de estabilidade (deslizamento e tombamento).`;
   }
 
+  if (simulacao.tipo === 'corpos-imersos' && simulacao.inverseSpecificWeightMode) {
+     const pesoStr = Number(simulacao.peso || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+     const papStr = Number(simulacao.pesoAparente ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+     const gammaFStr = Number(simulacao.pesoEspecificoFluido || 9802).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+     return `Um bloco de concreto pesa **${pesoStr} N** no ar e 'pesa' apenas **${papStr} N** quando imerso em água doce (**${gammaFStr} N/m³**). Qual é o peso específico médio do bloco?`;
+  }
+
   let textoGeometria = '';
   const geo = simulacao.geometria;
 

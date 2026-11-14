@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { construirGeometria } from '../../tipos/terra-enrocamento/geometria';
-import { interpolateX } from '../utils/geometryUtils';
+import { getHorizontalExtension3D, interpolateX } from '../utils/geometryUtils';
 
 export function buildAguaTerra(
   damHeight: number,
@@ -22,6 +22,7 @@ export function buildAguaTerra(
 
   const shape = new THREE.Shape();
   const offset = actualBaseWidth / 2;
+  const farExtension = getHorizontalExtension3D(damHeight, actualBaseWidth);
 
   // Assuming profile indices are:
   // 0: upstream toe
@@ -30,7 +31,7 @@ export function buildAguaTerra(
   // 3: downstream toe
 
   if (side === 'UPSTREAM') {
-    const farX = profile[0].x - damHeight * 1.5; 
+    const farX = profile[0].x - farExtension;
     const damXAtWater = interpolateX(waterLevelY, profile[0], profile[1]);
     
     shape.moveTo(farX, 0);
@@ -39,7 +40,7 @@ export function buildAguaTerra(
     shape.lineTo(profile[0].x, 0);
     shape.lineTo(farX, 0);
   } else {
-    const farX = profile[3].x + damHeight * 1.5;
+    const farX = profile[3].x + farExtension;
     const damXAtWater = interpolateX(waterLevelY, profile[3], profile[2]);
 
     shape.moveTo(profile[3].x, 0);

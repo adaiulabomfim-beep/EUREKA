@@ -43,22 +43,16 @@ interface PainelControlesProps {
   onTankDepthChange: (val: number) => void;
   extraWeight: number;
   onExtraWeightChange: (val: number) => void;
-  twoBlocks: boolean;
-  onTwoBlocksChange: (val: boolean) => void;
-  selectedMaterial2: string;
-  onMaterial2Change: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  density2: number;
-  onDensity2Change: (val: number) => void;
-  dim1_2: number;
-  onDim1_2Change: (val: number) => void;
-  dim2_2?: number;
-  onDim2_2Change?: (val: number) => void;
-  cordLength: number;
-  onCordLengthChange: (val: number) => void;
-  shape2: ObjectShape;
-  onShape2Change: (shape: ObjectShape) => void;
   showFluidComparison?: boolean;
   onToggleFluidComparison?: () => void;
+  inverseSpecificWeightMode?: boolean;
+  realWeightN?: number;
+  apparentWeightN?: number;
+  fluidSpecificWeight?: number;
+  gravity?: number;
+  onRealWeightChange?: (val: number) => void;
+  onApparentWeightChange?: (val: number) => void;
+  onFluidSpecificWeightChange?: (val: number) => void;
 }
 
 export const PainelControles: React.FC<PainelControlesProps> = ({
@@ -93,22 +87,16 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   onTankDepthChange,
   extraWeight,
   onExtraWeightChange,
-  twoBlocks,
-  onTwoBlocksChange,
-  selectedMaterial2,
-  onMaterial2Change,
-  density2,
-  onDensity2Change,
-  dim1_2,
-  onDim1_2Change,
-  dim2_2 = 100,
-  onDim2_2Change,
-  cordLength,
-  onCordLengthChange,
-  shape2,
-  onShape2Change,
   showFluidComparison = false,
   onToggleFluidComparison,
+  inverseSpecificWeightMode = false,
+  realWeightN = 445,
+  apparentWeightN = 267,
+  fluidSpecificWeight = 9802,
+  gravity = 9.81,
+  onRealWeightChange,
+  onApparentWeightChange,
+  onFluidSpecificWeightChange,
 }) => {
   const inputGroupClass = 'space-y-1.5';
   const labelClass = "block text-[9px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest mb-1.5";
@@ -117,13 +105,63 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   const selectClass =
     "w-full h-9 px-3 border border-slate-200 dark:border-slate-700/80 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium outline-none focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/60";
 
-  const isObjectTooWide = (shape === ObjectShape.CUBE ? dim1 : dim1 * 2) > tankWidth;
+  const effectiveObjWidthCm = inverseSpecificWeightMode
+    ? (physics?.illustrativeSideCm ?? 26.3)
+    : (shape === ObjectShape.CUBE ? dim1 : dim1 * 2);
+  const isObjectTooWide = effectiveObjWidthCm > tankWidth;
 
   return (
     <div className="flex flex-col gap-4 shrink-0">
       {/* Object Properties */}
       <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
         <SectionHeader icon={<Box className="w-4 h-4" />} title="Propriedades do Objeto" />
+        {inverseSpecificWeightMode ? (
+          <div className="space-y-4">
+            <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-800/60 text-[10px] text-blue-800 dark:text-blue-200 leading-relaxed">
+              <span className="font-bold block mb-0.5">Ensaio de Imersão Total (Bloco Suspenso)</span>
+              O bloco exibido na cena possui geometria apenas ilustrativa, pois o enunciado não informa suas dimensões.
+            </div>
+
+            <div className={inputGroupClass}>
+              <label className={labelClass}>Objeto / Material</label>
+              <select className={selectClass} value={selectedMaterial} onChange={onMaterialChange}>
+                {MATERIALS.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+                <option value="Custom">Personalizado...</option>
+              </select>
+            </div>
+
+            <div className="bg-slate-50/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-3">
+              <div className={inputGroupClass}>
+                <label className={labelClass}>Peso Real no Ar — P (N)</label>
+                <NumberInput
+                  value={realWeightN}
+                  min={0.1}
+                  step="1"
+                  onChange={(v) => onRealWeightChange?.(v)}
+                />
+              </div>
+              <div className={inputGroupClass}>
+                <label className={labelClass}>Peso Aparente na Água — Pₐₚ (N)</label>
+                <NumberInput
+                  value={apparentWeightN}
+                  min={0}
+                  step="1"
+                  onChange={(v) => onApparentWeightChange?.(v)}
+                />
+              </div>
+              {realWeightN <= apparentWeightN && (
+                <div className="flex items-start gap-2 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span className="font-medium leading-tight">O peso real no ar deve ser maior que o peso aparente imerso.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
         <div className="space-y-4">
           <div className={inputGroupClass}>
             <label className={labelClass}>Geometria</label>
@@ -183,12 +221,14 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Fluids */}
       <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
         <SectionHeader icon={<Droplets className="w-4 h-4" />} title="Fluidos" />
         <div className="space-y-4">
+          {!inverseSpecificWeightMode && (
           <div className="flex items-center gap-2.5 mb-2 p-2.5 bg-slate-50/70 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/90 transition-colors">
             <input
               type="checkbox"
@@ -205,10 +245,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             </label>
             {enableTwoFluids && <Layers className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />}
           </div>
+          )}
 
           <div className="space-y-3 relative">
             <div className={inputGroupClass}>
-              <label className={labelClass}>{enableTwoFluids ? 'Líquido Superior (A)' : 'Líquido Principal'}</label>
+              <label className={labelClass}>{enableTwoFluids && !inverseSpecificWeightMode ? 'Líquido Superior (A)' : 'Líquido Principal'}</label>
               <select
                 className={selectClass}
                 value={selectedFluid}
@@ -222,6 +263,28 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                 <option value="Custom">Personalizado...</option>
               </select>
 
+              {inverseSpecificWeightMode ? (
+                <div className="space-y-2 mt-2">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Peso Específico γf (N/m³)</label>
+                      <NumberInput
+                        value={fluidSpecificWeight}
+                        min={1}
+                        step="1"
+                        onChange={(v) => onFluidSpecificWeightChange?.(v)}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
+                      <NumberInput value={depthA} min={10} max={1000} step="1" onChange={onDepthAChange} />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-400">
+                    Densidade equiv.: <span className="font-semibold text-slate-600 dark:text-slate-300">{(fluidSpecificWeight / gravity).toFixed(1).replace('.', ',')} kg/m³</span> (g = {gravity.toFixed(2).replace('.', ',')} m/s²)
+                  </p>
+                </div>
+              ) : (
               <div className="flex gap-3 mt-2">
                 <div className="flex-1">
                   <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Densidade (kg/m³)</label>
@@ -232,8 +295,10 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                   <NumberInput value={depthA} min={1} max={1000} step="1" onChange={onDepthAChange} />
                 </div>
               </div>
+              )}
 
               {/* Toggle Comparador de Fluidos */}
+              {!inverseSpecificWeightMode && (
               <div className={`mt-3 p-2.5 rounded-xl border transition-all ${
                 showFluidComparison 
                   ? 'bg-blue-50/80 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800/70 shadow-sm' 
@@ -278,10 +343,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                   </button>
                 </div>
               </div>
+              )}
             </div>
           </div>
 
-          {enableTwoFluids && (
+          {enableTwoFluids && !inverseSpecificWeightMode && (
             <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
               <div className={inputGroupClass}>
                 <label className={labelClass}>Líquido Inferior (B)</label>
@@ -327,66 +393,6 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <NumberInput value={tankDepth} min={10} max={1000} onChange={onTankDepthChange} />
           </div>
         </div>
-      </div>
-
-      {/* Two Blocks Mode */}
-      <div className="bg-white dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors duration-200">
-        <div className="flex items-center gap-2.5 mb-3 p-2.5 bg-blue-50/50 dark:bg-blue-950/40 rounded-xl border border-blue-100/50 dark:border-blue-900/50">
-          <input
-            type="checkbox"
-            checked={twoBlocks}
-            onChange={(e) => onTwoBlocksChange(e.target.checked)}
-            id="two-blocks"
-            className="accent-blue-600 w-4 h-4 cursor-pointer rounded"
-          />
-          <label
-            htmlFor="two-blocks"
-            className="text-[10px] font-bold text-blue-700 dark:text-blue-300 cursor-pointer select-none uppercase tracking-widest flex-1"
-          >
-            Dois Blocos Ligados
-          </label>
-          <Layers className={`w-4 h-4 ${twoBlocks ? 'text-blue-500 dark:text-blue-400' : 'text-slate-300 dark:text-slate-600'}`} />
-        </div>
-
-        {twoBlocks && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className={inputGroupClass}>
-              <label className={labelClass}>Geometria Bloco 2</label>
-              <select className={selectClass} value={shape2} onChange={(e) => onShape2Change(e.target.value as ObjectShape)}>
-                <option value={ObjectShape.CUBE}>Cubo</option>
-                <option value={ObjectShape.SPHERE}>Esfera</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className={inputGroupClass}>
-                <label className={labelClass}>{shape2 === ObjectShape.CUBE ? 'Aresta 2 (cm)' : 'Raio 2 (cm)'}</label>
-                <NumberInput value={dim1_2} min={1} onChange={onDim1_2Change} />
-              </div>
-              <div className={inputGroupClass}>
-                <label className={labelClass}>Cabo (cm)</label>
-                <NumberInput value={cordLength} min={1} onChange={onCordLengthChange} />
-              </div>
-            </div>
-
-            <div className={inputGroupClass}>
-              <label className={labelClass}>Material Bloco 2</label>
-              <select className={selectClass} value={selectedMaterial2} onChange={onMaterial2Change}>
-                {MATERIALS.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.name}
-                  </option>
-                ))}
-                <option value="Custom">Personalizado...</option>
-              </select>
-            </div>
-
-            <div className={inputGroupClass}>
-              <label className={labelClass}>Densidade 2 (kg/m³)</label>
-              <NumberInput value={density2} onChange={onDensity2Change} />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
