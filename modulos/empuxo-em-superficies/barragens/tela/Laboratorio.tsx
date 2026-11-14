@@ -96,6 +96,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
     setMudHeight(3);
     setMudDensity(1500);
     setUnitSystem('SI');
+    setAnalyzedResults(null);
   };
 
   useEffect(() => {

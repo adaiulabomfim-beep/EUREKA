@@ -4,15 +4,18 @@ export const formatarDadosSimulacao = (simulacao) => {
   const formatNumber = (num, min=2, max=2) => Number(num).toLocaleString('pt-BR', {minimumFractionDigits: min, maximumFractionDigits: max});
   
   const objDes = parseFloat(simulacao.densidadeObjeto) || 0;
-  const effDes = parseFloat(simulacao.densidadeEquivalente) || objDes;
-  const fluidoDes = parseFloat(simulacao.densidadeFluido) || 0;
-  const statusSim = String(simulacao.status || '');
+  const fluidoDes =
+    parseFloat(
+      simulacao.densidadeFluido ??
+        simulacao.analyzedResults?.densityUp ??
+        simulacao.analyzedResults?.normalizedInputs?.waterDensity
+    ) || (simulacao.tipo !== 'corpos-imersos' ? 1000 : 0);
   
   let statusTexto = "O objeto permanecerá em EQUILÍBRIO (totalmente submerso), pois as densidades são iguais.";
-  if (statusSim.includes('AFUNDADO') || (!statusSim && effDes > fluidoDes)) {
-     statusTexto = "Como a densidade efetiva do corpo é maior que a do fluido (consequentemente o peso é maior que o empuxo máximo), o corpo tende a AFUNDAR.";
-  } else if (statusSim.includes('FLUTUANDO') || statusSim.includes('INTERFACE') || (!statusSim && effDes < fluidoDes)) {
-     statusTexto = "Como a densidade efetiva do corpo é menor que a do fluido, o corpo irá FLUTUAR, deslocando um volume de fluido cujo peso se iguala ao peso total do corpo.";
+  if (objDes > fluidoDes) {
+     statusTexto = "Como a densidade do corpo é maior que a do fluido (consequentemente o peso é maior que o empuxo máximo), o corpo tende a AFUNDAR.";
+  } else if (objDes < fluidoDes) {
+     statusTexto = "Como a densidade do corpo é menor que a do fluido, o corpo irá FLUTUAR, deslocando um volume de fluido cujo peso se iguala ao peso total do corpo.";
   }
 
   const geoMapSubstantivo = {
@@ -35,6 +38,7 @@ export const formatarDadosSimulacao = (simulacao) => {
 
   return {
     ...simulacao,
+    densidadeFluido: fluidoDes,
     geometriaNome: geoNome,
     densidadeObjetoFmt: `${formatNumber(objDes,0,0)} kg/m³`,
     densidadeFluidoFmt: `${formatNumber(fluidoDes,0,0)} kg/m³`,
@@ -51,6 +55,52 @@ export const formatarDadosSimulacao = (simulacao) => {
   };
 };
 
+const PARAMETER_LABELS = {
+  altura: 'Altura',
+  Altura: 'Altura',
+  larguraBase: 'Largura da base',
+  'Base/Largura': 'Largura da base',
+  larguraCrista: 'Largura da crista',
+  inclinacao: 'Inclinação',
+  'Inclinação': 'Inclinação',
+  nivelMontante: 'Nível de água a montante',
+  nivelJusante: 'Nível de água a jusante',
+  alturaLama: 'Altura da lama',
+  densidadeLama: 'Densidade da lama',
+  geometriaObjeto: 'Geometria do objeto',
+  densidadeObjeto: 'Densidade do objeto',
+  densidadeFluido: 'Densidade do fluido',
+  gravidade: 'Aceleração da gravidade',
+  nivelAguaMontante: 'Nível de água a montante',
+  alturaSubmersa: 'Altura submersa',
+  volumeSubmerso: 'Volume submerso',
+  'Aresta 2': 'Aresta do segundo corpo',
+};
+
+export const traduzirRotuloParametro = (identificador) => {
+  if (!identificador || typeof identificador !== 'string') return '';
+  const cleanKey = identificador.replace(/\s*\(.*?\)\s*/g, '').trim();
+
+  if (PARAMETER_LABELS[identificador]) return PARAMETER_LABELS[identificador];
+  if (PARAMETER_LABELS[cleanKey]) return PARAMETER_LABELS[cleanKey];
+
+  const lowerClean = cleanKey.toLowerCase();
+  const matchedEntry = Object.entries(PARAMETER_LABELS).find(
+    ([key]) => key.toLowerCase() === lowerClean
+  );
+  if (matchedEntry) return matchedEntry[1];
+
+  const humanized = cleanKey
+    .replace(/([a-z\u00C0-\u024F])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+  if (!humanized) return cleanKey;
+  return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+};
+
 export const obterDimensoesLimpas = (dados) => {
   const dim = dados.dimensoes || {};
   const results = [];
@@ -64,22 +114,26 @@ export const obterDimensoesLimpas = (dados) => {
       const val2 = formatMetersFn(dim2 / 100);
 
       if (dados.geometria === 'CUBE') {
-         results.push({ label: 'Aresta do Cubo', value: val1 });
+         results.push({ key: 'arestaCubo', label: 'Aresta do cubo', value: val1 });
       } else if (dados.geometria === 'SPHERE') {
-         results.push({ label: 'Raio da Esfera', value: val1 });
+         results.push({ key: 'raioEsfera', label: 'Raio da esfera', value: val1 });
       } else if (dados.geometria === 'CYLINDER') {
-         results.push({ label: 'Raio do Cilindro', value: val1 });
-         results.push({ label: 'Altura do Cilindro', value: val2 });
+         results.push({ key: 'raioCilindro', label: 'Raio do cilindro', value: val1 });
+         results.push({ key: 'alturaCilindro', label: 'Altura do cilindro', value: val2 });
       } else {
-         results.push({ label: 'Largura/Base', value: val1 });
-         results.push({ label: 'Comprimento/Altura', value: val2 });
+         results.push({ key: 'larguraBase', label: 'Largura da base', value: val1 });
+         results.push({ key: 'comprimentoAltura', label: 'Comprimento / altura', value: val2 });
       }
   } else {
       Object.entries(dim).forEach(([k, v]) => {
          const isCm = k.includes('(cm)');
          const cleanKey = k.replace(/\s*\(.*?\)\s*/, '');
          const finalVal = isCm ? (v / 100) : v;
-         results.push({ label: cleanKey, value: formatMetersFn(finalVal) }); 
+         results.push({
+           key: cleanKey,
+           label: traduzirRotuloParametro(k),
+           value: formatMetersFn(finalVal),
+         }); 
       });
   }
   return results;

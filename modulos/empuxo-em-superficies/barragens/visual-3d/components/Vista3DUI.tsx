@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, RotateCcw, Box, ArrowLeftRight, MousePointer2 } from 'lucide-react';
+import { ControlesNavegacaoCena } from '../../../../../src/components/ui/ControlesNavegacaoCena';
 
 interface Vista3DUIProps {
   is3D: boolean;
@@ -9,6 +10,10 @@ interface Vista3DUIProps {
   isAnalyzed: boolean;
   onCalculate: () => void;
   onReset: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onResetCamera?: () => void;
+  zoomPercent?: number;
 }
 
 export const Vista3DUI: React.FC<Vista3DUIProps> = ({
@@ -19,6 +24,10 @@ export const Vista3DUI: React.FC<Vista3DUIProps> = ({
   isAnalyzed,
   onCalculate,
   onReset,
+  onZoomIn,
+  onZoomOut,
+  onResetCamera,
+  zoomPercent = 100,
 }) => {
   return (
     <>
@@ -104,17 +113,28 @@ export const Vista3DUI: React.FC<Vista3DUIProps> = ({
         )}
       </div>
 
-      <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 select-none items-center gap-4 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity">
+      {onZoomIn && onZoomOut && onResetCamera && (
+        <ControlesNavegacaoCena
+          mode="3d"
+          onZoomIn={onZoomIn}
+          onZoomOut={onZoomOut}
+          onReset={onResetCamera}
+          zoomPercent={zoomPercent}
+          className="bottom-6 left-6"
+        />
+      )}
+
+      <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 hidden sm:flex -translate-x-1/2 select-none items-center gap-3 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity whitespace-nowrap">
         <span className="flex items-center gap-1">
           <MousePointer2 className="h-3 w-3" />
           Girar
         </span>
         <span className="h-3 w-px bg-slate-300" />
-        <span className="flex items-center gap-1">
-          <MousePointer2 className="h-3 w-3" />
-          Pan (direito)
-        </span>
+        <span>Pan (dir./meio)</span>
+        <span className="h-3 w-px bg-slate-300" />
+        <span>Zoom</span>
       </div>
     </>
   );
 };
+

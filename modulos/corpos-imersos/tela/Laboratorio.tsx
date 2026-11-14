@@ -247,8 +247,10 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     empuxo: physics.buoyancyForce,
     peso: physics.objectWeight,
     volumeDeslocado: physics.vol_deslocado,
-    alturaSubmersa: physics.h_sub_actual / 100
-  }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics]);
+    alturaSubmersa: physics.h_sub_actual / 100,
+    isSimulating,
+    isAnalyzed: isSimulating,
+  }), [shape, dim1, dim2, twoBlocks, dim1_2, customObjDensity, rhoA, physics, isSimulating]);
 
   const fluidSurfaceY = originalFluidSurfaceY - physics.deltaH_cm * visualScaleFactor;
   const maxBlockY = tankBottomY - (twoBlocks ? (visualHeight + H2_cm_visual + initialPhysics.actualCordLength * visualScaleFactor) : visualHeight);

@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { Cuboid, MousePointer2, Maximize, RotateCcw } from 'lucide-react';
+import { MousePointer2 } from 'lucide-react';
 import { ObjectShape } from '../dominio/tipos';
 import { SvgDefs } from './SvgDefs';
 import { getMaterialPattern } from './visualUtils';
+import { useSvgPanZoom } from '../../../src/hooks/useSvgPanZoom';
+import { ControlesNavegacaoCena } from '../../../src/components/ui/ControlesNavegacaoCena';
 
 export interface Point {
   x: number;
@@ -109,32 +111,38 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   shape2 = ObjectShape.CUBE,
   visualWidth2 = 0,
 }) => {
-  // câmera do 3D antigo
+  // câmera do 3D
   const [rotX, setRotX] = useState<number>(15);
   const [rotY, setRotY] = useState<number>(0);
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [isPanning, setIsPanning] = useState<boolean>(false);
 
   const isDraggingRef = useRef(false);
+  const isTouchOrbitRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
   const cameraAnimRef = useRef<number | null>(null);
+
+  const nav = useSvgPanZoom({
+    svgWidth,
+    svgHeight,
+    minZoom: 0.45,
+    maxZoom: 4.0,
+    allowRightDragPan: true,
+  });
 
   const renderFill = getMaterialPattern(selectedMaterial, objColor);
 
   const animateCameraReset = () => {
     if (cameraAnimRef.current) cancelAnimationFrame(cameraAnimRef.current);
+    nav.resetView();
 
     const startX = rotX;
     const startY = rotY;
-    const startPanX = pan.x;
-    const startPanY = pan.y;
 
     const targetX = 15;
     const nearestTargetY = startY + ((((0 - startY) % 360) + 540) % 360) - 180;
 
     const startTime = performance.now();
-    const duration = 800;
+    const duration = 500;
 
     const step = (now: number) => {
       const elapsed = now - startTime;
@@ -143,10 +151,6 @@ export const Vista3D: React.FC<Vista3DProps> = ({
 
       setRotX(startX + (targetX - startX) * ease);
       setRotY(startY + (nearestTargetY - startY) * ease);
-      setPan({
-        x: startPanX + (0 - startPanX) * ease,
-        y: startPanY + (0 - startPanY) * ease,
-      });
 
       if (progress < 1) {
         cameraAnimRef.current = requestAnimationFrame(step);
@@ -160,15 +164,24 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    nav.containerHandlers.onMouseDown(e);
+    const isPanAction =
+      e.button === 1 ||
+      e.button === 2 ||
+      e.shiftKey ||
+      nav.isSpacePressed;
+
+    if (isPanAction) {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      return;
+    }
+
+    if (e.button !== 0) return;
     e.preventDefault();
     if (cameraAnimRef.current) cancelAnimationFrame(cameraAnimRef.current);
 
-    if (e.button === 2 || e.shiftKey) {
-      setIsPanning(true);
-    } else {
-      setIsDragging(true);
-    }
-
+    setIsDragging(true);
     isDraggingRef.current = true;
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
   };
@@ -179,12 +192,8 @@ export const Vista3D: React.FC<Vista3DProps> = ({
     const deltaX = e.clientX - lastMouseRef.current.x;
     const deltaY = e.clientY - lastMouseRef.current.y;
 
-    if (isPanning) {
-      setPan((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
-    } else if (isDragging) {
-      setRotY((prev) => prev + deltaX * 0.5);
-      setRotX((prev) => Math.max(-90, Math.min(90, prev - deltaY * 0.5)));
-    }
+    setRotY((prev) => prev + deltaX * 0.5);
+    setRotX((prev) => Math.max(-90, Math.min(90, prev - deltaY * 0.5)));
 
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
   };
@@ -192,18 +201,40 @@ export const Vista3D: React.FC<Vista3DProps> = ({
   const handleMouseUp = () => {
     isDraggingRef.current = false;
     setIsDragging(false);
-    setIsPanning(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      if (cameraAnimRef.current) cancelAnimationFrame(cameraAnimRef.current);
+      isTouchOrbitRef.current = true;
+      lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      isTouchOrbitRef.current = false;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isTouchOrbitRef.current) {
+      const deltaX = e.touches[0].clientX - lastMouseRef.current.x;
+      const deltaY = e.touches[0].clientY - lastMouseRef.current.y;
+      setRotY((prev) => prev + deltaX * 0.5);
+      setRotX((prev) => Math.max(-90, Math.min(90, prev - deltaY * 0.5)));
+      lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length >= 2) {
+      isTouchOrbitRef.current = false;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    isTouchOrbitRef.current = false;
   };
 
   const project = (x: number, y: number, z: number): Point => {
-    const cx0 = tankOffsetX + currentTankW / 2;
-    const cy0 = tankBottomY - currentTankH / 2;
-
-    const cx = cx0 + pan.x;
-    const cy = cy0 + pan.y;
+    const cx = tankOffsetX + currentTankW / 2;
+    const cy = tankBottomY - currentTankH / 2;
 
     const dx = x;
-    const dy = y - cy0;
+    const dy = y - cy;
     const dz = z;
 
     const radX = (rotX * Math.PI) / 180;
@@ -653,14 +684,25 @@ export const Vista3D: React.FC<Vista3DProps> = ({
 
   return (
     <div
-      className={`relative flex flex-col items-center justify-center w-full h-full overflow-hidden transition-colors ${
-        isDragging ? (isPanning ? 'cursor-move' : 'cursor-grabbing') : 'cursor-grab'
+      ref={nav.containerRef}
+      className={`relative flex flex-col items-center justify-center w-full h-full overflow-hidden transition-colors select-none ${
+        nav.isPanning
+          ? 'cursor-move'
+          : isDragging
+            ? 'cursor-grabbing'
+            : nav.isSpacePressed
+              ? 'cursor-grab'
+              : 'cursor-grab'
       }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onContextMenu={(e) => e.preventDefault()}
+      onAuxClick={nav.containerHandlers.onAuxClick}
+      onContextMenu={nav.containerHandlers.onContextMenu}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div className="pointer-events-none absolute inset-0">
         <div
@@ -677,46 +719,47 @@ export const Vista3D: React.FC<Vista3DProps> = ({
         />
       </div>
 
-
-
       <svg
+        ref={nav.svgRef}
         width="100%"
         height={svgHeight}
-        className="overflow-visible"
+        className="overflow-visible touch-none"
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         preserveAspectRatio="xMidYMid meet"
       >
         <SvgDefs colorA={colorA} colorB={colorB} />
 
-        <SceneLayers />
+        <g transform={`translate(${nav.pan.x}, ${nav.pan.y}) scale(${nav.zoom})`}>
+          <SceneLayers />
 
-        <Vectors />
+          <Vectors />
+        </g>
       </svg>
 
       <div
-        className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 text-slate-400 bg-white/80 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest pointer-events-none backdrop-blur select-none transition-opacity ${
-          isDragging ? 'opacity-50' : 'opacity-100'
+        className={`hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 items-center gap-3 text-slate-400 bg-white/80 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest pointer-events-none backdrop-blur select-none transition-opacity whitespace-nowrap ${
+          isDragging || nav.isPanning ? 'opacity-50' : 'opacity-100'
         }`}
       >
         <span className="flex items-center gap-1">
           <MousePointer2 className="w-3 h-3" /> Girar
         </span>
-        <span className="w-px h-3 bg-slate-300"></span>
-        <span className="flex items-center gap-1">
-          <Maximize className="w-3 h-3" /> Pan (Direito)
-        </span>
+        <span className="w-px h-3 bg-slate-300" />
+        <span>Pan (dir./meio)</span>
+        <span className="w-px h-3 bg-slate-300" />
+        <span>Zoom</span>
       </div>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          animateCameraReset();
-        }}
-        className="absolute bottom-6 left-6 bg-white/90 p-2.5 rounded-full shadow-lg border border-blue-100/70 text-slate-500 hover:text-blue-600 hover:scale-110 transition-all z-30 group"
-        title="Resetar Câmera"
-      >
-        <RotateCcw className="w-4 h-4 group-hover:-rotate-180 transition-transform duration-500" />
-      </button>
+      <ControlesNavegacaoCena
+        mode="3d"
+        onZoomIn={nav.zoomIn}
+        onZoomOut={nav.zoomOut}
+        onReset={animateCameraReset}
+        zoomPercent={nav.zoomPercent}
+        canZoomIn={nav.canZoomIn}
+        canZoomOut={nav.canZoomOut}
+        className="bottom-6 left-6"
+      />
     </div>
   );
 };

@@ -160,7 +160,13 @@ export function renderizarEstabilidade2D(opts: OpcoesOverlayEstabilidade): React
   const larg = 220;
   const alt = 126;
   nodes.push(
-    <g key="painel-fs" transform={`translate(${svgW - larg - 12}, 12)`} pointerEvents="none">
+    <g
+      key="painel-fs"
+      id="painel-estabilidade-flutuante"
+      data-pdf-hide="true"
+      transform={`translate(${svgW - larg - 12}, 12)`}
+      pointerEvents="none"
+    >
       <rect x={0} y={0} width={larg} height={alt} rx={10} fill="white" opacity="0.92" stroke="#cbd5e1" strokeWidth="1" />
       <text x={12} y={16} fontSize="9" fontWeight="900" fill="#64748b" letterSpacing="1.2" stroke="none">
         ESTABILIDADE

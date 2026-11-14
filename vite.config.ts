@@ -9,11 +9,15 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        allowedHosts: true,
       },
       plugins: [
         react(),
         VitePWA({
           registerType: 'autoUpdate',
+          workbox: {
+            maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+          },
           includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
           manifest: {
             name: 'Fenômenos de Transporte',
@@ -43,6 +47,23 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      optimizeDeps: {
+        include: [
+          'react',
+          'react-dom',
+          'react-dom/client',
+          'lucide-react',
+          'motion/react',
+          'three',
+          '@react-three/fiber',
+          '@react-three/drei',
+          'driver.js',
+          '@google/genai',
+          'katex',
+          'html2canvas',
+          'jspdf',
+        ],
+      },
     };
 });

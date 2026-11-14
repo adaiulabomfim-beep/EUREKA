@@ -1,22 +1,18 @@
-import { capturarImagemSimulacao } from './capturarImagemSimulacao';
 import { RelatorioProvaEureka } from '../../components/relatorios/RelatorioProvaEureka';
-import { renderReactToPdf } from './renderReactToPdf';
+import { exportSimulacaoPdf } from './renderReactToPdf';
+import { validarExportacaoAtividadeAprendizagem } from './validarAtividadeAprendizagem';
 
-export const gerarPDFProvaVisual = async (simulacao) => {
-  const now = new Date();
-  const dataText = now.toLocaleDateString('pt-BR') + ' - ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const filename = `Avaliacao_EUREKA_${now.getTime()}.pdf`;
-
-  let imagemBase64 = null;
-  try {
-    imagemBase64 = await capturarImagemSimulacao('areaSimulacao');
-  } catch (e) {
-    console.warn("Erro ao capturar imagem da simulação:", e);
+export const gerarPDFAtividadeAprendizagem = async (simulacao) => {
+  const validacao = validarExportacaoAtividadeAprendizagem(simulacao);
+  if (!validacao.permitido) {
+    return { exported: false, blocked: true, ...validacao };
   }
 
-  await renderReactToPdf(
-    RelatorioProvaEureka, 
-    { simulacao, imagemSimulacao: imagemBase64, dataText, isGabarito: false }, 
-    filename
-  );
+  await exportSimulacaoPdf({
+    Component: RelatorioProvaEureka,
+    simulacao,
+    prefixoArquivo: 'Atividade_Aprendizagem',
+  });
+
+  return { exported: true, blocked: false };
 };

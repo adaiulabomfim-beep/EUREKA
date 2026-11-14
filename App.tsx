@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain, FileText, Compass, History } from 'lucide-react';
+import { LayoutDashboard, Anchor, Waves, BookOpen, GraduationCap, Mountain, FileText, Compass, History, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ImmersedBodiesLab } from './modulos/corpos-imersos';
 import { DamLab } from './modulos/empuxo-em-superficies/barragens';
@@ -12,6 +12,7 @@ import { iniciarTourGuiado } from './interface/TutorOnboarding';
 import { PainelHistorico } from './interface/PainelHistorico';
 import { obterHistorico, EVENTO_HISTORICO_ATUALIZADO } from './interface/historicoGerenciador';
 import { SeletorTema } from './interface/SeletorTema';
+import { validarExportacaoAtividadeAprendizagem } from './src/utils/exportacao/validarAtividadeAprendizagem';
 // Remove the unused import
 
 const App: React.FC = () => {
@@ -20,6 +21,10 @@ const App: React.FC = () => {
   const [simulationContext, setSimulationContext] = useState<string>('');
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [numHistorico, setNumHistorico] = useState<number>(0);
+  const [blockedActivityModal, setBlockedActivityModal] = useState<{
+    titulo: string;
+    orientacao: string;
+  } | null>(null);
 
   useEffect(() => {
     setNumHistorico(obterHistorico().length);
@@ -194,7 +199,7 @@ const App: React.FC = () => {
                     >
                       <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Exportar Relatório
                     </button>
-                    <div id="export-dropdown" style={{ display: 'none' }} className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl overflow-hidden z-50">
+                    <div id="export-dropdown" style={{ display: 'none' }} className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl overflow-hidden z-50">
                       {(() => {
                         const validateAndGetSimulacao = () => {
                           const container = document.getElementById("areaSimulacao");
@@ -218,35 +223,36 @@ const App: React.FC = () => {
 
                         return (
                           <>
-                            <button 
+                            <button
                               onClick={() => {
                                 closeMenu();
                                 const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFEstudoVisual(data));
+                                if (!data) return;
+                                const validacao = validarExportacaoAtividadeAprendizagem(data);
+                                if (!validacao.permitido) {
+                                  setBlockedActivityModal({
+                                    titulo: validacao.titulo,
+                                    orientacao: validacao.orientacao,
+                                  });
+                                  return;
+                                }
+                                import('./src/utils/exportacao').then(m => m.gerarPDFAtividadeAprendizagem(data));
                               }}
-                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800"
+                              className="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 whitespace-nowrap"
                             >
-                              PDF Relatório Visual
+                              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                              <span>Atividade de Aprendizagem</span>
                             </button>
-                            <button 
+                            <button
                               onClick={() => {
                                 closeMenu();
                                 const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFProvaVisual(data));
+                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFMaterialEstudo(data));
                               }}
-                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800"
+                              className="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 whitespace-nowrap"
                             >
-                              PDF de Prova (Lista/Exercício)
-                            </button>
-                            <button 
-                              onClick={() => {
-                                closeMenu();
-                                const data = validateAndGetSimulacao();
-                                if (data) import('./src/utils/exportacao').then(m => m.gerarPDFGabaritoVisual(data));
-                              }}
-                              className="w-full text-left px-4 py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200"
-                            >
-                              Gerar Gabarito (Com Result)
+                              <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                              <span>Material de Estudo</span>
                             </button>
                           </>
                         );
@@ -318,6 +324,67 @@ const App: React.FC = () => {
 
             {/* AI ChatBot Overlay */}
             <ChatBot simulationContext={simulationContext} />
+
+            {/* Alerta de bloqueio exclusivo para Atividade de Aprendizagem */}
+            <AnimatePresence>
+              {blockedActivityModal && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setBlockedActivityModal(null)}
+                  className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="activity-block-title"
+                >
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative w-full max-w-md overflow-hidden rounded-2xl border border-blue-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl"
+                  >
+                    <div className="h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500" />
+
+                    <div className="p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3
+                          id="activity-block-title"
+                          className="text-[15px] sm:text-base font-black text-slate-800 dark:text-slate-100 leading-tight"
+                        >
+                          {blockedActivityModal.titulo}
+                        </h3>
+
+                        <button
+                          type="button"
+                          onClick={() => setBlockedActivityModal(null)}
+                          aria-label="Fechar aviso"
+                          className="shrink-0 -mr-1 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {blockedActivityModal.orientacao}
+                      </p>
+
+                      <div className="mt-5 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setBlockedActivityModal(null)}
+                          className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-5 py-2 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-all active:scale-95"
+                        >
+                          Entendi
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

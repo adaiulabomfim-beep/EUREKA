@@ -2,12 +2,13 @@ import React from 'react';
 import {
   RotateCcw,
   MousePointer2,
-  Maximize,
   Play,
   Box,
   ArrowLeftRight,
 } from 'lucide-react';
 import { DefinicoesSVG } from './DefinicoesSVG';
+import { useSvgPanZoom } from '../../../../src/hooks/useSvgPanZoom';
+import { ControlesNavegacaoCena } from '../../../../src/components/ui/ControlesNavegacaoCena';
 
 type Point2D = {
   x: number;
@@ -76,9 +77,23 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
   pan,
   children,
 }) => {
+  const nav = useSvgPanZoom({
+    svgWidth: SVG_W,
+    svgHeight: SVG_H,
+    minZoom: 0.45,
+    maxZoom: 4.0,
+    allowRightDragPan: is3D,
+  });
+
+  const handleFullReset = () => {
+    nav.resetView();
+    resetView();
+  };
+
   return (
     <div
-      className="
+      ref={nav.containerRef}
+      className={`
         relative flex flex-col items-center justify-center
         min-h-[600px] h-full p-2 overflow-hidden
         rounded-2xl
@@ -86,8 +101,23 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
         border border-blue-100/70
         shadow-2xl shadow-blue-200/25
         transition-colors select-none
-      "
+        ${nav.isPanning ? 'cursor-grabbing' : nav.isSpacePressed ? 'cursor-grab' : ''}
+      `}
       {...handlers}
+      onMouseDown={(e) => {
+        nav.containerHandlers.onMouseDown(e);
+        if (!e.defaultPrevented && handlers?.onMouseDown) {
+          handlers.onMouseDown(e);
+        }
+      }}
+      onAuxClick={(e) => {
+        nav.containerHandlers.onAuxClick(e);
+        handlers?.onAuxClick?.(e);
+      }}
+      onContextMenu={(e) => {
+        nav.containerHandlers.onContextMenu(e);
+        handlers?.onContextMenu?.(e);
+      }}
     >
       <div className="pointer-events-none absolute inset-0">
         <div
@@ -114,7 +144,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
           type="button"
           onClick={() => {
             setIs3D(!is3D);
-            resetView();
+            handleFullReset();
           }}
           className={`
             flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap
@@ -193,36 +223,32 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
         )}
       </div>
 
-      {is3D && (
-        <>
-          <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 select-none items-center gap-4 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity">
-            <span className="flex items-center gap-1">
-              <MousePointer2 className="h-3 w-3" />
-              Girar
-            </span>
-            <span className="h-3 w-px bg-slate-300" />
-            <span className="flex items-center gap-1">
-              <Maximize className="h-3 w-3" />
-              Pan (direito)
-            </span>
-          </div>
+      <ControlesNavegacaoCena
+        mode={is3D ? '3d' : '2d'}
+        onZoomIn={nav.zoomIn}
+        onZoomOut={nav.zoomOut}
+        onReset={handleFullReset}
+        zoomPercent={nav.zoomPercent}
+        canZoomIn={nav.canZoomIn}
+        canZoomOut={nav.canZoomOut}
+        className="bottom-6 left-6"
+      />
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              resetView();
-            }}
-            className="group absolute bottom-6 right-6 z-30 rounded-full border border-blue-100/70 bg-white/90 p-2.5 text-slate-500 shadow-lg transition-all hover:scale-110 hover:text-blue-600"
-            title="Resetar câmera"
-            aria-label="Resetar câmera"
-          >
-            <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover:-rotate-180" />
-          </button>
-        </>
+      {is3D && (
+        <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 hidden sm:flex -translate-x-1/2 select-none items-center gap-3 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity whitespace-nowrap">
+          <span className="flex items-center gap-1">
+            <MousePointer2 className="h-3 w-3" />
+            Girar
+          </span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span>Pan (dir./meio)</span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span>Zoom</span>
+        </div>
       )}
 
       <svg
+        ref={nav.svgRef}
         width="100%"
         height="100%"
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -231,6 +257,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
       >
         <DefinicoesSVG pan={pan} />
 
+        <g transform={`translate(${nav.pan.x}, ${nav.pan.y}) scale(${nav.zoom})`}>
         <g opacity="0.12">
           <line
             x1={ORIGIN_X - 420}
@@ -419,6 +446,7 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
           })}
 
         {children}
+        </g>
       </svg>
     </div>
   );

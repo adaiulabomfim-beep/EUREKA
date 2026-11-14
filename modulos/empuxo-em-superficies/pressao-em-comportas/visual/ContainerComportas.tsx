@@ -2,16 +2,14 @@ import React from 'react';
 import {
   RotateCcw,
   MousePointer2,
-  Maximize,
   Play,
   Box,
   ArrowLeftRight,
   CircleDot,
   Ruler,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react';
 import { DefinicoesSVG } from './DefinicoesSVG';
+import { ControlesNavegacaoCena } from '../../../../src/components/ui/ControlesNavegacaoCena';
 
 type Point2D = {
   x: number;
@@ -65,9 +63,16 @@ interface ContainerComportasProps {
   ORIGIN_Y: number;
   pan?: { x: number; y: number };
   zoom?: number;
+  zoomPercent?: number;
+  canZoomIn?: boolean;
+  canZoomOut?: boolean;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   isResetting?: boolean;
+  isPanning?: boolean;
+  isSpacePressed?: boolean;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
+  svgRef?: React.RefObject<SVGSVGElement | null>;
   children?: React.ReactNode;
   upstreamFluidKey?: string;
   downstreamFluidKey?: string;
@@ -95,16 +100,23 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
   ORIGIN_Y,
   pan = { x: 0, y: 0 },
   zoom = 1,
+  zoomPercent,
+  canZoomIn = true,
+  canZoomOut = true,
   onZoomIn,
   onZoomOut,
-  isResetting = false,
+  isPanning = false,
+  isSpacePressed = false,
+  containerRef,
+  svgRef,
   children,
   upstreamFluidKey = 'agua',
   downstreamFluidKey = 'agua',
 }) => {
   return (
     <div
-      className="
+      ref={containerRef}
+      className={`
         relative flex flex-col items-center justify-center
         min-h-[600px] h-full p-2 overflow-hidden
         rounded-2xl
@@ -112,7 +124,8 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
         border border-blue-100/70
         shadow-2xl shadow-blue-200/25
         transition-colors select-none
-      "
+        ${isPanning ? 'cursor-grabbing' : isSpacePressed ? 'cursor-grab' : ''}
+      `}
       {...handlers}
     >
       {/* ... (background blur divs) */}
@@ -261,51 +274,46 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
         )}
       </div>
 
-      {is3D ? (
-        <>
-          <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 select-none items-center gap-4 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity">
-            <span className="flex items-center gap-1">
-              <MousePointer2 className="h-3 w-3" />
-              Girar
-            </span>
-            <span className="h-3 w-px bg-slate-300" />
-            <span className="flex items-center gap-1">
-              <Maximize className="h-3 w-3" />
-              Pan (direito)
-            </span>
-          </div>
+      {onZoomIn && onZoomOut && (
+        <ControlesNavegacaoCena
+          mode={is3D ? '3d' : '2d'}
+          onZoomIn={onZoomIn}
+          onZoomOut={onZoomOut}
+          onReset={resetView}
+          zoomPercent={zoomPercent ?? Math.round(zoom * 100)}
+          canZoomIn={canZoomIn}
+          canZoomOut={canZoomOut}
+          className="bottom-6 left-6"
+        />
+      )}
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              resetView();
-            }}
-            className="group absolute bottom-6 right-6 z-30 rounded-full border border-blue-100/70 bg-white/90 p-2.5 text-slate-500 shadow-lg transition-all hover:scale-110 hover:text-blue-600"
-            title="Resetar câmera"
-          >
-            <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover:-rotate-180" />
-          </button>
-        </>
+      {is3D ? (
+        <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 hidden sm:flex -translate-x-1/2 select-none items-center gap-3 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity whitespace-nowrap">
+          <span className="flex items-center gap-1">
+            <MousePointer2 className="h-3 w-3" />
+            Girar
+          </span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span>Pan (dir./meio)</span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span>Zoom</span>
+        </div>
       ) : null}
 
       <svg
+        ref={svgRef}
         width="100%"
         height="100%"
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         preserveAspectRatio="xMidYMid meet"
         className="flex-1 touch-none overflow-visible"
       >
-        <DefinicoesSVG pan={pan} chaveMontante={upstreamFluidKey} chaveJusante={downstreamFluidKey} />
+        <DefinicoesSVG pan={{ x: 0, y: 0 }} chaveMontante={upstreamFluidKey} chaveJusante={downstreamFluidKey} />
 
         {/* Camada interativa Pan & Zoom */}
         <g
           id="scene-pan-zoom-container"
           transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
-          style={{
-            transformOrigin: `${SVG_W / 2}px ${SVG_H / 2}px`,
-            transition: isResetting ? 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-          }}
         >
         <g opacity="0.12">
           <line
@@ -356,8 +364,13 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
           let strokeWidthToUse = f.strokeWidth ?? 0;
 
           if (!isLine && strokeToUse === 'none' && baseFill !== 'none') {
-            strokeToUse = baseFill;
-            strokeWidthToUse = 0.2;
+            if (isWater || baseOpacity < 1) {
+              strokeToUse = 'none';
+              strokeWidthToUse = 0;
+            } else {
+              strokeToUse = baseFill;
+              strokeWidthToUse = 0.2;
+            }
           }
 
           const overlayOpacity =
@@ -459,25 +472,26 @@ export const ContainerComportas: React.FC<ContainerComportasProps> = ({
                 {v.val !== undefined && v.val !== null && v.val !== '' && (
                   <g transform={`translate(${labelX}, ${labelY})`}>
                     <rect
-                      x={-32}
+                      x={-36}
                       y={-11}
-                      width={64}
+                      width={72}
                       height={22}
-                      rx={6}
-                      fill="#0f172a"
-                      opacity={0.8}
+                      rx={11}
+                      fill="#ffffff"
+                      opacity={0.92}
+                      stroke="#fecaca"
+                      strokeWidth={1.2}
                     />
                     <text
                       x={0}
                       y={0}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fill="#ffffff"
-                      fontSize={10}
+                      fill="#dc2626"
+                      fontSize={10.5}
                       fontWeight="bold"
-                      fontFamily="monospace"
                     >
-                      {String(v.val)}
+                      E = {String(v.val)}
                     </text>
                   </g>
                 )}

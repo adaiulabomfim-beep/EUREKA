@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { Edges, Html, Line } from '@react-three/drei';
-import { Play, RotateCcw, Box, ArrowLeftRight, Ruler, MousePointer2, Maximize } from 'lucide-react';
+import { Play, RotateCcw, Box, ArrowLeftRight, Ruler, MousePointer2 } from 'lucide-react';
 import {
   FormaComporta,
   PosicaoDobradica,
@@ -13,9 +13,11 @@ import {
 import { ResultadoSimulacaoComporta } from '../dominio/resultado';
 
 // Shared 3D components and materials
-import { BarragemCanvas } from '../../barragens/visual-3d/components/BarragemCanvas';
+import { BarragemCanvas, Camera3DHandle } from '../../barragens/visual-3d/components/BarragemCanvas';
 import { HatchMaterial } from '../../barragens/visual-3d/core/materials';
 import { AnimatedWaterMaterial } from '../../barragens/visual-3d/components/AnimatedWater';
+import { ControlesNavegacaoCena } from '../../../../src/components/ui/ControlesNavegacaoCena';
+import { CORES_MATERIAIS, ESTILOS_VETOR_3D } from '../../visual-compartilhado/identidadeVisual';
 
 interface Scene3DProps {
   upstreamLevel: number;
@@ -52,54 +54,6 @@ interface Scene3DProps {
   modoPosicionamento?: ModoPosicionamentoComporta;
   y_cg_direto?: number;
   [key: string]: any;
-}
-
-/** Textura procedural de alvenaria proporcional ao #brickPattern do 2D */
-let brickTexCache: THREE.Texture | null = null;
-function getBrickTexture(): THREE.Texture {
-  if (brickTexCache) return brickTexCache;
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#f1f5f9';
-    ctx.fillRect(0, 0, 256, 256);
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 2.2;
-
-    const rows = 8;
-    const cols = 4;
-    const rowH = 256 / rows;
-    const colW = 256 / cols;
-
-    for (let r = 0; r <= rows; r++) {
-      const y = r * rowH;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(256, y);
-      ctx.stroke();
-    }
-    for (let r = 0; r < rows; r++) {
-      const offset = (r % 2) * (colW / 2);
-      for (let c = 0; c <= cols; c++) {
-        const x = c * colW + offset;
-        if (x <= 256) {
-          ctx.beginPath();
-          ctx.moveTo(x, r * rowH);
-          ctx.lineTo(x, (r + 1) * rowH);
-          ctx.stroke();
-        }
-      }
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(1.35, 1.35);
-  tex.needsUpdate = true;
-  brickTexCache = tex;
-  return tex;
 }
 
 /** Ajusta automaticamente a câmera 3D e o OrbitControls ao aspect ratio real da janela */
@@ -147,7 +101,12 @@ const CameraFitRig: React.FC<{
 
     if (controls) {
       controls.target.set(centerX, centerY, 0);
+      controls.minDistance = Math.max(0.8, dist * 0.16);
+      controls.maxDistance = Math.max(25, dist * 4.5);
       controls.update();
+      if (typeof controls.saveState === 'function') {
+        controls.saveState();
+      }
     }
   }, [camera, controls, size.width, size.height, minX, maxX, minY, maxY, channelWidth, resetTrigger]);
 
@@ -183,7 +142,8 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   } = props;
 
   const [showExerciseDims, setShowExerciseDims] = useState<boolean>(true);
-  const [cameraResetKey, setCameraResetKey] = useState<number>(0);
+  const cameraControlRef = useRef<Camera3DHandle | null>(null);
+  const [zoomPercent, setZoomPercent] = useState<number>(100);
 
   // Garante que ao analisar (isAnalyzed = true), os vetores 3D fiquem visíveis imediatamente
   useEffect(() => {
@@ -478,8 +438,6 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
     return geo;
   }, [channelWidth, Y_top, H, W, Y_crest_above, Y_bed_dist, gateShape, P_mid.x, P_mid.y, cosTheta, sinTheta, wallHorizThick]);
 
-  const brickTex = useMemo(() => getBrickTexture(), []);
-
   // 4. SOLO DE FUNDAÇÃO (canal-bed-base idêntico ao 2D)
   const foundationRightX = downstreamLevel > 0 ? rightBoundaryX : P_bed_inc.x + wallHorizThick + Math.max(0.6, sceneSpan * 0.2);
   const foundationLength = foundationRightX - leftBoundaryX;
@@ -714,9 +672,9 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const pressureArrowMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#1d4ed8',
-        emissive: '#2563eb',
-        emissiveIntensity: 0.95,
+        color: ESTILOS_VETOR_3D.pressureColor,
+        emissive: ESTILOS_VETOR_3D.pressureEmissive,
+        emissiveIntensity: ESTILOS_VETOR_3D.pressureEmissiveIntensity,
         depthTest: true,
         depthWrite: true,
         transparent: false,
@@ -727,9 +685,9 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const resultantArrowMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#ef4444',
-        emissive: '#ef4444',
-        emissiveIntensity: 1.25,
+        color: ESTILOS_VETOR_3D.resultantColor,
+        emissive: ESTILOS_VETOR_3D.resultantEmissive,
+        emissiveIntensity: ESTILOS_VETOR_3D.resultantEmissiveIntensity,
         depthTest: true,
         depthWrite: true,
         transparent: false,
@@ -740,9 +698,9 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const cpMarkerMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#ef4444',
-        emissive: '#ffffff',
-        emissiveIntensity: 0.9,
+        color: ESTILOS_VETOR_3D.markerColor,
+        emissive: ESTILOS_VETOR_3D.markerEmissive,
+        emissiveIntensity: ESTILOS_VETOR_3D.markerEmissiveIntensity,
         depthTest: true,
         depthWrite: true,
         transparent: false,
@@ -858,7 +816,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
   const centerSceneX = (sceneMinX + sceneMaxX) / 2;
   const centerSceneY = (sceneMinY + sceneMaxY) / 2;
   const camDist = Math.max(10, (sceneMaxX - sceneMinX) * 2.4);
-  const resetTrigger = `${cameraResetKey}-${H.toFixed(2)}-${W.toFixed(2)}-${thetaDeg}-${Y_top.toFixed(2)}-${upstreamLevel}-${downstreamLevel}`;
+  const resetTrigger = `${H.toFixed(2)}-${W.toFixed(2)}-${thetaDeg}-${Y_top.toFixed(2)}-${upstreamLevel}-${downstreamLevel}`;
 
   return (
     <div className="w-full h-full relative" style={{ minHeight: 600 }}>
@@ -932,33 +890,29 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
         )}
       </div>
 
-      {/* Dica de Navegação e Resetar Câmera */}
-      <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 select-none items-center gap-4 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity">
+      <ControlesNavegacaoCena
+        mode="3d"
+        onZoomIn={() => cameraControlRef.current?.zoomIn()}
+        onZoomOut={() => cameraControlRef.current?.zoomOut()}
+        onReset={() => cameraControlRef.current?.reset()}
+        zoomPercent={zoomPercent}
+        className="bottom-6 left-6"
+      />
+
+      {/* Dica de Navegação */}
+      <div className="animate-in fade-in pointer-events-none absolute bottom-6 left-1/2 z-30 hidden sm:flex -translate-x-1/2 select-none items-center gap-3 rounded-full bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 backdrop-blur transition-opacity whitespace-nowrap">
         <span className="flex items-center gap-1">
           <MousePointer2 className="h-3 w-3" />
           Girar
         </span>
         <span className="h-3 w-px bg-slate-300" />
-        <span className="flex items-center gap-1">
-          <Maximize className="h-3 w-3" />
-          Pan (direito)
-        </span>
+        <span>Pan (dir./meio)</span>
+        <span className="h-3 w-px bg-slate-300" />
+        <span>Zoom</span>
       </div>
 
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setCameraResetKey((k) => k + 1);
-        }}
-        className="group absolute bottom-6 right-6 z-30 rounded-full border border-blue-100/70 bg-white/90 p-2.5 text-slate-500 shadow-lg transition-all hover:scale-110 hover:text-blue-600"
-        title="Resetar câmera"
-      >
-        <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover:-rotate-180" />
-      </button>
-
       {/* Canvas Three.js */}
-      <div key={cameraResetKey} className="w-full h-full" style={{ minHeight: 600 }}>
+      <div className="w-full h-full" style={{ minHeight: 600 }}>
         <BarragemCanvas
           targetY={centerSceneY}
           cameraPosition={[
@@ -968,6 +922,10 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           ]}
           fov={32}
           target={[centerSceneX, centerSceneY, 0]}
+          controlRef={cameraControlRef}
+          onZoomChange={setZoomPercent}
+          minDistance={Math.max(0.8, camDist * 0.16)}
+          maxDistance={Math.max(25, camDist * 4.5)}
         >
           <CameraFitRig
             minX={sceneMinX}
@@ -981,17 +939,17 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
           <mesh position={[foundationCenterX, foundationCenterY, 0]} receiveShadow>
             <boxGeometry args={[foundationLength, groundThick, channelWidth + 0.08]} />
             <HatchMaterial type="ground" texScale={1.65 / Math.max(2.0, sceneSpan)} />
-            <Edges color="#4a2a0e" threshold={15} opacity={0.45} transparent />
+            <Edges color={CORES_MATERIAIS.terraStroke} threshold={15} opacity={0.45} transparent />
           </mesh>
 
           {/* ── 2. Paramento de Concreto: Laje de Base + Parede Inclinada Vazada pelo Buraco da Comporta ── */}
           <mesh geometry={baseSlabGeometry} castShadow receiveShadow>
             <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
-            <Edges color="#545e69" threshold={15} opacity={0.45} transparent />
+            <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
           </mesh>
           <mesh geometry={inclinedWallGeometry} castShadow receiveShadow>
             <HatchMaterial type="concrete" texScale={0.975 / Math.max(2.0, sceneSpan)} />
-            <Edges color="#545e69" threshold={15} opacity={0.45} transparent />
+            <Edges color={CORES_MATERIAIS.concreto3DEdge} threshold={15} opacity={0.45} transparent />
           </mesh>
           {/* Moldura e túnel interno escuro do buraco da comporta (visível de montante e de jusante) */}
           <mesh geometry={holeLiningGeometry} castShadow receiveShadow>
@@ -1005,56 +963,35 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
 
           {/* ── 3. Corpo de Água de Montante (water-upstream-body) ── */}
           {upstreamWaterGeometry && (
-            <group>
-              <mesh geometry={upstreamWaterGeometry} receiveShadow>
-                <AnimatedWaterMaterial
-                  opacity={0.56}
-                  colorPrimaria={fm.corPrimaria}
-                  colorSecundaria={fm.corSecundaria}
-                  colorSuperficie={fm.corSuperficie}
-                />
-              </mesh>
-              {/* Linha técnica nítida na superfície livre de montante (cota NA) */}
-              <Line
-                points={[
-                  [leftBoundaryX, waterSurfaceY, frontZ + 0.01],
-                  [P_surf.x, waterSurfaceY, frontZ + 0.01],
-                ]}
-                color="#0284c7"
-                lineWidth={2.5}
+            <mesh geometry={upstreamWaterGeometry} receiveShadow>
+              <AnimatedWaterMaterial
+                opacity={0.6}
+                colorPrimaria={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaPrimaria : fm.corPrimaria}
+                colorSecundaria={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSecundaria : fm.corSecundaria}
+                colorSuperficie={upstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaProfunda : fm.corSecundaria}
               />
-            </group>
+            </mesh>
           )}
 
           {/* ── 4. Corpo de Água de Jusante (water-downstream-body) ── */}
           {downstreamWaterGeometry && (
-            <group>
-              <mesh geometry={downstreamWaterGeometry} receiveShadow>
-                <AnimatedWaterMaterial
-                  opacity={0.72}
-                  colorPrimaria={fj.corPrimaria}
-                  colorSecundaria={fj.corSecundaria}
-                  colorSuperficie={fj.corSuperficie}
-                />
-              </mesh>
-              <Line
-                points={[
-                  [downStartX, downSurfaceY, frontZ + 0.01],
-                  [rightBoundaryX, downSurfaceY, frontZ + 0.01],
-                ]}
-                color="#0284c7"
-                lineWidth={2.5}
+            <mesh geometry={downstreamWaterGeometry} receiveShadow>
+              <AnimatedWaterMaterial
+                opacity={0.6}
+                colorPrimaria={downstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaPrimaria : fj.corPrimaria}
+                colorSecundaria={downstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaSecundaria : fj.corSecundaria}
+                colorSuperficie={downstreamFluidKey === 'agua' ? CORES_MATERIAIS.aguaProfunda : fj.corSecundaria}
               />
-            </group>
+            </mesh>
           )}
 
           {/* ── 5. Placa da Comporta Metálica Embutida no Buraco da Parede (quando ativa) ── */}
           {hasGate && (
             <mesh geometry={plateGeometry} castShadow receiveShadow>
               <meshStandardMaterial
-                color="#64748b"
-                roughness={0.3}
-                metalness={0.82}
+                color="#94a3b8"
+                roughness={0.35}
+                metalness={0.65}
               />
               <Edges color="#0f172a" threshold={15} opacity={0.95} transparent />
             </mesh>
@@ -1206,7 +1143,7 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
                   );
                 })()}
 
-                {/* Rótulo simples e harmônico da Força Resultante */}
+                {/* Rótulo da Força Resultante padronizado com EmpuxoVector3D (Barragens) */}
                 <Html
                   position={[
                     eStart.x - n_out.x * Math.max(0.18, H * 0.14),
@@ -1214,10 +1151,19 @@ export const Scene3D: React.FC<Scene3DProps> = (props) => {
                     0,
                   ]}
                   center
-                  className="pointer-events-none select-none"
+                  style={{ pointerEvents: 'none' }}
                 >
-                  <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-red-600 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border border-red-200/80 whitespace-nowrap">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                  <div
+                    className="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border whitespace-nowrap select-none"
+                    style={{
+                      color: ESTILOS_VETOR_3D.resultantColor,
+                      borderColor: `${ESTILOS_VETOR_3D.resultantColor}55`,
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: ESTILOS_VETOR_3D.resultantColor }}
+                    ></span>
                     <span>E = {force_disp}</span>
                   </div>
                 </Html>

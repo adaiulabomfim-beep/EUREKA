@@ -1,6 +1,10 @@
 export { formatarDadosSimulacao } from './formatarDadosSimulacao';
 export { forcarDownloadPDF } from './forcarDownloadPDF';
 export { capturarImagemSimulacao } from './capturarImagemSimulacao';
-export { gerarPDFEstudoVisual } from './gerarPDFEstudoVisual';
-export { gerarPDFProvaVisual } from './gerarPDFProvaVisual';
-export { gerarPDFGabaritoVisual } from './gerarPDFGabaritoVisual';
+export { gerarPDFMaterialEstudo } from './gerarPDFEstudoVisual';
+export { gerarPDFAtividadeAprendizagem } from './gerarPDFProvaVisual';
+export {
+  MENSAGEM_BLOQUEIO_ATIVIDADE,
+  simulacaoPossuiResultadosAtivos,
+  validarExportacaoAtividadeAprendizagem,
+} from './validarAtividadeAprendizagem';

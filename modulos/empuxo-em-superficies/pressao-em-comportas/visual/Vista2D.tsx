@@ -1,5 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ContainerComportas } from './ContainerComportas';
+import { useSvgPanZoom } from '../../../../src/hooks/useSvgPanZoom';
 import {
   FormaComporta,
   PosicaoDobradica,
@@ -8,6 +9,16 @@ import {
   ModoPosicionamentoComporta,
 } from '../dominio/tipos';
 import { ResultadoSimulacaoComporta } from '../dominio/resultado';
+import {
+  CORES_MATERIAIS,
+  DIMENSOES_CENA_2D,
+} from '../../visual-compartilhado/identidadeVisual';
+import {
+  DesenhoCota2D,
+  FaixaOndulacaoAgua2D,
+  MarcadorCG2D,
+  SimboloNivelAgua2D,
+} from '../../visual-compartilhado/ElementosTecnicos2D';
 
 interface Vista2DProps {
   upstreamLevel: number;
@@ -46,28 +57,22 @@ interface Vista2DProps {
 }
 
 export const Vista2D: React.FC<Vista2DProps> = (props) => {
-  const SVG_W = 750;
-  const SVG_H = 500;
+  const { SVG_W, SVG_H } = DIMENSOES_CENA_2D;
 
   // View toggles
   const [showFrontalView, setShowFrontalView] = useState<boolean>(true);
   const [showExerciseDims, setShowExerciseDims] = useState<boolean>(true);
 
-  // Visualização 2D Fixa Padrão (Sem zoom e sem arrastar no 2D, conforme solicitado)
-  const pan = { x: 0, y: 0 };
-  const zoom = 1;
-  const isResetting = false;
+  // Navegação 2D (zoom no cursor, pan com botão do meio ou Espaço + esquerdo, touch e Home)
+  const nav = useSvgPanZoom({
+    svgWidth: SVG_W,
+    svgHeight: SVG_H,
+    minZoom: 0.45,
+    maxZoom: 4.0,
+  });
 
   // Tooltips interativos de pontos notáveis
   const [hoveredItem, setHoveredItem] = useState<'CG' | 'CP' | 'PRISM' | null>(null);
-
-  const resetView = useCallback(() => {}, []);
-  const zoomIn = useCallback(() => {}, []);
-  const zoomOut = useCallback(() => {}, []);
-
-  const interactionHandlers = {
-    style: { cursor: 'default' },
-  };
 
   const isKgf = props.sistemaUnidades === SistemaUnidades.TECNICO_KGF;
 
@@ -161,14 +166,91 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   const p_unit = isKgf ? 'kgf/m²' : 'kPa';
   const force_disp = isKgf ? `${Math.round(F_resultant_kgf).toLocaleString('pt-BR')} kgf` : `${F_resultant_kN.toFixed(1)} kN`;
 
-  // --- RESPONSIVE SCREEN COORDINATES & SCALING ---
-  const H_span = (Y_top + H) * sinTheta + 1.25;
-  const maxMeters = Math.max(props.upstreamLevel, H_span, 3.0);
-  const SCALE = Math.min((SVG_H * 0.68) / Math.max(2.3, H_span), 118);
+  // --- RESPONSIVE SCREEN COORDINATES & PROPORTIONAL AUTO-FIT SCALING (900x520) ---
+  const tanTheta = Math.tan(thetaRad);
+  const totalWaterDepth = Math.max(h_bot, props.upstreamLevel || 0, 0.8);
+  const bedMarginM = Math.max(0.28, Math.min(0.75, totalWaterDepth * 0.14));
+  const bedDepthM = Math.max(h_bot + bedMarginM, props.upstreamLevel || 0);
+  const crestAboveM = Math.max(0.38, Math.min(0.95, totalWaterDepth * 0.18));
 
-  // Position of water surface line and slope intersection
-  const waterSurfaceY = 125;
-  const surfX = Math.min(425, SVG_W * 0.56);
+  const tieHeadroomM =
+    props.hasGate && props.hasTieRod && props.tieRodPosRel < 0
+      ? Math.max(0, -(Y_top + props.tieRodPosRel * H) * sinTheta) + 0.45
+      : 0;
+  const topReachM = Math.max(crestAboveM, tieHeadroomM);
+
+  // Espessuras proporcionais à escala física (padrão estrutural do módulo Barragens)
+  const wallThickM = Math.max(0.20, totalWaterDepth * 0.085);
+  const slabThickM = Math.max(0.18, totalWaterDepth * 0.075);
+  const soilThickM = totalWaterDepth * 0.20;
+
+  // Extensão geométrica real da comporta na vista frontal (em metros)
+  const shapeExtentM =
+    shape === FormaComporta.RETANGULAR
+      ? Math.min(W / 2, H * 1.8)
+      : shape === FormaComporta.SEMI_CIRCULAR
+      ? H
+      : H / 2;
+
+  const slopeRunM = bedDepthM / Math.max(0.15, tanTheta);
+  const crestRightM = crestAboveM / Math.max(0.15, tanTheta) + wallThickM / sinTheta;
+  const frontalRightM = showFrontalView
+    ? Math.max(0, 2 * shapeExtentM * sinTheta + (H / 2) * cosTheta - Y_CG * cosTheta)
+    : 0;
+  const rightExtentM = Math.max(
+    crestRightM + (props.downstreamLevel > 0 ? 1.5 : 0.4),
+    frontalRightM
+  );
+
+  const topPadPx = 88;
+  const botPadPx = 38;
+  const baseProjClear = props.isAnalyzed ? 148 : 102;
+
+  const bottomDepthM = bedDepthM + slabThickM + soilThickM;
+  const scaleY1 = (SVG_H - topPadPx - botPadPx) / Math.max(1.2, topReachM + bottomDepthM);
+
+  const frontalBotM = showFrontalView && props.hasGate ? h_bot + 2 * shapeExtentM * cosTheta : 0;
+  const frontalBotFixedPx = showFrontalView && props.hasGate ? (baseProjClear + 36) * cosTheta : 0;
+  const scaleY2 =
+    showFrontalView && props.hasGate && cosTheta > 0.01
+      ? (SVG_H - topPadPx - 24 - frontalBotFixedPx) / Math.max(0.5, topReachM + frontalBotM)
+      : Infinity;
+  const scaleY = Math.min(scaleY1, scaleY2);
+
+  const leftPadPx = showExerciseDims
+    ? props.isAnalyzed
+      ? 235
+      : 135
+    : props.isAnalyzed && props.showVectors
+    ? 145
+    : 95;
+  const rightFixedPx = showFrontalView
+    ? props.isAnalyzed
+      ? 205
+      : 155
+    : props.isAnalyzed
+    ? 140
+    : 85;
+  const horizSpanM = slopeRunM + rightExtentM;
+  const scaleX =
+    (SVG_W - 44 - leftPadPx - rightFixedPx) / Math.max(0.8, horizSpanM);
+
+  const SCALE = Math.max(12, Math.min(scaleY, scaleX, 118));
+  const maxMeters = Math.max(props.upstreamLevel, bedDepthM, 3.0);
+
+  const usedBotPx = Math.max(
+    (topReachM + bottomDepthM) * SCALE + botPadPx,
+    showFrontalView && props.hasGate
+      ? (topReachM + frontalBotM) * SCALE + frontalBotFixedPx + 24
+      : 0
+  );
+  const extraY = Math.max(0, (SVG_H - topPadPx - usedBotPx) / 2);
+  const waterSurfaceY = topPadPx + extraY + topReachM * SCALE;
+
+  const leftHalfPx = leftPadPx + slopeRunM * SCALE;
+  const rightHalfPx = rightFixedPx + rightExtentM * SCALE;
+  const extraX = Math.max(0, (SVG_W - 44 - leftHalfPx - rightHalfPx) / 2);
+  const surfX = 22 + leftHalfPx + extraX;
   const P_surf = { x: surfX, y: waterSurfaceY };
 
   // Helper for points on the inclined plane at distance Y along incline from water surface
@@ -183,44 +265,55 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
   const P_CP = getInclinePt(Y_CP);
 
   // Incline extension above water surface (crest of wall)
-  const Y_crest_above = 0.65 / sinTheta;
+  const Y_crest_above = crestAboveM / sinTheta;
   const P_crest = {
     x: P_surf.x - u_down.x * (Y_crest_above * SCALE),
     y: P_surf.y - u_down.y * (Y_crest_above * SCALE),
   };
 
-  // Incline extension below gate to canal bed
-  const Y_bed_below = (Y_top + H) + 0.65 / sinTheta;
+  // Incline extension down to canal bed
+  const Y_bed_below = bedDepthM / sinTheta;
   const P_bed_inc = getInclinePt(Y_bed_below);
-  const P_bed_left = { x: P_bed_inc.x - 70, y: P_bed_inc.y };
 
-  const wallThick = 26; // px
+  const wallThick = Math.max(15, Math.min(34, wallThickM * SCALE));
+  const slabThickPx = Math.max(14, Math.min(28, slabThickM * SCALE));
+  const soilThickPx = Math.max(26, Math.min(68, soilThickM * SCALE));
   const wallHorizThick = wallThick / sinTheta;
-  const rightSlabX = props.downstreamLevel > 0 ? SVG_W : P_bed_inc.x + wallHorizThick;
-  const rightSoilX = props.downstreamLevel > 0 ? SVG_W : P_bed_inc.x + wallHorizThick + 50;
+
+  const leftBoundX = 22;
+  const rightBoundX = SVG_W - 22;
+  const rightSlabX =
+    props.downstreamLevel > 0
+      ? rightBoundX
+      : Math.min(rightBoundX, P_bed_inc.x + wallHorizThick);
+  const rightSoilX =
+    props.downstreamLevel > 0
+      ? rightBoundX
+      : Math.min(rightBoundX, P_bed_inc.x + wallHorizThick + Math.max(38, soilThickPx * 1.1));
 
   // --- SVG GEOMETRIC MESH / POLYGONS ---
   const renderedFaces: any[] = [];
 
-  // 1. Foundation Bed (Earth / Concrete bottom) — estende-se sob jusante quando ativa
-  const soilBottomY = SVG_H;
+  // 1. Foundation Bed (Earth block — padrão exato Barragens)
+  const soilTopY = P_bed_inc.y + slabThickPx;
+  const soilBottomY = soilTopY + soilThickPx;
   renderedFaces.push({
     id: 'canal-bed-base',
     kind: 'DAM',
     pts: [
-      { x: 0, y: P_bed_inc.y + 24 },
-      { x: rightSoilX, y: P_bed_inc.y + 24 },
+      { x: leftBoundX, y: soilTopY },
+      { x: rightSoilX, y: soilTopY },
       { x: rightSoilX, y: soilBottomY },
-      { x: 0, y: soilBottomY },
+      { x: leftBoundX, y: soilBottomY },
     ],
-    fill: '#977347',
-    stroke: '#4a2a0e',
-    strokeWidth: 1.2,
-    hatchPattern: 'url(#earthPattern)',
+    fill: CORES_MATERIAIS.terraFill,
+    stroke: CORES_MATERIAIS.terraStroke,
+    strokeWidth: CORES_MATERIAIS.terraStrokeWidth,
+    hatchPattern: CORES_MATERIAIS.terraHatch,
     opacity: 1,
   });
 
-  // 2. Continuous Concrete Wall (Estrutura de concreto contínua no paramento e na laje de fundo)
+  // 2. Continuous Concrete Wall (Concreto padronizado com hachura Barragens)
   renderedFaces.push({
     id: 'wall-full-masonry',
     kind: 'DAM',
@@ -229,64 +322,68 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       { x: P_crest.x + wallHorizThick, y: P_crest.y },
       { x: P_bed_inc.x + wallHorizThick, y: P_bed_inc.y },
       { x: rightSlabX, y: P_bed_inc.y },
-      { x: rightSlabX, y: P_bed_inc.y + 24 },
-      { x: 0, y: P_bed_inc.y + 24 },
-      { x: 0, y: P_bed_inc.y },
+      { x: rightSlabX, y: soilTopY },
+      { x: leftBoundX, y: soilTopY },
+      { x: leftBoundX, y: P_bed_inc.y },
       P_bed_inc,
     ],
-    fill: '#9ca3af',
-    stroke: '#6b7280',
-    strokeWidth: 1.2,
-    hatchPattern: 'url(#concretePattern)',
+    fill: CORES_MATERIAIS.concretoFill,
+    stroke: CORES_MATERIAIS.concretoStroke,
+    strokeWidth: CORES_MATERIAIS.concretoStrokeWidth,
+    hatchPattern: CORES_MATERIAIS.concretoHatch,
     opacity: 1,
   });
 
-  // 4. Reservoir Water Body (Montante / Upstream side on left) — colado no limite esquerdo da janela e sobre a base de alvenaria
+  // 4. Reservoir Water Body (Montante / Upstream side on left — gradiente idêntico ao módulo Barragens)
   renderedFaces.push({
     id: 'water-upstream-body',
     kind: 'WATER_UP',
     pts: [
-      { x: 0, y: waterSurfaceY },
+      { x: leftBoundX, y: waterSurfaceY },
       P_surf,
       P_top,
       props.hasGate ? P_bot : P_top,
       P_bed_inc,
-      { x: 0, y: P_bed_inc.y },
+      { x: leftBoundX, y: P_bed_inc.y },
     ],
     fill: 'url(#fluidDepthA)',
     stroke: 'none',
     strokeWidth: 0,
-    opacity: 0.95,
+    opacity: 1,
   });
 
   // Helper para cota visual de jusante proporcional ao fundo do canal (y = P_bed_inc.y)
   const canalBedSurfaceY = P_bed_inc.y;
-  const downRatio = props.upstreamLevel > 0 ? Math.min(1.12, Math.max(0, props.downstreamLevel / props.upstreamLevel)) : 0;
+  const downRatio =
+    props.upstreamLevel > 0
+      ? Math.min(1.12, Math.max(0, props.downstreamLevel / props.upstreamLevel))
+      : 0;
   const downRawY = canalBedSurfaceY - downRatio * (canalBedSurfaceY - waterSurfaceY);
   const downDepthY = Math.min(canalBedSurfaceY, Math.max(downRawY, P_crest.y + 6));
-  const downStartX = P_surf.x + (u_down.x / u_down.y) * (downDepthY - waterSurfaceY) + wallHorizThick;
+  const downStartX =
+    P_surf.x + (u_down.x / u_down.y) * (downDepthY - waterSurfaceY) + wallHorizThick;
   const downBottomLeftX = P_bed_inc.x + wallHorizThick;
 
-  // 5. Downstream water body (if active) — encaixado perfeitamente na face traseira da parede inclinada
+  // 5. Downstream water body (if active — gradiente idêntico ao módulo Barragens)
   if (props.downstreamLevel > 0) {
     renderedFaces.push({
       id: 'water-downstream-body',
       kind: 'WATER_DOWN',
       pts: [
         { x: downStartX, y: downDepthY },
-        { x: SVG_W, y: downDepthY },
-        { x: SVG_W, y: canalBedSurfaceY },
+        { x: rightBoundX, y: downDepthY },
+        { x: rightBoundX, y: canalBedSurfaceY },
         { x: downBottomLeftX, y: canalBedSurfaceY },
       ],
       fill: 'url(#fluidDepthB)',
       stroke: 'none',
       strokeWidth: 0,
-      opacity: 0.85,
+      opacity: 1,
     });
   }
 
   // 6. Gate Plate on the Incline
-  const gatePlateThick = 9; // px
+  const gatePlateThick = Math.max(6, Math.min(10, wallThick * 0.36));
   if (props.hasGate) {
     renderedFaces.push({
       id: 'gate-incline-plate',
@@ -304,14 +401,20 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     });
   } else {
     // Raised/open gate
-    const liftDist = (H * 0.9) * SCALE;
+    const liftDist = H * 0.9 * SCALE;
     renderedFaces.push({
       id: 'gate-incline-raised',
       kind: 'GATE',
       pts: [
         { x: P_top.x - u_down.x * liftDist, y: P_top.y - u_down.y * liftDist },
-        { x: P_top.x - u_down.x * liftDist + n_out.x * gatePlateThick, y: P_top.y - u_down.y * liftDist + n_out.y * gatePlateThick },
-        { x: P_bot.x - u_down.x * liftDist + n_out.x * gatePlateThick, y: P_bot.y - u_down.y * liftDist + n_out.y * gatePlateThick },
+        {
+          x: P_top.x - u_down.x * liftDist + n_out.x * gatePlateThick,
+          y: P_top.y - u_down.y * liftDist + n_out.y * gatePlateThick,
+        },
+        {
+          x: P_bot.x - u_down.x * liftDist + n_out.x * gatePlateThick,
+          y: P_bot.y - u_down.y * liftDist + n_out.y * gatePlateThick,
+        },
         { x: P_bot.x - u_down.x * liftDist, y: P_bot.y - u_down.y * liftDist },
       ],
       fill: 'url(#metalLinear)',
@@ -321,11 +424,10 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     });
   }
 
-  // --- VECTORS ---
+  // --- VECTORS (paleta oficial Barragens) ---
   const vectors: any[] = [];
   if (props.hasGate && props.showVectors) {
     if (props.isAnalyzed) {
-      // Hydrostatic pressure vectors along gate face
       const numRays = 5;
       for (let i = 0; i <= numRays; i++) {
         const t = i / numRays;
@@ -335,13 +437,13 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         };
         const depth_i = (pt.y - waterSurfaceY) / SCALE;
         if (depth_i > 0) {
-          const len_ray = Math.min(45, (depth_i / maxMeters) * 50);
+          const len_ray = Math.max(10, Math.min(48, (depth_i / maxMeters) * 52));
           vectors.push({
             start: { x: pt.x - n_out.x * len_ray, y: pt.y - n_out.y * len_ray },
             end: { x: pt.x, y: pt.y },
-            color: '#0284c7',
-            strokeWidth: 1.6,
-            opacity: 0.65,
+            color: CORES_MATERIAIS.vetorDistribuicaoMontante,
+            strokeWidth: 1.35,
+            opacity: 0.78,
             isResultant: false,
           });
         }
@@ -349,83 +451,8 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     }
   }
 
-  // --- OVERLAY ELEMENTS (ONDAS DINÂMICAS, FLUXO, DOBRADIÇA, TIRANTES) ---
+  // --- OVERLAY ELEMENTS (FLUXO, DOBRADIÇA, TIRANTES) ---
   const overlayElements: React.ReactNode[] = [];
-
-  // 1. Água Montante: Linha de superfície d'água perfeitamente alinhada na cota NA
-  overlayElements.push(
-    <g key="upstream-surface-waves" pointerEvents="none">
-      {/* Linha técnica nítida da superfície livre da água (alinhada exatamente ao nível NA) */}
-      <line
-        x1={0}
-        y1={waterSurfaceY}
-        x2={surfX}
-        y2={waterSurfaceY}
-        stroke="#0284c7"
-        strokeWidth={2.4}
-        opacity={0.95}
-      />
-      <line
-        x1={0}
-        y1={waterSurfaceY - 0.8}
-        x2={surfX}
-        y2={waterSurfaceY - 0.8}
-        stroke="#ffffff"
-        strokeWidth={1.2}
-        opacity={0.85}
-      />
-      {/* Bolhas ambientais flutuantes no reservatório de montante */}
-      {[
-        { cx: 75, cy: P_bed_inc.y - 35, r: 2.2, dur: '5.2s', delay: '0s' },
-        { cx: 155, cy: P_bed_inc.y - 75, r: 3.0, dur: '4.8s', delay: '1.2s' },
-        { cx: 220, cy: P_bed_inc.y - 45, r: 2.0, dur: '6.0s', delay: '2.5s' },
-        { cx: 285, cy: P_bed_inc.y - 95, r: 2.6, dur: '5.0s', delay: '0.7s' },
-      ].map((b, i) => (
-        <circle key={`bubble-${i}`} cx={b.cx} cy={b.cy} r={b.r} fill="#ffffff" opacity={0.35}>
-          <animate
-            attributeName="cy"
-            values={`${b.cy}; ${waterSurfaceY + 8}`}
-            dur={b.dur}
-            begin={b.delay}
-            repeatCount="indefinite"
-          />
-          <animate
-            attributeName="opacity"
-            values="0.1; 0.55; 0.55; 0"
-            dur={b.dur}
-            begin={b.delay}
-            repeatCount="indefinite"
-          />
-        </circle>
-      ))}
-    </g>
-  );
-
-  // 2. Água Jusante (se ativada): Ondas móveis
-  if (props.downstreamLevel > 0) {
-    overlayElements.push(
-      <g key="downstream-surface-waves" pointerEvents="none">
-        <line
-          x1={downStartX}
-          y1={downDepthY}
-          x2={SVG_W}
-          y2={downDepthY}
-          stroke="#0284c7"
-          strokeWidth={2.4}
-          opacity={0.95}
-        />
-        <line
-          x1={downStartX}
-          y1={downDepthY - 0.8}
-          x2={SVG_W}
-          y2={downDepthY - 0.8}
-          stroke="#ffffff"
-          strokeWidth={1.2}
-          opacity={0.85}
-        />
-      </g>
-    );
-  }
 
   // 3. Jato e turbilhonamento quando comporta está levantada/aberta (!hasGate)
   if (!props.hasGate) {
@@ -495,27 +522,27 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
     );
   }
 
-  // --- DIAGRAMA DE PRESSÃO TRAPEZOIDAL SOBRE A COMPORTA (ITEM 4) ---
+  // --- DIAGRAMA DE PRESSÃO TRAPEZOIDAL SOBRE A COMPORTA ---
   const renderPressurePrism = () => {
     if (!props.hasGate || !props.isAnalyzed || !props.showVectors) return null;
 
-    // Largura do diagrama proporcional à pressão em cada ponto
     const maxP = Math.max(1, p_bot_Pa);
-    const maxDiagWidth = 56; // px
+    const maxDiagWidth = 54; // px
     const w_top = (p_top_Pa / maxP) * maxDiagWidth;
     const w_bot = maxDiagWidth;
 
-    // Vértices do prisma de pressão na face montante (direção -n_out)
     const ptTopOuter = { x: P_top.x - n_out.x * w_top, y: P_top.y - n_out.y * w_top };
     const ptBotOuter = { x: P_bot.x - n_out.x * w_bot, y: P_bot.y - n_out.y * w_bot };
 
     const prismPath = `M ${P_top.x},${P_top.y} L ${ptTopOuter.x},${ptTopOuter.y} L ${ptBotOuter.x},${ptBotOuter.y} L ${P_bot.x},${P_bot.y} Z`;
 
-    // Ponto de início da seta F_R / E no diagrama
     const eStart = {
       x: P_CP.x - n_out.x * (maxDiagWidth + 36),
       y: P_CP.y - n_out.y * (maxDiagWidth + 36),
     };
+
+    const forceText = `E = ${force_disp}`;
+    const pillW = Math.max(76, forceText.length * 6.5 + 18);
 
     return (
       <g
@@ -529,13 +556,13 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         <path
           d={prismPath}
           fill="url(#pressurePrismGrad)"
-          stroke="#2563eb"
+          stroke={CORES_MATERIAIS.vetorResultante}
           strokeWidth={hoveredItem === 'PRISM' ? 2.2 : 1.5}
           strokeLinejoin="round"
           opacity={hoveredItem === 'PRISM' ? 0.95 : 0.85}
         />
 
-        {/* Linhas internas de variação de pressão (hachuras de carga) */}
+        {/* Linhas internas de variação de pressão */}
         {[0.25, 0.5, 0.75].map((t, idx) => {
           const pInner = {
             x: P_top.x + u_down.x * (t * H * SCALE),
@@ -553,100 +580,116 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
               y1={pOuter.y}
               x2={pInner.x}
               y2={pInner.y}
-              stroke="#60a5fa"
+              stroke={CORES_MATERIAIS.aguaSuperficie}
               strokeWidth={1}
               strokeDasharray="3 2"
-              opacity={0.7}
+              opacity={0.75}
             />
           );
         })}
 
-        {/* Label p_topo (sem fundo branco, alinhado acima do topo do prisma) */}
+        {/* Label p_topo (com contorno branco suave para nitidez sobre a água) */}
         <text
-          x={ptTopOuter.x - u_down.x * 10 - n_out.x * 4}
-          y={ptTopOuter.y - u_down.y * 10 - n_out.y * 4 - 4}
+          x={ptTopOuter.x - u_down.x * 8 - n_out.x * 6}
+          y={ptTopOuter.y - u_down.y * 8 - n_out.y * 6 - 4}
           textAnchor="end"
           dominantBaseline="central"
-          fill="#0f172a"
+          fill={CORES_MATERIAIS.cotaNivelTexto}
           fontSize="11"
           fontWeight="700"
-          stroke="none"
+          stroke="white"
+          strokeWidth="3"
+          paintOrder="stroke"
         >
           p<tspan baselineShift="sub" fontSize="7.5">topo</tspan> = {p_top_disp} {p_unit}
         </text>
 
-        {/* Label p_base (sem fundo branco, alinhado abaixo da base do prisma) */}
+        {/* Label p_base (com contorno branco suave para nitidez sobre a água) */}
         <text
-          x={ptBotOuter.x + u_down.x * 12 - n_out.x * 4}
-          y={ptBotOuter.y + u_down.y * 12 - n_out.y * 4 + 6}
+          x={ptBotOuter.x + u_down.x * 10 - n_out.x * 6}
+          y={ptBotOuter.y + u_down.y * 10 - n_out.y * 6 + 6}
           textAnchor="end"
           dominantBaseline="central"
-          fill="#0f172a"
+          fill={CORES_MATERIAIS.cotaNivelTexto}
           fontSize="11"
           fontWeight="700"
-          stroke="none"
+          stroke="white"
+          strokeWidth="3"
+          paintOrder="stroke"
         >
           p<tspan baselineShift="sub" fontSize="7.5">base</tspan> = {p_bot_disp} {p_unit}
         </text>
 
-        {/* Seta de F_R / E apontando do diagrama diretamente para o Ponto E (CP) */}
+        {/* Seta da Força Resultante E (padrão Barragens: azul #2563eb com ponta #1e40af) */}
         <line
           x1={eStart.x}
           y1={eStart.y}
           x2={P_CP.x}
           y2={P_CP.y}
-          stroke="#0f172a"
-          strokeWidth={hoveredItem === 'CP' ? 4.5 : 3.5}
+          stroke={CORES_MATERIAIS.vetorResultante}
+          strokeWidth={hoveredItem === 'CP' ? 4.2 : 3.5}
           markerEnd="url(#arrow-thrust)"
           className="transition-all"
         />
 
-        {/* Rótulo limpo da Força Resultante E (sem fundo branco) */}
+        {/* Pílula branca com borda suave da Força Resultante E (idêntica a Barragens) */}
         <g
-          transform={`translate(${eStart.x - n_out.x * 8}, ${eStart.y - n_out.y * 8 - 8})`}
+          transform={`translate(${eStart.x - n_out.x * (pillW * 0.42)}, ${eStart.y - n_out.y * 10 - 15})`}
           onMouseEnter={() => setHoveredItem('CP')}
           onMouseLeave={() => setHoveredItem(null)}
           style={{ cursor: 'pointer' }}
         >
+          <rect
+            x={-pillW / 2}
+            y={-11}
+            width={pillW}
+            height={22}
+            rx={11}
+            fill="#ffffff"
+            opacity={0.94}
+            stroke={CORES_MATERIAIS.vetorPillBorda}
+            strokeWidth={1.2}
+          />
           <text
             x={0}
             y={0}
-            textAnchor="end"
+            textAnchor="middle"
             dominantBaseline="central"
-            fill="#b91c1c"
-            fontSize="12"
-            fontWeight="800"
+            fill={CORES_MATERIAIS.vetorPillTexto}
+            fontSize="10.5"
+            fontWeight="bold"
             stroke="none"
           >
-            E = {force_disp}
+            {forceText}
           </text>
         </g>
       </g>
     );
   };
 
-  // --- RENDER FRONT VIEW (VISTA FRONTAL REBATIDA DA COMPORTA - ITEM 3) ---
+  // --- RENDER FRONT VIEW (VISTA FRONTAL REBATIDA DA COMPORTA) ---
   const renderFrontalView = () => {
     if (!showFrontalView || !props.hasGate) return null;
 
-    const D_proj = 185;
     const R_px = (H * SCALE) / 2;
-    const W_px = W * SCALE;
+    const W_px = Math.min(W * SCALE, H * SCALE * 3.6);
+    const shapeExtentOut =
+      shape === FormaComporta.RETANGULAR
+        ? W_px / 2
+        : shape === FormaComporta.SEMI_CIRCULAR
+        ? H * SCALE
+        : R_px;
 
-    // Center of the projected face (aligned with centroid CG)
+    // Mantém afastamento limpo em relação às cotas inclinadas y_CG e y_CP
+    const baseProjClear = props.isAnalyzed ? 148 : 102;
+    const D_proj = baseProjClear + shapeExtentOut;
+
     const C_proj = {
       x: P_CG.x + n_out.x * D_proj,
       y: P_CG.y + n_out.y * D_proj,
     };
 
-    // Projection Lines extending perpendicular from the gate on the incline
-    const shapeExtentOut =
-      shape === FormaComporta.RETANGULAR
-        ? W_px / 2
-        : shape === FormaComporta.SEMI_CIRCULAR
-        ? Math.min(H * SCALE * 0.85, 62)
-        : R_px;
-    const projLineExtra = 38;
+    const projLineExtra = 34;
     const P_top_proj_end = {
       x: P_top.x + n_out.x * (D_proj + shapeExtentOut + projLineExtra),
       y: P_top.y + n_out.y * (D_proj + shapeExtentOut + projLineExtra),
@@ -656,7 +699,6 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       y: P_bot.y + n_out.y * (D_proj + shapeExtentOut + projLineExtra),
     };
 
-    // Position of CP on the frontal view (eccentricity along longitudinal axis u_down)
     const CP_proj = {
       x: C_proj.x + u_down.x * (delta_y * SCALE),
       y: C_proj.y + u_down.y * (delta_y * SCALE),
@@ -671,8 +713,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       y: P_bot.y + n_out.y * D_proj,
     };
 
-    // Dimension line across the frontal face
-    const dimOffset = shapeExtentOut + 32;
+    const dimOffset = shapeExtentOut + 30;
     const dimP1 = {
       x: P_top_proj.x + n_out.x * dimOffset,
       y: P_top_proj.y + n_out.y * dimOffset,
@@ -686,45 +727,23 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
     return (
       <g key="frontal-view-projection" className="animate-in fade-in duration-300">
-        {/* Orthogonal Projection Lines (Linhas de Chamada tracejadas finas) */}
+        {/* Linhas de chamada ortogonais padronizadas com Barragens */}
         <line
           x1={P_top.x}
           y1={P_top.y}
           x2={P_top_proj_end.x}
           y2={P_top_proj_end.y}
-          stroke="#94a3b8"
-          strokeWidth="1.1"
-          strokeDasharray="4 3"
-          opacity="0.7"
+          stroke={CORES_MATERIAIS.cotaLinha}
+          strokeWidth="1.4"
+          strokeDasharray="3 3"
+          opacity="0.45"
         />
         <line
           x1={P_bot.x}
           y1={P_bot.y}
           x2={P_bot_proj_end.x}
           y2={P_bot_proj_end.y}
-          stroke="#94a3b8"
-          strokeWidth="1.1"
-          strokeDasharray="4 3"
-          opacity="0.7"
-        />
-
-        {/* Dimension extension ticks to frontal dimension */}
-        <line
-          x1={P_top_proj.x}
-          y1={P_top_proj.y}
-          x2={dimP1.x}
-          y2={dimP1.y}
-          stroke="#64748b"
-          strokeWidth="1.4"
-          strokeDasharray="3 3"
-          opacity="0.45"
-        />
-        <line
-          x1={P_bot_proj.x}
-          y1={P_bot_proj.y}
-          x2={dimP2.x}
-          y2={dimP2.y}
-          stroke="#64748b"
+          stroke={CORES_MATERIAIS.cotaLinha}
           strokeWidth="1.4"
           strokeDasharray="3 3"
           opacity="0.45"
@@ -749,13 +768,12 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
               stroke="none"
             />
 
-            {/* Symmetry crosshairs (eixos de simetria) */}
             <line
               x1={C_proj.x - u_down.x * (R_px + 12)}
               y1={C_proj.y - u_down.y * (R_px + 12)}
               x2={C_proj.x + u_down.x * (R_px + 12)}
               y2={C_proj.y + u_down.y * (R_px + 12)}
-              stroke="#64748b"
+              stroke={CORES_MATERIAIS.cotaLinha}
               strokeWidth="1"
               strokeDasharray="7 3 2 3"
             />
@@ -764,7 +782,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
               y1={C_proj.y - n_out.y * (R_px + 12)}
               x2={C_proj.x + n_out.x * (R_px + 12)}
               y2={C_proj.y + n_out.y * (R_px + 12)}
-              stroke="#64748b"
+              stroke={CORES_MATERIAIS.cotaLinha}
               strokeWidth="1"
               strokeDasharray="7 3 2 3"
             />
@@ -775,7 +793,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <g>
             {(() => {
               const halfH = (H * SCALE) / 2;
-              const halfW = (W * SCALE) / 2;
+              const halfW = W_px / 2;
               const p1 = { x: C_proj.x - u_down.x * halfH - n_out.x * halfW, y: C_proj.y - u_down.y * halfH - n_out.y * halfW };
               const p2 = { x: C_proj.x - u_down.x * halfH + n_out.x * halfW, y: C_proj.y - u_down.y * halfH + n_out.y * halfW };
               const p3 = { x: C_proj.x + u_down.x * halfH + n_out.x * halfW, y: C_proj.y + u_down.y * halfH + n_out.y * halfW };
@@ -791,7 +809,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                     y1={C_proj.y - u_down.y * (halfH + 12)}
                     x2={C_proj.x + u_down.x * (halfH + 12)}
                     y2={C_proj.y + u_down.y * (halfH + 12)}
-                    stroke="#64748b"
+                    stroke={CORES_MATERIAIS.cotaLinha}
                     strokeWidth="1"
                     strokeDasharray="7 3 2 3"
                   />
@@ -800,7 +818,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                     y1={C_proj.y - n_out.y * (halfW + 12)}
                     x2={C_proj.x + n_out.x * (halfW + 12)}
                     y2={C_proj.y + n_out.y * (halfW + 12)}
-                    stroke="#64748b"
+                    stroke={CORES_MATERIAIS.cotaLinha}
                     strokeWidth="1"
                     strokeDasharray="7 3 2 3"
                   />
@@ -814,7 +832,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <g>
             {(() => {
               const H_px = H * SCALE;
-              const R_semi = Math.min(H_px * 0.85, 62);
+              const R_semi = H_px;
               const steps = 32;
               const pts: string[] = [];
               for (let i = 0; i <= steps; i++) {
@@ -835,7 +853,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                     y1={P_top_proj.y - u_down.y * 10}
                     x2={P_bot_proj.x + u_down.x * 10}
                     y2={P_bot_proj.y + u_down.y * 10}
-                    stroke="#64748b"
+                    stroke={CORES_MATERIAIS.cotaLinha}
                     strokeWidth="1"
                     strokeDasharray="7 3 2 3"
                   />
@@ -845,213 +863,101 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           </g>
         )}
 
-        {/* Dimension line with arrows and clean break for gate size/diameter (rendered above gate shape) */}
-        {(() => {
-          const dx = dimP2.x - dimP1.x;
-          const dy = dimP2.y - dimP1.y;
-          const len = Math.hypot(dx, dy) || 1;
-          const ux = dx / len;
-          const uy = dy / len;
-          const cx = (dimP1.x + dimP2.x) / 2;
-          const cy = (dimP1.y + dimP2.y) / 2;
-          const gapHalf = 14;
-          return (
-            <g>
-              {len > gapHalf * 2 + 10 ? (
-                <>
-                  <line
-                    x1={dimP1.x}
-                    y1={dimP1.y}
-                    x2={cx - ux * gapHalf}
-                    y2={cy - uy * gapHalf}
-                    stroke="#64748b"
-                    strokeWidth="1.5"
-                    markerStart="url(#arrow)"
-                  />
-                  <line
-                    x1={cx + ux * gapHalf}
-                    y1={cy + uy * gapHalf}
-                    x2={dimP2.x}
-                    y2={dimP2.y}
-                    stroke="#64748b"
-                    strokeWidth="1.5"
-                    markerEnd="url(#arrow)"
-                  />
-                </>
-              ) : (
-                <line
-                  x1={dimP1.x}
-                  y1={dimP1.y}
-                  x2={dimP2.x}
-                  y2={dimP2.y}
-                  stroke="#64748b"
-                  strokeWidth="1.5"
-                  markerStart="url(#arrow)"
-                  markerEnd="url(#arrow)"
-                />
-              )}
-              <text
-                x={cx - 12}
-                y={cy}
-                textAnchor="start"
-                dominantBaseline="central"
-                fill="#334155"
-                fontSize="11.5"
-                fontWeight="700"
-                stroke="none"
-              >
-                {dimLabel}
-              </text>
-            </g>
-          );
-        })()}
+        {/* Cota da altura/diâmetro da comporta no padrão oficial Barragens */}
+        <DesenhoCota2D
+          p1Orig={P_top_proj}
+          p2Orig={P_bot_proj}
+          p1Off={dimP1}
+          p2Off={dimP2}
+          label={dimLabel}
+          labelCharCount={dimLabel.length}
+        />
 
-        {/* --- CENTROID (CG) NA VISTA FRONTAL --- */}
-        <g>
-          <circle cx={C_proj.x} cy={C_proj.y} r={4.5} fill="#ffffff" stroke="#0f172a" strokeWidth={2} />
-          <circle cx={C_proj.x} cy={C_proj.y} r={1.5} fill="#0f172a" />
-          <text
-            x={C_proj.x - n_out.x * 14 - u_down.x * 12}
-            y={C_proj.y - n_out.y * 14 - u_down.y * 12}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#0f172a"
-            fontSize="12"
-            fontWeight="bold"
-            fontFamily="sans-serif"
-          >
-            CG
-          </text>
-        </g>
+        {/* --- CENTROID (CG) NA VISTA FRONTAL (padrão Barragens) --- */}
+        <MarcadorCG2D
+          x={C_proj.x}
+          y={C_proj.y}
+          radius={5.5}
+          labelOffset={{
+            x: -n_out.x * 14 - u_down.x * 10,
+            y: -n_out.y * 14 - u_down.y * 10,
+          }}
+        />
 
         {/* --- CENTER OF PRESSURE (CP) NA VISTA FRONTAL --- */}
-        <g>
-          <circle cx={CP_proj.x} cy={CP_proj.y} r={4.5} fill="#ef4444" stroke="#ffffff" strokeWidth={1.8} />
-          <text
-            x={CP_proj.x + n_out.x * 15 + u_down.x * 12}
-            y={CP_proj.y + n_out.y * 15 + u_down.y * 12}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#b91c1c"
-            fontSize="12"
-            fontWeight="bold"
-            fontFamily="sans-serif"
-          >
-            CP
-          </text>
-
-          {delta_y * SCALE > 2 && (
-            <line
-              x1={C_proj.x}
-              y1={C_proj.y}
-              x2={CP_proj.x}
-              y2={CP_proj.y}
-              stroke="#ef4444"
-              strokeWidth={1.5}
-              markerEnd="url(#arrow-red)"
+        {props.isAnalyzed && (
+          <g>
+            <circle
+              cx={CP_proj.x}
+              cy={CP_proj.y}
+              r={4.5}
+              fill={CORES_MATERIAIS.pontoCP}
+              stroke="#ffffff"
+              strokeWidth={1.8}
             />
-          )}
-        </g>
+            <text
+              x={CP_proj.x + n_out.x * 15 + u_down.x * 12}
+              y={CP_proj.y + n_out.y * 15 + u_down.y * 12}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill={CORES_MATERIAIS.pontoCPTexto}
+              fontSize="11"
+              fontWeight="800"
+              stroke="white"
+              strokeWidth="2.5"
+              paintOrder="stroke"
+            >
+              CP
+            </text>
+
+            {delta_y * SCALE > 2 && (
+              <line
+                x1={C_proj.x}
+                y1={C_proj.y}
+                x2={CP_proj.x}
+                y2={CP_proj.y}
+                stroke={CORES_MATERIAIS.pontoCP}
+                strokeWidth={1.5}
+                markerEnd="url(#arrow-red)"
+              />
+            )}
+          </g>
+        )}
       </g>
     );
   };
 
-  // --- RENDER TEXTBOOK ENGINEERING DIMENSIONS (COTAGENS DIDÁTICAS) ---
-  // Visualização limpa, organizada e sem fundos brancos nas cotas e informações
+  // --- RENDER TEXTBOOK ENGINEERING DIMENSIONS (COTAGENS PADRONIZADAS BARRAGENS) ---
   const renderDimensions = () => {
     if (!showExerciseDims) return null;
 
     const dims: React.ReactNode[] = [];
 
-    // Helper para cotas verticais ortogonais (sem fundo branco e com interrupção limpa da linha no texto)
+    // Helper para cotas verticais ortogonais no padrão exato de Barragens
     const drawVerticalDimAtX = (
       key: string,
       p1: { x: number; y: number },
       p2: { x: number; y: number },
       dimX: number,
       labelNode: React.ReactNode,
+      labelCharCount: number,
       labelRatioY: number = 0.5
     ) => {
-      const yTop = Math.min(p1.y, p2.y);
-      const yBot = Math.max(p1.y, p2.y);
-      const spanY = yBot - yTop;
-      const cy = yTop + Math.max(16, Math.min(spanY - 16, spanY * labelRatioY));
-      const gapHalfY = 10;
-
       return (
-        <g key={key} fill="none" opacity="0.95">
-          {/* Linhas de chamada tracejadas horizontais */}
-          <line
-            x1={p1.x}
-            y1={p1.y}
-            x2={dimX}
-            y2={p1.y}
-            stroke="#64748b"
-            strokeWidth="1.2"
-            strokeDasharray="3 3"
-            opacity="0.4"
-          />
-          <line
-            x1={p2.x}
-            y1={p2.y}
-            x2={dimX}
-            y2={p2.y}
-            stroke="#64748b"
-            strokeWidth="1.2"
-            strokeDasharray="3 3"
-            opacity="0.4"
-          />
-          {/* Linha de cota dividida acima e abaixo do texto para não cruzar o rótulo */}
-          {spanY > gapHalfY * 2 + 10 ? (
-            <>
-              <line
-                x1={dimX}
-                y1={yTop}
-                x2={dimX}
-                y2={cy - gapHalfY}
-                stroke="#475569"
-                strokeWidth="1.5"
-                markerStart="url(#arrow)"
-              />
-              <line
-                x1={dimX}
-                y1={cy + gapHalfY}
-                x2={dimX}
-                y2={yBot}
-                stroke="#475569"
-                strokeWidth="1.5"
-                markerEnd="url(#arrow)"
-              />
-            </>
-          ) : (
-            <line
-              x1={dimX}
-              y1={yTop}
-              x2={dimX}
-              y2={yBot}
-              stroke="#475569"
-              strokeWidth="1.5"
-              markerStart="url(#arrow)"
-              markerEnd="url(#arrow)"
-            />
-          )}
-          <text
-            x={dimX}
-            y={cy}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#0f172a"
-            fontSize="11.5"
-            fontWeight="700"
-            stroke="none"
-          >
-            {labelNode}
-          </text>
-        </g>
+        <DesenhoCota2D
+          key={key}
+          p1Orig={p1}
+          p2Orig={p2}
+          p1Off={{ x: dimX, y: p1.y }}
+          p2Off={{ x: dimX, y: p2.y }}
+          label={labelNode}
+          labelCharCount={labelCharCount}
+          labelRatio={labelRatioY}
+        />
       );
     };
 
-    // Helper para cotas inclinadas paralelas à superfície (sem fundo branco e com interrupção na linha)
+    // Helper para cotas inclinadas paralelas à superfície no padrão exato de Barragens
     const drawSlantedDim = (
       key: string,
       p1Orig: { x: number; y: number },
@@ -1059,163 +965,94 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       p1Off: { x: number; y: number },
       p2Off: { x: number; y: number },
       labelNode: React.ReactNode,
+      labelCharCount: number,
       labelRatio: number = 0.5
     ) => {
-      const dx = p2Off.x - p1Off.x;
-      const dy = p2Off.y - p1Off.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const ux = dx / len;
-      const uy = dy / len;
-
-      const cx = p1Off.x + dx * labelRatio;
-      const cy = p1Off.y + dy * labelRatio;
-      const gapHalf = 14;
-
       return (
-        <g key={key} fill="none" opacity="0.95">
-          <line
-            x1={p1Orig.x}
-            y1={p1Orig.y}
-            x2={p1Off.x}
-            y2={p1Off.y}
-            stroke="#64748b"
-            strokeWidth="1.2"
-            strokeDasharray="3 3"
-            opacity="0.4"
-          />
-          <line
-            x1={p2Orig.x}
-            y1={p2Orig.y}
-            x2={p2Off.x}
-            y2={p2Off.y}
-            stroke="#64748b"
-            strokeWidth="1.2"
-            strokeDasharray="3 3"
-            opacity="0.4"
-          />
-          {len > gapHalf * 2 + 12 ? (
-            <>
-              <line
-                x1={p1Off.x}
-                y1={p1Off.y}
-                x2={cx - ux * gapHalf}
-                y2={cy - uy * gapHalf}
-                stroke="#475569"
-                strokeWidth="1.5"
-                markerStart="url(#arrow)"
-              />
-              <line
-                x1={cx + ux * gapHalf}
-                y1={cy + uy * gapHalf}
-                x2={p2Off.x}
-                y2={p2Off.y}
-                stroke="#475569"
-                strokeWidth="1.5"
-                markerEnd="url(#arrow)"
-              />
-            </>
-          ) : (
-            <line
-              x1={p1Off.x}
-              y1={p1Off.y}
-              x2={p2Off.x}
-              y2={p2Off.y}
-              stroke="#475569"
-              strokeWidth="1.5"
-              markerStart="url(#arrow)"
-              markerEnd="url(#arrow)"
-            />
-          )}
-          <text
-            x={cx}
-            y={cy}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#334155"
-            fontSize="11.5"
-            fontWeight="700"
-            stroke="none"
-          >
-            {labelNode}
-          </text>
-        </g>
+        <DesenhoCota2D
+          key={key}
+          p1Orig={p1Orig}
+          p2Orig={p2Orig}
+          p1Off={p1Off}
+          p2Off={p2Off}
+          label={labelNode}
+          labelCharCount={labelCharCount}
+          labelRatio={labelRatio}
+        />
       );
     };
 
-    // Helper para símbolo de nível d'água (NA) idêntico ao padrão de Barragens
-    const drawLevelSymbol = (
-      key: string,
-      x: number,
-      y: number,
-      text: string,
-      flipX: boolean = false
-    ) => {
-      const dir = flipX ? -1 : 1;
-      return (
-        <g key={key} stroke="#475569" strokeWidth="1.2" opacity="0.95">
-          <polygon points={`${x},${y} ${x - 7},${y - 14} ${x},${y - 14}`} fill="none" />
-          <polygon points={`${x},${y} ${x},${y - 14} ${x + 7},${y - 14}`} fill="#475569" />
-          <polyline points={`${x},${y - 14} ${x},${y - 30} ${x + dir * 56},${y - 30}`} fill="none" />
-          <text
-            x={x + dir * 28}
-            y={y - 34}
-            textAnchor="middle"
-            dominantBaseline="alphabetic"
-            fill="#334155"
-            fontSize="11"
-            fontWeight="bold"
-            stroke="none"
-          >
-            {text}
-          </text>
-        </g>
-      );
-    };
-
-    // 1. Símbolo de Nível da Água Montante (NA) no canto esquerdo da superfície d'água, com traço virado para a esquerda
-    const naX = 82;
+    // 1. Símbolo de Nível da Água Montante (NA) idêntico ao padrão de Barragens
+    const naX = leftBoundX + 60;
     const naText = `NA=${(props.upstreamLevel || 0).toFixed(2)}`;
-    dims.push(drawLevelSymbol('na-level-symbol', naX, waterSurfaceY, naText, true));
+    dims.push(
+      <SimboloNivelAgua2D
+        key="na-level-symbol"
+        x={naX}
+        y={waterSurfaceY}
+        text={naText}
+        flipX={true}
+      />
+    );
 
     // Nível da Água Jusante (se ativo)
     if (props.downstreamLevel > 0) {
-      const naDownX = SVG_W - 28;
-      dims.push(drawLevelSymbol('na-downstream-symbol', naDownX, downDepthY, `NA=${props.downstreamLevel.toFixed(2)}`, true));
+      const naDownX = rightBoundX - 18;
+      dims.push(
+        <SimboloNivelAgua2D
+          key="na-downstream-symbol"
+          x={naDownX}
+          y={downDepthY}
+          text={`NA=${props.downstreamLevel.toFixed(2)}`}
+          flipX={true}
+        />
+      );
     }
 
-    // 2. Indicador do Peso Específico (γ) posicionado de forma limpa no canto inferior esquerdo do reservatório (sem fundo branco)
+    // 2. Indicador do Peso Específico (γ) posicionado de forma limpa no canto inferior esquerdo do reservatório
+    const gammaLabel = `γ = ${gamma_kgf} kgf/m³ (${(gamma_N / 1000).toFixed(2)} kN/m³)`;
+    const gammaBoxW = gammaLabel.length * 6.4 + 14;
     dims.push(
-      <g key="water-gamma-badge" transform={`translate(18, ${P_bed_inc.y - 24})`}>
-        <text
+      <g key="water-gamma-badge" transform={`translate(${leftBoundX + 12}, ${P_bed_inc.y - 20})`}>
+        <rect
           x={0}
+          y={-10}
+          width={gammaBoxW}
+          height={20}
+          rx={4}
+          fill="#ffffff"
+          fillOpacity={0.9}
+          stroke="#cbd5e1"
+          strokeWidth={0.8}
+        />
+        <text
+          x={7}
           y={0}
           textAnchor="start"
           dominantBaseline="central"
-          fill="#0f172a"
-          fontSize="11.5"
+          fill={CORES_MATERIAIS.cotaNivelTexto}
+          fontSize="11"
           fontWeight="700"
           stroke="none"
         >
-          γ = {gamma_kgf} kgf/m³ ({(gamma_N / 1000).toFixed(2)} kN/m³)
+          {gammaLabel}
         </text>
       </g>
     );
 
-    // 3, 4 e 5. Colunas verticais de profundidade (h_topo, h_CG, h_CP) organizadas à esquerda do prisma de pressão
-    // No modo Y_CG Direto, antes de analisar, o dado de entrada do exercício é y_CG = 1.50 m (ao longo da inclinação),
-    // enquanto h_topo e h_CG (projeções verticais h = y·senθ) e h_CP aparecem ao clicar em Analisar (ou quando em modo Padrão h₁).
+    // 3, 4 e 5. Colunas verticais de profundidade (h_topo, h_CG, h_CP) à esquerda do prisma de pressão
     const isDirectYcgMode = props.modoPosicionamento === ModoPosicionamentoComporta.Y_CG_DIRETO;
     const prismClearX =
       props.isAnalyzed && props.showVectors
-        ? Math.min(P_bot.x - n_out.x * 65, P_CP.x - n_out.x * 105) - 34
-        : Math.min(P_top.x, P_bot.x) - 35;
+        ? Math.min(P_bot.x - n_out.x * 62, P_CP.x - n_out.x * 96) - 44
+        : Math.min(P_top.x, P_bot.x) - 38;
 
-    const colTopX = Math.max(155, Math.min(245, prismClearX));
-    const colCgX = Math.max(92, colTopX - 68);
-    const colCpX = Math.max(32, colCgX - 68);
+    const colTopX = Math.max(leftBoundX + 145, Math.min(P_surf.x - 45, prismClearX));
+    const colCgX = Math.max(leftBoundX + 78, colTopX - 66);
+    const colCpX = Math.max(leftBoundX + 14, colCgX - 66);
 
-    // 3. Profundidade vertical até o topo da comporta: h_topo (exibida sempre no modo h₁ ou após Analisar)
     if (!isDirectYcgMode || props.isAnalyzed) {
+      const hTopPlain = `htopo = ${h_top.toFixed(2)} m`;
       dims.push(
         drawVerticalDimAtX(
           'dim-h-top',
@@ -1225,13 +1062,14 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <>
             h<tspan baselineShift="sub" fontSize="8.5">topo</tspan> = {h_top.toFixed(2)} m
           </>,
+          hTopPlain.length,
           0.36
         )
       );
     }
 
-    // 4. Profundidade vertical do centróide: h_CG (exibida ao analisar)
     if (props.isAnalyzed) {
+      const hCgPlain = `hCG = ${h_CG.toFixed(2)} m`;
       dims.push(
         drawVerticalDimAtX(
           'dim-h-cg',
@@ -1241,13 +1079,12 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <>
             h<tspan baselineShift="sub" fontSize="8.5">CG</tspan> = {h_CG.toFixed(2)} m
           </>,
+          hCgPlain.length,
           0.52
         )
       );
-    }
 
-    // 5. Profundidade vertical do centro de pressão: h_CP (somente após análise)
-    if (props.isAnalyzed) {
+      const hCpPlain = `hCP = ${h_CP.toFixed(2)} m`;
       dims.push(
         drawVerticalDimAtX(
           'dim-h-cp',
@@ -1257,22 +1094,24 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <>
             h<tspan baselineShift="sub" fontSize="8.5">CP</tspan> = {h_CP.toFixed(2)} m
           </>,
+          hCpPlain.length,
           0.68
         )
       );
     }
 
-    // 6. Ângulo de Inclinação (θ) na superfície d'água (sem fundo branco)
-    const arcR = 46;
+    // 6. Ângulo de Inclinação (θ) na superfície d'água (padrão Barragens)
+    const arcR = 44;
     const arcEndX = P_surf.x - u_down.x * arcR;
     const arcEndY = P_surf.y - u_down.y * arcR;
     dims.push(
-      <g key="angle-arc-indicator" stroke="#64748b" strokeWidth="1.5" fill="none">
+      <g key="angle-arc-indicator" stroke={CORES_MATERIAIS.anguloArco} strokeWidth="1.5" fill="none" opacity="0.88">
         <line
           x1={P_surf.x}
           y1={waterSurfaceY}
-          x2={P_surf.x + 72}
+          x2={P_surf.x + 68}
           y2={waterSurfaceY}
+          stroke={CORES_MATERIAIS.cotaLinha}
           strokeDasharray="3 3"
           opacity="0.45"
         />
@@ -1280,13 +1119,13 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           d={`M ${P_surf.x + arcR},${waterSurfaceY} A ${arcR} ${arcR} 0 0 0 ${arcEndX},${arcEndY}`}
         />
         <text
-          x={P_surf.x + arcR + 14}
+          x={P_surf.x + arcR + 15}
           y={waterSurfaceY - 12}
           textAnchor="middle"
           dominantBaseline="central"
-          fill="#334155"
+          fill={CORES_MATERIAIS.anguloTexto}
           fontSize="12"
-          fontWeight="700"
+          fontWeight="bold"
           stroke="none"
         >
           {thetaDeg}°
@@ -1294,10 +1133,11 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       </g>
     );
 
-    // 7. Distâncias inclinadas ao longo do plano da comporta: y_CG e y_CP (escalonadas para não colidirem com a parede)
-    const D_slanted_cg = 66;
+    // 7. Distâncias inclinadas ao longo do plano da comporta: y_CG e y_CP
+    const D_slanted_cg = 64;
     const ref_surf_cg = { x: P_surf.x + n_out.x * D_slanted_cg, y: P_surf.y + n_out.y * D_slanted_cg };
     const ref_cg_off = { x: P_CG.x + n_out.x * D_slanted_cg, y: P_CG.y + n_out.y * D_slanted_cg };
+    const yCgPlain = `yCG = ${Y_CG.toFixed(2)} m`;
 
     dims.push(
       drawSlantedDim(
@@ -1309,15 +1149,16 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         <>
           y<tspan baselineShift="sub" fontSize="8.5">CG</tspan> = {Y_CG.toFixed(2)} m
         </>,
+        yCgPlain.length,
         0.42
       )
     );
 
-    // Cota inclinada y_CP: afastada para fora e com rótulo escalonado em 66% do comprimento
     if (props.isAnalyzed) {
-      const D_slanted_cp = 118;
+      const D_slanted_cp = 116;
       const ref_surf_cp = { x: P_surf.x + n_out.x * D_slanted_cp, y: P_surf.y + n_out.y * D_slanted_cp };
       const ref_cp_off = { x: P_CP.x + n_out.x * D_slanted_cp, y: P_CP.y + n_out.y * D_slanted_cp };
+      const yCpPlain = `yCP = ${Y_CP.toFixed(2)} m`;
 
       dims.push(
         drawSlantedDim(
@@ -1329,12 +1170,13 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
           <>
             y<tspan baselineShift="sub" fontSize="8.5">CP</tspan> = {Y_CP.toFixed(2)} m
           </>,
+          yCpPlain.length,
           0.66
         )
       );
     }
 
-    // 8. PONTO CG e PONTO E NA COMPORTA (ITEM 3 - COM ANIMAÇÃO E INTERATIVIDADE)
+    // 8. PONTO CG (⊕ padrão Barragens) e PONTO E / CP NA COMPORTA
     if (props.hasGate) {
       dims.push(
         <g key="notable-points-on-gate">
@@ -1350,31 +1192,20 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                 cy={P_CG.y}
                 r={12}
                 fill="none"
-                stroke="#2563eb"
+                stroke={CORES_MATERIAIS.vetorResultante}
                 strokeWidth={1.8}
                 opacity={0.8}
               />
             )}
-            <circle
-              cx={P_CG.x}
-              cy={P_CG.y}
-              r={hoveredItem === 'CG' ? 6.5 : 5.5}
-              fill="#ffffff"
-              stroke="#0f172a"
-              strokeWidth={2}
+            <MarcadorCG2D
+              x={P_CG.x}
+              y={P_CG.y}
+              radius={hoveredItem === 'CG' ? 6.5 : 6}
+              labelOffset={{
+                x: n_out.x * 16 - u_down.x * 10,
+                y: n_out.y * 16 - u_down.y * 10,
+              }}
             />
-            <text
-              x={P_CG.x + n_out.x * 18 - u_down.x * 12}
-              y={P_CG.y + n_out.y * 18 - u_down.y * 12}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="#0f172a"
-              fontSize="10"
-              fontWeight="black"
-              fontFamily="sans-serif"
-            >
-              CG
-            </text>
           </g>
 
           {/* Ponto E: Centro de Pressão (Empuxo Resultante) - somente após análise */}
@@ -1384,13 +1215,12 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
               onMouseEnter={() => setHoveredItem('CP')}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              {/* Anel de pulso vivo e dinâmico */}
               <circle
                 cx={P_CP.x}
                 cy={P_CP.y}
                 r={7}
                 fill="none"
-                stroke="#ef4444"
+                stroke={CORES_MATERIAIS.pontoCP}
                 strokeWidth={1.6}
                 opacity={0.8}
               >
@@ -1402,7 +1232,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                 cx={P_CP.x}
                 cy={P_CP.y}
                 r={hoveredItem === 'CP' ? 6.5 : 5.5}
-                fill="#ef4444"
+                fill={CORES_MATERIAIS.pontoCP}
                 stroke="#ffffff"
                 strokeWidth={1.8}
               />
@@ -1411,10 +1241,12 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                 y={P_CP.y + n_out.y * 18 + u_down.y * 12}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fill="#b91c1c"
+                fill={CORES_MATERIAIS.pontoCPTexto}
                 fontSize="10"
-                fontWeight="black"
-                fontFamily="sans-serif"
+                fontWeight="800"
+                stroke="white"
+                strokeWidth="2.5"
+                paintOrder="stroke"
               >
                 E
               </text>
@@ -1545,22 +1377,61 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         isAnalyzed={props.isAnalyzed}
         onCalculate={props.onCalculate}
         onReset={props.onReset}
-        resetView={resetView}
-        handlers={interactionHandlers}
+        resetView={nav.resetView}
+        handlers={nav.containerHandlers}
         renderedFaces={renderedFaces}
         vectors={vectors}
         SVG_W={SVG_W}
         SVG_H={SVG_H}
         ORIGIN_X={surfX}
         ORIGIN_Y={P_bed_inc.y}
-        pan={pan}
-        zoom={zoom}
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
-        isResetting={isResetting}
+        pan={nav.pan}
+        zoom={nav.zoom}
+        zoomPercent={nav.zoomPercent}
+        canZoomIn={nav.canZoomIn}
+        canZoomOut={nav.canZoomOut}
+        onZoomIn={nav.zoomIn}
+        onZoomOut={nav.zoomOut}
+        isPanning={nav.isPanning}
+        isSpacePressed={nav.isSpacePressed}
+        containerRef={nav.containerRef}
+        svgRef={nav.svgRef}
         upstreamFluidKey={props.upstreamFluidKey}
         downstreamFluidKey={props.downstreamFluidKey}
       >
+        {/* Faixa de ondulação apenas na superfície da água (componente compartilhado Barragens 2D) */}
+        {(() => {
+          const upWaterHeightPx = Math.max(0, P_bed_inc.y - waterSurfaceY);
+          const rippleUpH = Math.min(30, upWaterHeightPx);
+          const upRippleBotX = P_surf.x + (u_down.x / u_down.y) * rippleUpH;
+
+          const downWaterHeightPx =
+            props.downstreamLevel > 0 ? Math.max(0, canalBedSurfaceY - downDepthY) : 0;
+          const rippleDownH = Math.min(30, downWaterHeightPx);
+          const downRippleBotX = downStartX + (u_down.x / u_down.y) * rippleDownH;
+
+          return (
+            <g key="water-surface-ripples-barragens" pointerEvents="none">
+              <FaixaOndulacaoAgua2D
+                xLeft={leftBoundX}
+                xRightTop={P_surf.x}
+                xRightBottom={upRippleBotX}
+                xLeftBottom={leftBoundX}
+                yTop={waterSurfaceY}
+                heightPx={rippleUpH}
+              />
+              <FaixaOndulacaoAgua2D
+                xLeft={downStartX}
+                xRightTop={rightBoundX}
+                xRightBottom={rightBoundX}
+                xLeftBottom={downRippleBotX}
+                yTop={downDepthY}
+                heightPx={rippleDownH}
+              />
+            </g>
+          );
+        })()}
+
         {/* Diagrama Trapezoidal de Pressão Hidrostática */}
         {renderPressurePrism()}
 
@@ -1570,7 +1441,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
         {/* Cotagens Didáticas Completas */}
         {renderDimensions()}
 
-        {/* Elementos Adicionais (ondas dinâmicas, bolhas, apoios, tirantes) */}
+        {/* Elementos Adicionais (apoios, tirantes, fluxo) */}
         {overlayElements}
 
         {/* Tooltip Dinâmico ao passar o mouse em CG, CP ou Prisma */}

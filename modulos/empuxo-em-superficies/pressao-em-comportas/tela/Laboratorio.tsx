@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Maximize, AlertCircle, AlertTriangle } from 'lucide-react';
 import { FormaComporta, PosicaoDobradica, ModoPosicionamentoComporta, SistemaUnidades } from '../dominio/tipos';
 import { ConfiguracaoSimulacaoComporta } from '../dominio/configuracao';
@@ -84,6 +84,7 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
   const resetDefaults = () => {
       setConfig(CONFIG_PADRAO_COMPORTA);
       setActivePresetKey(null);
+      setAnalyzedResults(null);
   };
 
   // Qualquer edição manual desvincula a simulação ativa

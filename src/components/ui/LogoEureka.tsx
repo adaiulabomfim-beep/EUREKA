@@ -31,6 +31,33 @@ export const LogoEureka: React.FC<LogoEurekaProps> = ({
   const dropShadowId = `dropShadow-${uniqId}`;
   const whiteDropShadowId = `whiteDropShadow-${uniqId}`;
 
+  const textRef = React.useRef<SVGTextElement | null>(null);
+  const [markX, setMarkX] = React.useState<number>(224);
+
+  React.useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+
+    const updatePosition = () => {
+      let domRight = 0;
+      try {
+        const bbox = el.getBBox();
+        domRight = bbox.x + bbox.width;
+      } catch {
+        domRight = el.getComputedTextLength();
+      }
+      if (domRight > 0) {
+        const nextX = Math.ceil(domRight + 5);
+        setMarkX((prev) => (prev !== nextX ? nextX : prev));
+      }
+    };
+
+    updatePosition();
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(updatePosition).catch(() => {});
+    }
+  }, []);
+
   let textColor = '#ffffff';
   let barColor = '#ffffff';
   let dropColor = '#ffffff';
@@ -53,9 +80,14 @@ export const LogoEureka: React.FC<LogoEurekaProps> = ({
       }
     : {};
 
+  const viewBoxWidth = markX + 18;
+
   return (
     <svg
-      viewBox="0 0 245 58"
+      data-eureka-logo="true"
+      data-theme={theme}
+      data-mark-x={markX}
+      viewBox={`0 0 ${viewBoxWidth} 58`}
       className={`${sizeClasses} ${className} block`}
       style={{ overflow: 'visible' }}
       xmlns="http://www.w3.org/2000/svg"
@@ -86,6 +118,7 @@ export const LogoEureka: React.FC<LogoEurekaProps> = ({
 
       {/* Texto EUREKA */}
       <text
+        ref={textRef}
         x="0"
         y="48"
         fontFamily="Inter, sans-serif"
@@ -98,21 +131,21 @@ export const LogoEureka: React.FC<LogoEurekaProps> = ({
         EUREKA
       </text>
 
-      {/* Barra da Exclamação */}
+      {/* Barra da Exclamação (alinhada à altura das letras, imediatamente após o A) */}
       <rect
-        x="222"
-        y="8"
+        x={markX}
+        y="9"
         width="10"
-        height="31"
+        height="22"
         rx="2"
         fill={barColor}
       />
 
-      {/* Pingo da Exclamação */}
+      {/* Pingo da Exclamação (base alinhada à linha de base tipográfica y=48) */}
       <DropElement {...dropAnimationProps}>
         <path
           d="M 7 0 L 14 0 L 14 7 A 7 7 0 1 1 7 0 Z"
-          transform="translate(220, 43) rotate(45, 7, 7)"
+          transform={`translate(${markX - 2}, 34) rotate(45, 7, 7)`}
           fill={dropColor}
           filter={
             isColored ? `url(#${dropShadowId})` : isWhite ? `url(#${whiteDropShadowId})` : undefined

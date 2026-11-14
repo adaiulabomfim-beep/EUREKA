@@ -3,6 +3,8 @@ import { Box as BoxIcon } from 'lucide-react';
 import { ObjectShape } from '../dominio/tipos';
 import { SvgDefs } from './SvgDefs';
 import { getMaterialPattern } from './visualUtils';
+import { useSvgPanZoom } from '../../../src/hooks/useSvgPanZoom';
+import { ControlesNavegacaoCena } from '../../../src/components/ui/ControlesNavegacaoCena';
 
 type Point2D = {
   x: number;
@@ -251,12 +253,37 @@ export const Vista2D: React.FC<Vista2DProps> = ({
       ? Math.max(tankBottomY + pan.y + 22, eVectorTailY + 18)
       : tankBottomY + pan.y + 22;
 
+  const nav = useSvgPanZoom({
+    svgWidth,
+    svgHeight,
+    minZoom: 0.45,
+    maxZoom: 4.0,
+  });
+
   return (
-    <div className="relative w-full h-full">
+    <div
+      ref={nav.containerRef}
+      className={`relative w-full h-full select-none ${
+        nav.isPanning ? 'cursor-grabbing' : nav.isSpacePressed ? 'cursor-grab' : ''
+      }`}
+      {...nav.containerHandlers}
+    >
+      <ControlesNavegacaoCena
+        mode="2d"
+        onZoomIn={nav.zoomIn}
+        onZoomOut={nav.zoomOut}
+        onReset={nav.resetView}
+        zoomPercent={nav.zoomPercent}
+        canZoomIn={nav.canZoomIn}
+        canZoomOut={nav.canZoomOut}
+        className="bottom-6 left-6"
+      />
+
       <svg
+        ref={nav.svgRef}
         width="100%"
         height="100%"
-        className="overflow-visible"
+        className="overflow-visible touch-none"
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         preserveAspectRatio="xMidYMid meet"
       >
@@ -279,6 +306,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
         </clipPath>
       </defs>
 
+      <g transform={`translate(${nav.pan.x}, ${nav.pan.y}) scale(${nav.zoom})`}>
       {/* Fundo do tanque */}
       <g>
         {drawPoly(
@@ -740,6 +768,7 @@ export const Vista2D: React.FC<Vista2DProps> = ({
           )}
         </g>
       )}
+    </g>
     </svg>
     </div>
   );

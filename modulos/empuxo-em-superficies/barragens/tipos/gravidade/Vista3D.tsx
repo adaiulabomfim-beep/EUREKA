@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { RenderizadorBarragensProps } from '../../dominio/tipos';
-import { BarragemCanvas } from '../../visual-3d/components/BarragemCanvas';
+import { BarragemCanvas, Camera3DHandle } from '../../visual-3d/components/BarragemCanvas';
 import { BarragemScene } from '../../visual-3d/components/BarragemScene';
 import { Vista3DUI } from '../../visual-3d/components/Vista3DUI';
 
@@ -29,6 +29,8 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
   } = props;
 
   const CHANNEL_WIDTH = 40;
+  const cameraControlRef = useRef<Camera3DHandle | null>(null);
+  const [zoomPercent, setZoomPercent] = useState(100);
 
   return (
     <div className="w-full h-full relative" style={{ minHeight: 600 }}>
@@ -40,10 +42,18 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
         isAnalyzed={isAnalyzed}
         onCalculate={onCalculate}
         onReset={onReset}
+        onZoomIn={() => cameraControlRef.current?.zoomIn()}
+        onZoomOut={() => cameraControlRef.current?.zoomOut()}
+        onResetCamera={() => cameraControlRef.current?.reset()}
+        zoomPercent={zoomPercent}
       />
 
       <div className="w-full h-full flex items-center justify-center">
-        <BarragemCanvas targetY={damHeight / 3}>
+        <BarragemCanvas
+          targetY={damHeight / 3}
+          controlRef={cameraControlRef}
+          onZoomChange={setZoomPercent}
+        >
           <BarragemScene
             damHeight={damHeight}
             damBaseWidth={damBaseWidth}
@@ -72,3 +82,4 @@ export const Vista3D: React.FC<GravityDam3DViewProps> = (props) => {
     </div>
   );
 };
+
