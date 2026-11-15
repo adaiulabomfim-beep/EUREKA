@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { MessageCircle, X, Send, Image as ImageIcon, Loader2, Bot, User, Trash2, Microscope } from 'lucide-react';
 
 interface ChatMessage {
@@ -142,57 +141,139 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
       image: selectedImage || undefined
     };
 
+    const previousMessages = messages;
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setSelectedImage(null);
     setIsLoading(true);
 
     try {
-      const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || '';
-      const ai = new GoogleGenAI(apiKey ? { apiKey } : {});
-      
-      const contents = messages.map(msg => {
-        const parts: any[] = [{ text: msg.text }];
-        if (msg.image) {
-            const [metadata, base64Data] = msg.image.split(',');
-            const mimeType = metadata.match(/:(.*?);/)?.[1] || 'image/png';
-            parts.push({
-                inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
-                }
-            });
+      const buildParts = (text: string, image?: string) => {
+        const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+        if (text) {
+          parts.push({ text });
         }
-        return {
-          role: msg.role,
-          parts: parts
-        };
-      });
+        if (image) {
+          const commaIdx = image.indexOf(',');
+          const metadata = commaIdx >= 0 ? image.slice(0, commaIdx) : '';
+          const base64Data = commaIdx >= 0 ? image.slice(commaIdx + 1) : image;
+          const mimeType = metadata.match(/:(.*?);/)?.[1] || 'image/png';
+          if (base64Data) {
+            parts.push({
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
+            });
+          }
+        }
+        return parts;
+      };
+
+      const contents = previousMessages.map(msg => ({
+        role: msg.role,
+        parts: buildParts(msg.text, msg.image),
+      }));
 
       // Add current message with potentially augmented prompt
-      const currentParts: any[] = [{ text: fullPrompt }];
-      if (userMessage.image) {
-          const [metadata, base64Data] = userMessage.image.split(',');
-          const mimeType = metadata.match(/:(.*?);/)?.[1] || 'image/png';
-          currentParts.push({
-              inlineData: {
-                  mimeType: mimeType,
-                  data: base64Data
-              }
-          });
-      }
-      
-      contents.push({ role: 'user', parts: currentParts });
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
-        config: {
-            systemInstruction: "Você é um assistente tutor especialista em Mecânica dos Fluidos, especificamente Hidrostática e Empuxo. Você está integrado em uma aplicação web educacional. O usuário pode enviar dados de uma simulação (Contexto do Laboratório). Use esses dados numéricos precisos para explicar o que está acontecendo fisicamente. Explique conceitos como se fosse um professor universitário didático. IMPORTANTE: NÃO use formatação LaTeX (como $...$, \\text{}, ou ^ para expoentes). Escreva as unidades de medida em texto simples e limpo (exemplo: kg/m³, N, m², Pa). Não use símbolos que poluam a leitura.",
-        },
-        contents: contents
+      contents.push({
+        role: 'user',
+        parts: buildParts(fullPrompt, userMessage.image),
       });
 
-      const responseText = response.text || "Desculpe, não consegui gerar uma resposta.";
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contents }),
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      const rawResponseBody = await response.text().catch(() => '');
+
+      let payload: {
+        text?: unknown;
+        error?: unknown;
+        code?: unknown;
+        finishReason?: unknown;
+        diagnostics?: {
+          model?: unknown;
+          geminiHttpStatus?: unknown;
+          finishReason?: unknown;
+        };
+      } | null = null;
+
+      if (rawResponseBody.trim()) {
+        try {
+          payload = JSON.parse(rawResponseBody);
+        } catch {
+          payload = null;
+        }
+      }
+
+      console.info('[ChatBot /api/chat] Diagnóstico da resposta:', {
+        httpStatus: response.status,
+        ok: response.ok,
+        contentType: contentType || '(vazio)',
+        isJsonPayload: Boolean(payload && typeof payload === 'object'),
+        hasTextProperty: Boolean(payload && typeof payload.text === 'string' && payload.text.trim()),
+        code: payload?.code || null,
+        diagnostics: payload?.diagnostics || null,
+      });
+
+      if (!contentType.includes('application/json') || !payload || typeof payload !== 'object') {
+        const previewType = contentType || 'conteúdo desconhecido';
+        if (response.status === 404) {
+          throw new Error(
+            `Rota /api/chat não encontrada (HTTP 404, Content-Type: ${previewType}). Verifique se a função serverless api/chat.js (Vercel) ou o backend server.js está publicado e ativo.`
+          );
+        }
+        throw new Error(
+          `A rota /api/chat respondeu HTTP ${response.status} com formato "${previewType}" em vez de JSON válido. Isso indica que a requisição não atingiu a função serverless api/chat.js ou o backend server.js.`
+        );
+      }
+
+      if (!response.ok) {
+        const serverError = typeof payload.error === 'string' ? payload.error : '';
+        const errorCode = typeof payload.code === 'string' ? payload.code : '';
+        const modelInfo =
+          payload.diagnostics && typeof payload.diagnostics.model === 'string'
+            ? ` | modelo: ${payload.diagnostics.model}`
+            : '';
+        const geminiStatusInfo =
+          payload.diagnostics && typeof payload.diagnostics.geminiHttpStatus === 'number'
+            ? ` | Gemini HTTP: ${payload.diagnostics.geminiHttpStatus}`
+            : '';
+
+        if (serverError) {
+          throw new Error(
+            `${serverError} (HTTP ${response.status}${errorCode ? ` / ${errorCode}` : ''}${modelInfo}${geminiStatusInfo})`
+          );
+        }
+        throw new Error(
+          `Erro na API /api/chat (HTTP ${response.status}${errorCode ? ` / ${errorCode}` : ''}${modelInfo}${geminiStatusInfo}).`
+        );
+      }
+
+      if (typeof payload.text !== 'string' || !payload.text.trim()) {
+        const finishReason =
+          typeof payload.finishReason === 'string'
+            ? payload.finishReason
+            : payload.diagnostics && typeof payload.diagnostics.finishReason === 'string'
+            ? payload.diagnostics.finishReason
+            : '';
+        console.error('[ChatBot /api/chat] Resposta HTTP 200 sem propriedade "text" válida:', {
+          httpStatus: response.status,
+          payloadKeys: Object.keys(payload),
+          finishReason: finishReason || null,
+        });
+        throw new Error(
+          `A API /api/chat retornou HTTP ${response.status}, mas sem conteúdo na propriedade "text"${finishReason ? ` (finishReason: ${finishReason})` : ''}.`
+        );
+      }
+
+      const responseText = payload.text;
 
       setMessages(prev => [...prev, {
         role: 'model',
@@ -201,9 +282,16 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
 
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
+      const errorMessage =
+        error instanceof TypeError
+          ? "Não foi possível conectar ao servidor do Tutor Inteligente (/api/chat). Verifique sua conexão ou se o backend está ativo."
+          : error instanceof Error && error.message
+          ? error.message
+          : "Ocorreu um erro inesperado ao processar a resposta do Tutor Inteligente.";
+
       setMessages(prev => [...prev, {
         role: 'model',
-        text: "Desculpe, ocorreu um erro ao conectar com o servidor. Verifique sua chave API ou tente novamente."
+        text: errorMessage
       }]);
     } finally {
       setIsLoading(false);
