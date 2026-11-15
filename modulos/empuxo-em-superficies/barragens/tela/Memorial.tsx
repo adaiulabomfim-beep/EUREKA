@@ -116,18 +116,18 @@ export const Memorial: React.FC<MemorialProps> = ({
                 {isTriangular3DMode && apC ? (
                   <>
                     Análise tridimensional na largura longitudinal total{' '}
-                    <MathTex tex={`b = ${apC.larguraLongitudinal.toFixed(2)}\\text{ m}`} />, fluido a 20 °C (
-                    <MathTex tex={`\\gamma_{\\text{água}} = ${(density * gravity).toFixed(1)}\\text{ N/m}^3`} />
+                    <MathTex tex={`b = ${apC.larguraLongitudinal.toFixed(2)}\\text{ m}`} />, água a 20 °C (
+                    <MathTex tex={`\\gamma_{\\text{água}} = ${(density * gravity).toFixed(0)}\\text{ N/m}^3`} />
                     ), concreto com densidade relativa{' '}
-                    <MathTex tex={`d = ${(st?.concreteSpecificGravity ?? gammaMat / 9810).toFixed(2)}`} /> (
-                    <MathTex tex={`\\gamma_{\\text{conc}} = ${(gammaMat / 1000).toFixed(2)}\\text{ kN/m}^3`} />
-                    ). Para a condição com percolação sob a base <MathTex tex="BC" />, adota-se como{' '}
-                    <strong>hipótese clássica de engenharia</strong> (não fornecida explicitamente no enunciado) a
-                    distribuição linear/triangular de subpressão variando de{' '}
-                    <MathTex tex={`p_B = ${(apC.subpressao.fatorMontante * 100).toFixed(0)}\\%\\cdot \\gamma h`} /> no
-                    pé de montante <MathTex tex="B" /> até{' '}
-                    <MathTex tex={`p_C = ${(apC.subpressao.fatorJusante * 100).toFixed(0)}\\%`} /> na extremidade de
-                    jusante <MathTex tex="C" />.
+                    <MathTex tex={`d = ${(st?.concreteSpecificGravity ?? 2.4).toFixed(2)}`} /> (
+                    <MathTex tex={`\\gamma_{\\text{conc}} = ${fmtBrTex(gammaMat, 0)}\\text{ N/m}^3`} />
+                    ). Para a condição com percolação sob a base <MathTex tex="BC" />, comenta-se o efeito da
+                    subpressão <MathTex tex="U" /> sobre a distribuição das reações na base e avaliação de
+                    estabilidade (com hipótese clássica linear variando de{' '}
+                    <MathTex tex={`p_B = ${(apC.subpressao.fatorMontante * 100).toFixed(0)}\\%\\cdot \\gamma h`} /> em{' '}
+                    <MathTex tex="B" /> até{' '}
+                    <MathTex tex={`p_C = ${(apC.subpressao.fatorJusante * 100).toFixed(0)}\\%`} /> em{' '}
+                    <MathTex tex="C" />).
                   </>
                 ) : (
                   <>
@@ -229,30 +229,30 @@ export const Memorial: React.FC<MemorialProps> = ({
                     theme="slate"
                     label="Peso Específico da Água (a 20 °C)"
                     symbol={<MathTex tex="\gamma_{\text{água}}" />}
-                    formula={<MathTex tex="\rho_{\text{água}} \cdot g" />}
-                    substitution={<MathTex tex={`${density} \\cdot ${gravity}`} />}
-                    result={<MathTex tex={fmtBrTex(density * gravity, 1)} />}
+                    formula={<MathTex tex="\gamma_{20^\circ\text{C}}" />}
+                    substitution={<MathTex tex="9\,790" />}
+                    result={<MathTex tex={fmtBrTex(density * gravity, 0)} />}
                     unit={<MathTex tex="\text{N/m}^3" />}
                   />
                   <CalculationLine
                     theme="slate"
                     label="Densidade Relativa do Concreto"
                     symbol={<MathTex tex="d_{\text{conc}}" />}
-                    result={<MathTex tex={(st.concreteSpecificGravity ?? gammaMat / 9810).toFixed(2)} />}
+                    result={<MathTex tex={(st.concreteSpecificGravity ?? 2.4).toFixed(2)} />}
                     unit=""
                   />
                   <CalculationLine
                     theme="slate"
                     label="Peso Específico do Concreto"
                     symbol={<MathTex tex="\gamma_{\text{conc}}" />}
-                    formula={<MathTex tex="d_{\text{conc}} \cdot \gamma_{\text{ref}}" />}
+                    formula={<MathTex tex="d_{\text{conc}} \cdot \gamma_{\text{água}}" />}
                     substitution={
                       <MathTex
-                        tex={`${(st.concreteSpecificGravity ?? gammaMat / 9810).toFixed(2)} \\cdot 9\\,810`}
+                        tex={`${(st.concreteSpecificGravity ?? 2.4).toFixed(2)} \\cdot ${fmtBrTex(density * gravity, 0)}`}
                       />
                     }
-                    result={<MathTex tex={fmtBrTex(gammaMat / 1000, 2)} />}
-                    unit={<MathTex tex="\text{kN/m}^3" />}
+                    result={<MathTex tex={fmtBrTex(gammaMat, 0)} />}
+                    unit={<MathTex tex="\text{N/m}^3" />}
                   />
                 </div>
               </section>
@@ -307,38 +307,38 @@ export const Memorial: React.FC<MemorialProps> = ({
                     formula={<MathTex tex="\gamma_{\text{água}} \cdot h_{CG} \cdot A_{AB}" />}
                     substitution={
                       <MathTex
-                        tex={`${fmtP(apC.p_cg)} \\cdot ${fmtBrTex(apC.areaMolhadaTotal, 0)}`}
+                        tex={`${fmtBrTex(density * gravity, 0)} \\cdot ${(fd.up?.h_cg ?? 0).toFixed(2)} \\cdot ${fmtBrTex(apC.areaMolhadaTotal, 0)}`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalForceTex(apC.F_R_total)} />}
-                    unit={<MathTex tex={totalForceUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.F_R_total, 0)} />}
+                    unit={<MathTex tex="\text{N}" />}
                     isSubHeader
                   />
                   <CalculationLine
                     theme="blue"
-                    label="Componente Horizontal (Para Jusante +x)"
+                    label="Componente Horizontal (Para a Direita +x)"
                     symbol={<MathTex tex="F_H" />}
                     formula={<MathTex tex="F_{R,AB} \cdot \operatorname{sen}(\theta)" />}
                     substitution={
                       <MathTex
-                        tex={`${fmtTotalForceTex(apC.F_R_total)} \\cdot \\operatorname{sen}(${thetaUp.toFixed(2)}^\\circ)`}
+                        tex={`${fmtBrTex(apC.F_R_total, 0)} \\cdot \\operatorname{sen}(${thetaUp.toFixed(2)}^\\circ)`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalForceTex(apC.F_H_total)} />}
-                    unit={<MathTex tex={totalForceUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.F_H_total, 0)} />}
+                    unit={<MathTex tex="\text{N}" />}
                   />
                   <CalculationLine
                     theme="blue"
-                    label="Componente Vertical (Descendente sobre AB)"
+                    label="Componente Vertical (Atua para Baixo sobre AB)"
                     symbol={<MathTex tex="F_V" />}
                     formula={<MathTex tex="F_{R,AB} \cdot \cos(\theta)" />}
                     substitution={
                       <MathTex
-                        tex={`${fmtTotalForceTex(apC.F_R_total)} \\cdot \\cos(${thetaUp.toFixed(2)}^\\circ)`}
+                        tex={`${fmtBrTex(apC.F_R_total, 0)} \\cdot \\cos(${thetaUp.toFixed(2)}^\\circ)`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalForceTex(apC.F_V_total)} />}
-                    unit={<MathTex tex={totalForceUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.F_V_total, 0)} />}
+                    unit={<MathTex tex="\text{N}" />}
                   />
                 </div>
               </section>
@@ -452,10 +452,10 @@ export const Memorial: React.FC<MemorialProps> = ({
                     symbol={<MathTex tex="M_{F_H,C}" />}
                     formula={<MathTex tex="+F_H \cdot y_{CP}" />}
                     substitution={
-                      <MathTex tex={`${fmtTotalForceTex(apC.F_H_total)} \\cdot ${apC.y_cp_B.toFixed(2)}`} />
+                      <MathTex tex={`${fmtBrTex(apC.F_H_total, 0)} \\cdot ${apC.y_cp_B.toFixed(2)}`} />
                     }
-                    result={<MathTex tex={fmtTotalMomentTex(apC.M_FH_C_por_metro * apC.larguraLongitudinal)} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.M_FH_C_por_metro * apC.larguraLongitudinal, 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                   />
                   <CalculationLine
                     theme="amber"
@@ -464,24 +464,24 @@ export const Memorial: React.FC<MemorialProps> = ({
                     formula={<MathTex tex="-F_V \cdot (B_{BC} - x_{CP,B})" />}
                     substitution={
                       <MathTex
-                        tex={`-${fmtTotalForceTex(apC.F_V_total)} \\cdot (${st.actualBaseWidth.toFixed(1)} - ${apC.x_cp_B.toFixed(1)})`}
+                        tex={`-${fmtBrTex(apC.F_V_total, 0)} \\cdot (${st.actualBaseWidth.toFixed(1)} - ${apC.x_cp_B.toFixed(1)})`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalMomentTex(Math.abs(apC.M_FV_C_por_metro * apC.larguraLongitudinal))} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(Math.abs(apC.M_FV_C_por_metro * apC.larguraLongitudinal), 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                   />
                   <CalculationLine
                     theme="amber"
-                    label="Módulo do Momento Hidrostático Resultante em C"
-                    symbol={<MathTex tex="|M_{C,\text{hidro}}|" />}
+                    label="Momento Hidrostático Resultante em C (Anti-horário)"
+                    symbol={<MathTex tex="M_{C,\text{hidro}}" />}
                     formula={<MathTex tex="F_{R,AB} \cdot d_{\perp,C} = |M_{F_H,C} + M_{F_V,C}|" />}
                     substitution={
                       <MathTex
-                        tex={`${fmtTotalForceTex(apC.F_R_total)} \\cdot ${apC.braco_FR_C.toFixed(3)}`}
+                        tex={`${fmtBrTex(apC.F_R_total, 0)} \\cdot ${apC.braco_FR_C.toFixed(3)}`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalMomentTex(Math.abs(apC.M_hidro_C_total))} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(Math.abs(apC.M_hidro_C_total), 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                     isSubHeader
                   />
                 </div>
@@ -513,11 +513,11 @@ export const Memorial: React.FC<MemorialProps> = ({
                     formula={<MathTex tex="\gamma_{\text{conc}} \cdot V_{\text{barragem}}" />}
                     substitution={
                       <MathTex
-                        tex={`${fmtBrTex(gammaMat / 1000, 2)} \\cdot ${fmtBrTex(st.area * apC.larguraLongitudinal, 0)}`}
+                        tex={`${fmtBrTex(gammaMat, 0)} \\cdot ${fmtBrTex(st.area * apC.larguraLongitudinal, 0)}`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalForceTex(apC.W_total)} />}
-                    unit={<MathTex tex={totalForceUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.W_total, 0)} />}
+                    unit={<MathTex tex="\text{N}" />}
                     isSubHeader
                   />
                   <CalculationLine
@@ -544,10 +544,10 @@ export const Memorial: React.FC<MemorialProps> = ({
                     symbol={<MathTex tex="M_{W,C}" />}
                     formula={<MathTex tex="W \cdot b_{W,C}" />}
                     substitution={
-                      <MathTex tex={`${fmtTotalForceTex(apC.W_total)} \\cdot ${st.lever_arm_weight.toFixed(2)}`} />
+                      <MathTex tex={`${fmtBrTex(apC.W_total, 0)} \\cdot ${st.lever_arm_weight.toFixed(2)}`} />
                     }
-                    result={<MathTex tex={fmtTotalMomentTex(apC.M_W_C_total)} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.M_W_C_total, 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                     isSubHeader
                   />
                 </div>
@@ -557,43 +557,33 @@ export const Memorial: React.FC<MemorialProps> = ({
               <section>
                 <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <div className="w-6 h-px bg-emerald-300 dark:bg-emerald-800"></div>
-                  Etapa 7 – Verificação Sem Percolação (Fundação Impermeável)
+                  Etapa 7 – Verificação Qualitativa Sem Percolação (Fundação Impermeável)
                   <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
                 </h4>
                 <div className="bg-emerald-50/40 dark:bg-emerald-950/20 p-6 rounded-2xl border border-emerald-200/70 dark:border-emerald-900/50 space-y-3">
                   <CalculationLine
                     theme="emerald"
-                    label="Módulo do Momento Hidrostático em C"
-                    symbol={<MathTex tex="|M_{C,\text{hidro}}|" />}
-                    result={<MathTex tex={fmtTotalMomentTex(Math.abs(apC.M_hidro_C_total))} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
+                    label="Momento Hidrostático em C (Anti-horário)"
+                    symbol={<MathTex tex="M_{C,\text{hidro}}" />}
+                    result={<MathTex tex={fmtBrTex(Math.abs(apC.M_hidro_C_total), 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                   />
                   <CalculationLine
                     theme="emerald"
-                    label="Momento Resistente do Peso Próprio em C"
+                    label="Momento Resistente do Peso Próprio em C (Anti-horário)"
                     symbol={<MathTex tex="M_{W,C}" />}
-                    result={<MathTex tex={fmtTotalMomentTex(apC.M_W_C_total)} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
-                  />
-                  <CalculationLine
-                    theme="emerald"
-                    label="Fator de Segurança ao Tombamento (Sem Percolação)"
-                    symbol={<MathTex tex="FS_{\text{tomb,sem}}" />}
-                    formula={<MathTex tex="\frac{M_{W,C} + |M_{F_V,C}|}{M_{F_H,C}}" />}
-                    result={<MathTex tex={apC.fs_tomb_sem_percolacao.toFixed(2)} />}
-                    unit=""
-                    isSubHeader
+                    result={<MathTex tex={fmtBrTex(apC.M_W_C_total, 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                   />
                   <div className="text-xs text-emerald-950 dark:text-emerald-100 leading-relaxed pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50">
                     <strong>Resposta à pergunta do problema (Sem Percolação):</strong>{' '}
-                    <strong>Não, a força hidrostática sobre AB jamais poderia tombar a barragem.</strong> Como a face de
-                    montante <MathTex tex="AB" /> é fortemente inclinada (<MathTex tex={`\\theta = ${thetaUp.toFixed(2)}^\\circ`} />), a
-                    enorme componente vertical do peso da água sobre a rampa (<MathTex tex={`F_V = ${fmtTotalForceTex(apC.F_V_total)}\\;${totalForceUnitTex}`} />) passa a{' '}
-                    <MathTex tex="40{,}00\text{ m}" /> à esquerda de <MathTex tex="C" />, produzindo um momento anti-horário que anula e supera o momento tombante de{' '}
-                    <MathTex tex="F_H" />. Mesmo comparando o módulo{' '}
-                    <MathTex tex={`|M_{C,\\text{hidro}}| = ${fmtTotalMomentTex(Math.abs(apC.M_hidro_C_total))}\\;${totalMomentUnitTex}`} /> com o momento estabilizante do peso próprio{' '}
-                    <MathTex tex={`M_{W,C} = ${fmtTotalMomentTex(apC.M_W_C_total)}\\;${totalMomentUnitTex}`} />, o momento do peso é mais de{' '}
-                    <strong>10 vezes superior</strong>.
+                    <strong>Não, a força hidrostática sobre AB não poderia tombar a barragem.</strong> Conforme a
+                    resolução do livro de White, como o centro de pressão <MathTex tex="CP" /> (<MathTex tex="s_{CP} = 66{,}67\text{ m}" />)
+                    situa-se abaixo da projeção perpendicular de <MathTex tex="C" /> sobre <MathTex tex="AB" /> (<MathTex tex="AD = 64{,}00\text{ m}" />),
+                    a linha de ação de <MathTex tex="F_R" /> passa a <MathTex tex="d_{\perp,C} = 2{,}67\text{ m}" /> abaixo de <MathTex tex="D" />,
+                    produzindo um momento resultante no sentido <strong>anti-horário</strong> em torno de <MathTex tex="C" /> (
+                    <MathTex tex={`M_C = ${fmtBrTex(Math.abs(apC.M_hidro_C_total), 0)}\\text{ N}\\cdot\\text{m}`} />
+                    ), o qual atua contra o tombamento para a direita (somando-se ao momento anti-horário do peso próprio <MathTex tex="W" />).
                   </div>
                 </div>
               </section>
@@ -602,15 +592,16 @@ export const Memorial: React.FC<MemorialProps> = ({
               <section>
                 <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <div className="w-6 h-px bg-purple-300 dark:bg-purple-800"></div>
-                  Etapa 8 – Determinação da Subpressão sob a Fundação (Com Percolação)
+                  Etapa 8 – Efeito da Percolação sob a Fundação (Base BC)
                   <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
                 </h4>
                 <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-purple-100 dark:border-purple-900/50">
                   <div className="mb-3 p-3 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-xs text-purple-900 dark:text-purple-200 leading-relaxed">
-                    <strong>Hipótese de Cálculo Adotada:</strong> Considera-se distribuição linear/triangular de pressão
-                    de percolação sob a base <MathTex tex="BC" />, variando da pressão hidrostática máxima no pé de
-                    montante <MathTex tex="B" /> (<MathTex tex="p_B = \gamma_{\text{água}} \cdot h" />) até pressão
-                    manométrica nula na extremidade de jusante <MathTex tex="C" /> (<MathTex tex="p_C = 0" />).
+                    <strong>Interpretação Física da Percolação:</strong> A percolação de água sob a barragem modifica a
+                    distribuição das reações na base <MathTex tex="BC" /> e altera a avaliação da estabilidade ao gerar
+                    uma força de subpressão vertical para cima (<MathTex tex="U" />). Adotando distribuição linear desde{' '}
+                    <MathTex tex="p_B = \gamma_{\text{água}} \cdot h" /> em <MathTex tex="B" /> até <MathTex tex="p_C = 0" /> em{' '}
+                    <MathTex tex="C" />:
                   </div>
                   <CalculationLine
                     theme="indigo"
@@ -619,11 +610,11 @@ export const Memorial: React.FC<MemorialProps> = ({
                     formula={<MathTex tex="k_B \cdot \gamma_{\text{água}} \cdot h" />}
                     substitution={
                       <MathTex
-                        tex={`${apC.subpressao.fatorMontante.toFixed(2)} \\cdot ${fmtBrTex((density * gravity) / 1000, 3)} \\cdot ${hUp.toFixed(2)}`}
+                        tex={`${apC.subpressao.fatorMontante.toFixed(2)} \\cdot ${fmtBrTex(density * gravity, 0)} \\cdot ${hUp.toFixed(2)}`}
                       />
                     }
-                    result={<MathTex tex={fmtP(apC.subpressao.p_B)} />}
-                    unit={<MathTex tex={unitPTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.subpressao.p_B, 0)} />}
+                    unit={<MathTex tex="\text{Pa}" />}
                   />
                   <CalculationLine
                     theme="indigo"
@@ -632,11 +623,11 @@ export const Memorial: React.FC<MemorialProps> = ({
                     formula={<MathTex tex="\frac{1}{2} \cdot (p_B + p_C) \cdot B_{BC} \cdot b" />}
                     substitution={
                       <MathTex
-                        tex={`\\frac{1}{2} \\cdot ${fmtP(apC.subpressao.p_B)} \\cdot ${st.actualBaseWidth.toFixed(1)} \\cdot ${apC.larguraLongitudinal.toFixed(0)}`}
+                        tex={`\\frac{1}{2} \\cdot ${fmtBrTex(apC.subpressao.p_B, 0)} \\cdot ${st.actualBaseWidth.toFixed(1)} \\cdot ${apC.larguraLongitudinal.toFixed(0)}`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalForceTex(apC.subpressao.U_total)} />}
-                    unit={<MathTex tex={totalForceUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.subpressao.U_total, 0)} />}
+                    unit={<MathTex tex="\text{N}" />}
                     isSubHeader
                   />
                   <CalculationLine
@@ -650,16 +641,16 @@ export const Memorial: React.FC<MemorialProps> = ({
                   />
                   <CalculationLine
                     theme="indigo"
-                    label="Momento de Subpressão (Braço B/3 = 20 m – Referência Clássica)"
+                    label="Momento de Subpressão (Braço B/3 = 20 m)"
                     symbol={<MathTex tex="M_{U,\text{ref}}" />}
                     formula={<MathTex tex="U \cdot \frac{B_{BC}}{3}" />}
                     substitution={
                       <MathTex
-                        tex={`${fmtTotalForceTex(apC.subpressao.U_total)} \\cdot ${apC.subpressao.x_U.toFixed(2)}`}
+                        tex={`${fmtBrTex(apC.subpressao.U_total, 0)} \\cdot ${apC.subpressao.x_U.toFixed(2)}`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalMomentTex(apC.subpressao.M_U_ref_total)} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.subpressao.M_U_ref_total, 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                     isSubHeader
                   />
                   <CalculationLine
@@ -669,118 +660,78 @@ export const Memorial: React.FC<MemorialProps> = ({
                     formula={<MathTex tex="U \cdot (B_{BC} - x_U)" />}
                     substitution={
                       <MathTex
-                        tex={`${fmtTotalForceTex(apC.subpressao.U_total)} \\cdot ${apC.subpressao.braco_U_C.toFixed(2)}`}
+                        tex={`${fmtBrTex(apC.subpressao.U_total, 0)} \\cdot ${apC.subpressao.braco_U_C.toFixed(2)}`}
                       />
                     }
-                    result={<MathTex tex={fmtTotalMomentTex(apC.subpressao.M_U_C_total)} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
+                    result={<MathTex tex={fmtBrTex(apC.subpressao.M_U_C_total, 0)} />}
+                    unit={<MathTex tex="\text{N}\cdot\text{m}" />}
                   />
                 </div>
               </section>
 
               {/* ETAPA 9 */}
               <section>
-                <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <div className="w-6 h-px bg-purple-300 dark:bg-purple-800"></div>
-                  Etapa 9 – Verificação Com Percolação
-                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
-                </h4>
-                <div className="bg-purple-50/40 dark:bg-purple-950/20 p-6 rounded-2xl border border-purple-200/70 dark:border-purple-900/50 space-y-2">
-                  <CalculationLine
-                    theme="indigo"
-                    label="Soma dos Momentos Hidrostático + Subpressão (Braço 20 m)"
-                    symbol={<MathTex tex="|M_{C,\text{hidro}}| + M_{U,\text{ref}}" />}
-                    formula={<MathTex tex="|M_{C,\text{hidro}}| + U \cdot 20\text{ m}" />}
-                    substitution={
-                      <MathTex
-                        tex={`${fmtTotalMomentTex(Math.abs(apC.M_hidro_C_total))} + ${fmtTotalMomentTex(apC.subpressao.M_U_ref_total)}`}
-                      />
-                    }
-                    result={
-                      <MathTex
-                        tex={fmtTotalMomentTex(Math.abs(apC.M_hidro_C_total) + apC.subpressao.M_U_ref_total)}
-                      />
-                    }
-                    unit={<MathTex tex={totalMomentUnitTex} />}
-                    isSubHeader
-                  />
-                  <CalculationLine
-                    theme="indigo"
-                    label="Momento Resistente do Peso Próprio em C"
-                    symbol={<MathTex tex="M_{W,C}" />}
-                    result={<MathTex tex={fmtTotalMomentTex(apC.M_W_C_total)} />}
-                    unit={<MathTex tex={totalMomentUnitTex} />}
-                  />
-                  <CalculationLine
-                    theme="indigo"
-                    label="Fator de Segurança Global ao Tombamento (Com Percolação)"
-                    symbol={<MathTex tex="FS_{\text{tomb,com}}" />}
-                    formula={<MathTex tex="\frac{M_{W,C} + |M_{F_V,C}|}{M_{F_H,C} + M_{U,\text{ref}}}" />}
-                    result={<MathTex tex={apC.fs_tomb_com_percolacao.toFixed(2)} />}
-                    unit=""
-                    isSubHeader
-                  />
-                </div>
-              </section>
-
-              {/* ETAPA 10 */}
-              <section>
                 <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <div className="w-6 h-px bg-blue-300 dark:bg-blue-800"></div>
-                  Etapa 10 – Comparação entre as Condições e Conclusão Final
+                  Etapa 9 – Síntese dos Resultados (Largura Total 30 m vs Metro Linear 1 m)
                   <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
                 </h4>
                 <div className="bg-slate-50 dark:bg-slate-900/90 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60">
                       <div className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-1">
-                        A. Sem Percolação (U = 0)
+                        Valores Totais para Largura b = {apC.larguraLongitudinal.toFixed(0)} m
                       </div>
                       <ul className="text-xs text-slate-700 dark:text-slate-200 space-y-1">
                         <li>
-                          • Força em AB: <strong>{fmtTotalForceTex(apC.F_R_total)} kN</strong>
+                          • Força Hidrostática (<MathTex tex="F_R" />):{' '}
+                          <strong>{fmtBrTex(apC.F_R_total, 0)} N</strong> ({fmtTotalForceTex(apC.F_R_total)} kN)
                         </li>
                         <li>
-                          • Momento em C (<MathTex tex="|M_{C,\text{hidro}}|" />):{' '}
-                          <strong>{fmtTotalMomentTex(Math.abs(apC.M_hidro_C_total))} kN·m</strong>
+                          • Componentes: <MathTex tex="F_H" /> = <strong>{fmtBrTex(apC.F_H_total, 0)} N</strong> |{' '}
+                          <MathTex tex="F_V" /> = <strong>{fmtBrTex(apC.F_V_total, 0)} N</strong> (para baixo)
                         </li>
                         <li>
-                          • Momento do Peso (<MathTex tex="M_{W,C}" />):{' '}
-                          <strong>{fmtTotalMomentTex(apC.M_W_C_total)} kN·m</strong>
+                          • Momento em C (<MathTex tex="M_C" />):{' '}
+                          <strong>{fmtBrTex(Math.abs(apC.M_hidro_C_total), 0)} N·m</strong> (Anti-horário)
                         </li>
                         <li>
-                          • Status: <strong>Estável (Não tomba, FS = {apC.fs_tomb_sem_percolacao.toFixed(2)})</strong>
+                          • Tombamento sem percolação: <strong>Não pode tombar (momento anti-horário)</strong>
                         </li>
                       </ul>
                     </div>
-                    <div className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-1">
-                        B. Com Percolação (Hipótese Triangular)
+                    <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-1">
+                        Valores Equivalentes por Metro Linear (1 m)
                       </div>
                       <ul className="text-xs text-slate-700 dark:text-slate-200 space-y-1">
                         <li>
-                          • Subpressão (<MathTex tex="U" />):{' '}
-                          <strong>{fmtTotalForceTex(apC.subpressao.U_total)} kN</strong>
+                          • Força Resultante (<MathTex tex="F_R / b" />):{' '}
+                          <strong>{fmtBrTex(frUp / 1000, 0)} kN/m</strong>
                         </li>
                         <li>
-                          • Momento de Subpressão (<MathTex tex="20\text{ m}" />):{' '}
-                          <strong>{fmtTotalMomentTex(apC.subpressao.M_U_ref_total)} kN·m</strong>
+                          • Componente Horizontal (<MathTex tex="F_H / b" />):{' '}
+                          <strong>{fmtBrTex(fhUp / 1000, 0)} kN/m</strong>
                         </li>
                         <li>
-                          • Momento Combinado: <strong>{fmtTotalMomentTex(Math.abs(apC.M_hidro_C_total) + apC.subpressao.M_U_ref_total)} kN·m</strong>
+                          • Componente Vertical (<MathTex tex="F_V / b" />):{' '}
+                          <strong>{fmtBrTex(fvUp / 1000, 0)} kN/m</strong> (para baixo)
                         </li>
                         <li>
-                          • Status: <strong>Permanece Estável (FS = {apC.fs_tomb_com_percolacao.toFixed(2)}, porém com menor margem)</strong>
+                          • Centro de Pressão: <MathTex tex="s_{CP} = 66{,}67\text{ m}" />,{' '}
+                          <MathTex tex="h_p = 53{,}33\text{ m}" />, <MathTex tex="y_{CP} = 26{,}67\text{ m}" />
                         </li>
                       </ul>
                     </div>
                   </div>
                   <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                    <strong>Conclusão de Engenharia:</strong> A inclinação da face de montante <MathTex tex="AB" /> faz
-                    com que o próprio peso da água (<MathTex tex="F_V" />) ajude a ancorar a barragem contra o
-                    tombamento em torno de <MathTex tex="C" />. Quando há percolação por baixo da base <MathTex tex="BC" />,
-                    a subpressão <MathTex tex="U" /> atua verticalmente para cima, reduzindo a força normal efetiva na
-                    fundação e introduzindo um momento tombante significativo (<MathTex tex={`M_U \\approx ${fmtTotalMomentTex(apC.subpressao.M_U_ref_total)}\\text{ kN}\\cdot\\text{m}`} /> para braço de <MathTex tex="20\text{ m}" />, ou <MathTex tex={`${fmtTotalMomentTex(apC.subpressao.M_U_C_total)}\\text{ kN}\\cdot\\text{m}`} /> a <MathTex tex="40\text{ m}" /> de <MathTex tex="C" />). Ainda assim, o momento resistente do peso próprio do concreto (<MathTex tex={`M_{W,C} \\approx ${fmtTotalMomentTex(apC.M_W_C_total)}\\text{ kN}\\cdot\\text{m}`} />) garante a estabilidade contra o tombamento, evidenciando a importância de galerias de drenagem e cortinas de impermeabilização em barragens de gravidade.
+                    <strong>Interpretação Física:</strong> A inclinação da face de montante <MathTex tex="AB" /> faz
+                    com que a componente vertical descendente <MathTex tex="F_V" /> produza um momento anti-horário em
+                    relação a <MathTex tex="C" /> maior que o momento horário de <MathTex tex="F_H" />, resultando em um
+                    momento hidrostático líquido anti-horário (<MathTex tex={`M_C = ${fmtBrTex(Math.abs(apC.M_hidro_C_total), 0)}\\text{ N}\\cdot\\text{m}`} />)
+                    que não pode tombar a barragem para a direita na condição sem percolação. Caso ocorra percolação sob
+                    a barragem, a subpressão na base <MathTex tex="BC" /> modifica a distribuição das reações na fundação
+                    e introduz um momento horário tombante, alterando a avaliação da estabilidade.
                   </p>
                 </div>
               </section>
@@ -1176,7 +1127,7 @@ export const Memorial: React.FC<MemorialProps> = ({
             </div>
           </section>
 
-          {st && (
+          {st && !isTriangular3DMode && (
             <section>
               <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <div className="w-6 h-px bg-emerald-200 dark:bg-emerald-900"></div> Análise de Estabilidade{' '}

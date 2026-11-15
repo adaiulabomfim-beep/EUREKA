@@ -46,7 +46,7 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
   const [unitSystem, setUnitSystem] = useState<SistemaUnidadesBarragem>('SI');
   const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
 
-  const density = fluidKey === 'agua20C' ? 998.2 : 1000;
+  const density = fluidKey === 'agua20C' ? 9790 / 9.81 : 1000;
   const [gravity] = useState<number>(9.81);
 
   // UI STATE
@@ -242,14 +242,24 @@ export const Laboratorio: React.FC<DamLabProps> = ({ onContextUpdate }) => {
           ...(hasPercolation ? { 'Percolação / Subpressão': `Ativa (kB=${(upliftFactorUp * 100).toFixed(0)}%)` } : {}),
         },
         resultados: {
-          empuxo: liveResults.forceData.FR_net,
-          empuxoFormatado: fmtF(liveResults.forceData.FR_net),
-          peso: st?.weight,
-          pesoFormatado: st ? fmtF(st.weight) : undefined,
+          empuxo: st?.analisePontoC && (showTriangularMode || damWidth > 1)
+            ? st.analisePontoC.F_R_total
+            : liveResults.forceData.FR_net,
+          empuxoFormatado: st?.analisePontoC && (showTriangularMode || damWidth > 1)
+            ? `${st.analisePontoC.F_R_total.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} N (${fmtF(liveResults.forceData.FR_net)})`
+            : fmtF(liveResults.forceData.FR_net),
+          peso: st?.analisePontoC && (showTriangularMode || damWidth > 1) ? st.analisePontoC.W_total : st?.weight,
+          pesoFormatado: st
+            ? st.analisePontoC && (showTriangularMode || damWidth > 1)
+              ? `${st.analisePontoC.W_total.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} N`
+              : fmtF(st.weight)
+            : undefined,
           centroPressao: `${liveResults.forceData.y_cp_net.toFixed(2)} m (do fundo)`,
           segurancaOuStatus: st
             ? st.isArchDam
               ? `Efeito de Arco | N = ${fmtF(st.archThrust ?? 0)}`
+              : showTriangularMode && st.analisePontoC
+              ? `M_C = ${Math.abs(st.analisePontoC.M_hidro_C_total).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} N·m (Anti-horário — Não tomba)`
               : `FS Tomb: ${st.fs_tomb.toFixed(2)} | FS Desl: ${st.fs_desl.toFixed(2)}`
             : undefined,
         },

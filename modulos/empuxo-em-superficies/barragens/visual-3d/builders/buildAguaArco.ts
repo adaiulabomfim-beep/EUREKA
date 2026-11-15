@@ -11,9 +11,12 @@ export function buildAguaArcoGeometry(
   channelWidth: number,
   waterLevelY: number,
   side: "UPSTREAM" | "DOWNSTREAM",
-  segmentsZ: number = 64
+  segmentsZ: number = 64,
+  yStart: number = 0
 ): THREE.BufferGeometry | null {
-  if (waterLevelY <= 0) return null;
+  const y0 = Math.max(0, yStart);
+  const y1 = Math.max(y0, waterLevelY);
+  if (y1 - y0 <= 1e-6) return null;
 
   const { profile, actualBaseWidth } = construirGeometria(
     damHeight, damBaseWidth, damCrestWidth, inclinationAngle
@@ -25,12 +28,12 @@ export function buildAguaArcoGeometry(
 
   if (side === 'UPSTREAM') {
     farX = (profile[0].x - farExtension) - offsetBase;
-    X_front_base = profile[0].x;
-    X_front_top = interpolateX(waterLevelY, profile[0], profile[1]);
+    X_front_base = interpolateX(y0, profile[0], profile[1]);
+    X_front_top = interpolateX(y1, profile[0], profile[1]);
   } else {
     farX = (profile[3].x + farExtension) - offsetBase;
-    X_front_base = profile[3].x;
-    X_front_top = interpolateX(waterLevelY, profile[3], profile[2]);
+    X_front_base = interpolateX(y0, profile[3], profile[2]);
+    X_front_top = interpolateX(y1, profile[3], profile[2]);
   }
 
   const thetaMax = channelWidth / archRadius;
@@ -51,18 +54,18 @@ export function buildAguaArcoGeometry(
     const r0 = archRadius - (X_front_base - offsetBase);
     const x0 = archRadius - r0 * cosT;
     const z0 = r0 * sinT;
-    frontBasePts.push(new THREE.Vector3(x0, 0, z0));
+    frontBasePts.push(new THREE.Vector3(x0, y0, z0));
 
     const rH = archRadius - (X_front_top - offsetBase);
     const xH = archRadius - rH * cosT;
     const zH = rH * sinT;
-    frontTopPts.push(new THREE.Vector3(xH, waterLevelY, zH));
+    frontTopPts.push(new THREE.Vector3(xH, y1, zH));
   }
 
   // Back face points: flat along X, interpolando Z para acompanhar os limites
   for (let s = 0; s <= segmentsZ; s++) {
-    backBasePts.push(new THREE.Vector3(farX, 0, frontBasePts[s].z));
-    backTopPts.push(new THREE.Vector3(farX, waterLevelY, frontTopPts[s].z));
+    backBasePts.push(new THREE.Vector3(farX, y0, frontBasePts[s].z));
+    backTopPts.push(new THREE.Vector3(farX, y1, frontTopPts[s].z));
   }
 
   const vertices: number[] = [];

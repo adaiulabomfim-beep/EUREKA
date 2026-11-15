@@ -56,11 +56,18 @@ export const BarragemArcoScene: React.FC<any> = ({
     );
   }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, archRadius, channelWidth]);
 
+  const mudGeometry = useMemo(() => {
+    if (effMudHeight <= 1e-6) return null;
+    return buildAguaArcoGeometry(
+      damHeight, damBaseWidth, damCrestWidth, inclinationAngle, archRadius, channelWidth, effMudHeight, 'UPSTREAM', 64, 0
+    );
+  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, archRadius, channelWidth, effMudHeight]);
+
   const upstreamGeometry = useMemo(() => {
     return buildAguaArcoGeometry(
-      damHeight, damBaseWidth, damCrestWidth, inclinationAngle, archRadius, channelWidth, upstreamLevel, 'UPSTREAM'
+      damHeight, damBaseWidth, damCrestWidth, inclinationAngle, archRadius, channelWidth, upstreamLevel, 'UPSTREAM', 64, effMudHeight
     );
-  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, archRadius, channelWidth, upstreamLevel]);
+  }, [damHeight, damBaseWidth, damCrestWidth, inclinationAngle, archRadius, channelWidth, upstreamLevel, effMudHeight]);
 
   const downstreamGeometry = useMemo(() => {
     return buildAguaArcoGeometry(
@@ -78,10 +85,17 @@ export const BarragemArcoScene: React.FC<any> = ({
          <Edges color="#545e69" threshold={15} opacity={0.45} transparent />
       </mesh>
 
+      {/* Bottom Dense Liquid / Mud Layer */}
+      {mudGeometry && (
+        <mesh geometry={mudGeometry} receiveShadow>
+          <meshStandardMaterial color="#78350f" roughness={0.85} transparent opacity={0.92} />
+        </mesh>
+      )}
+
       {/* Upstream Water */}
       {upstreamGeometry && (
         <mesh geometry={upstreamGeometry} receiveShadow>
-          <AnimatedWaterMaterial minY={0} maxY={upstreamLevel} />
+          <AnimatedWaterMaterial minY={effMudHeight} maxY={upstreamLevel} />
         </mesh>
       )}
 

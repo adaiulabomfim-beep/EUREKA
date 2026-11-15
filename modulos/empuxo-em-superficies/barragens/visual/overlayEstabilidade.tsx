@@ -1,7 +1,186 @@
 import React from 'react';
-import { ResultadoEstabilidadeBarragem, SistemaUnidadesBarragem } from '../dominio/tipos';
+import {
+  ResultadoEstabilidadeBarragem,
+  ResultadoSuperficieRetangular,
+  SistemaUnidadesBarragem,
+} from '../dominio/tipos';
 
 type Pt = { x: number; y: number };
+
+export interface OpcoesCotasCentroPressao2D {
+  isAnalyzed: boolean;
+  upstreamLevel: number;
+  inclinationAngle: number;
+  up?: ResultadoSuperficieRetangular;
+  getDamXAtY: (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => number;
+  toWorldX: (x: number) => number;
+  project: (p: { x: number; y: number; z: number }) => Pt;
+}
+
+/**
+ * Renderiza as cotas geométricas HP (vertical) e YP (paralela à superfície inclinada)
+ * utilizando exclusivamente a interseção da superfície livre com a face molhada e as
+ * coordenadas reais do Centro de Pressão (CP) como referência única.
+ */
+export function renderizarCotasHPeYP2D(opts: OpcoesCotasCentroPressao2D): React.ReactNode[] {
+  const { isAnalyzed, upstreamLevel, inclinationAngle, up, getDamXAtY, toWorldX, project } = opts;
+  if (!isAnalyzed || !up || up.FR <= 0 || upstreamLevel <= 0) return [];
+
+  const ySurf = upstreamLevel;
+  const yCP = up.y_cp;
+
+  const xSurfWorld = toWorldX(getDamXAtY(ySurf, 'UPSTREAM'));
+  const xCPWorld = toWorldX(getDamXAtY(yCP, 'UPSTREAM'));
+
+  const pSurf = project({ x: xSurfWorld, y: ySurf, z: 0 });
+  const pCP = project({ x: xCPWorld, y: yCP, z: 0 });
+
+  const isVertical = Math.abs(inclinationAngle - 90) < 0.1;
+
+  const textHP = `HP = ${up.h_cp.toFixed(2)}m`;
+  const textYP = `YP = ${up.s_cp.toFixed(2)}m`;
+  const textW_HP = textHP.length * 7 + 10;
+  const textW_YP = textYP.length * 7 + 10;
+  const textH = 18;
+
+  const nodes: React.ReactNode[] = [];
+
+  if (isVertical) {
+    // Em superfícies verticais, exibir somente HP, ocultando YP por serem numericamente iguais
+    const xHP = pCP.x - 75;
+    const p1HP = { x: xHP, y: pSurf.y };
+    const p2HP = { x: xHP, y: pCP.y };
+    const cxHP = xHP - textW_HP / 2 - 8;
+    const cyHP = (p1HP.y + p2HP.y) / 2;
+
+    nodes.push(
+      <g key="cota-hp" stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.95" pointerEvents="none">
+        <line x1={pSurf.x} y1={pSurf.y} x2={p1HP.x} y2={p1HP.y} strokeDasharray="3 3" opacity="0.5" />
+        <line x1={pCP.x} y1={pCP.y} x2={p2HP.x} y2={p2HP.y} strokeDasharray="3 3" opacity="0.5" />
+        <line
+          x1={p1HP.x}
+          y1={p1HP.y}
+          x2={p2HP.x}
+          y2={p2HP.y}
+          markerStart="url(#arrow)"
+          markerEnd="url(#arrow)"
+        />
+        <rect x={cxHP - textW_HP / 2} y={cyHP - textH / 2} width={textW_HP} height={textH} fill="white" rx="3" stroke="none" />
+        <text
+          x={cxHP}
+          y={cyHP}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#475569"
+          fontSize="12"
+          fontWeight="700"
+          stroke="none"
+        >
+          {textHP}
+        </text>
+      </g>
+    );
+  } else {
+    // Superfície inclinada:
+    // COTA YP: paralela à face inclinada, iniciando na superfície livre (pSurf) e terminando no CP (pCP)
+    const dxFace = Math.abs(pSurf.x - pCP.x);
+    const dyFace = Math.abs(pCP.y - pSurf.y);
+    const lenFace = Math.hypot(dxFace, dyFace);
+    const sinSlope = lenFace > 1e-3 ? dyFace / lenFace : 1;
+    const tanSlope = dxFace > 1e-3 ? dyFace / dxFace : 10;
+    const dYP = Math.max(44, Math.min(64, Math.round(36 / Math.max(0.5, sinSlope))));
+
+    const p1YP = { x: pSurf.x - dYP, y: pSurf.y };
+    const p2YP = { x: pCP.x - dYP, y: pCP.y };
+    const midYP_X = (p1YP.x + p2YP.x) / 2;
+    const cyYP = (p1YP.y + p2YP.y) / 2;
+
+    // Deslocamento do texto de YP à esquerda da linha inclinada para manter a linha de cota 100% visível
+    const slopeClearancePx = (textH / 2) / Math.max(0.25, tanSlope);
+    const ypTextRightEdge = midYP_X - slopeClearancePx - 6;
+    const cxYP = ypTextRightEdge - textW_YP / 2;
+    const ypTextLeftEdge = ypTextRightEdge - textW_YP;
+
+    // COTA HP: rigorosamente vertical, da altura da superfície livre (pSurf.y) até a altura do CP (pCP.y)
+    const minX_YP = Math.min(p1YP.x, p2YP.x);
+    const xHP = Math.min(minX_YP - 24, ypTextLeftEdge - 16);
+
+    const p1HP = { x: xHP, y: pSurf.y };
+    const p2HP = { x: xHP, y: pCP.y };
+    const cxHP = xHP - textW_HP / 2 - 8;
+    const cyHP = (p1HP.y + p2HP.y) / 2;
+
+    nodes.push(
+      <g key="cota-hp" stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.95" pointerEvents="none">
+        <line x1={pSurf.x} y1={pSurf.y} x2={p1HP.x} y2={p1HP.y} strokeDasharray="3 3" opacity="0.5" />
+        <line x1={pCP.x} y1={pCP.y} x2={p2HP.x} y2={p2HP.y} strokeDasharray="3 3" opacity="0.5" />
+        <line
+          x1={p1HP.x}
+          y1={p1HP.y}
+          x2={p2HP.x}
+          y2={p2HP.y}
+          markerStart="url(#arrow)"
+          markerEnd="url(#arrow)"
+        />
+        <rect x={cxHP - textW_HP / 2} y={cyHP - textH / 2} width={textW_HP} height={textH} fill="white" rx="3" stroke="none" />
+        <text
+          x={cxHP}
+          y={cyHP}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#475569"
+          fontSize="12"
+          fontWeight="700"
+          stroke="none"
+        >
+          {textHP}
+        </text>
+      </g>
+    );
+
+    nodes.push(
+      <g key="cota-yp" stroke="#64748b" strokeWidth="1.6" fill="none" opacity="0.95" pointerEvents="none">
+        <line
+          x1={p1YP.x}
+          y1={p1YP.y}
+          x2={p2YP.x}
+          y2={p2YP.y}
+          markerStart="url(#arrow)"
+          markerEnd="url(#arrow)"
+        />
+        <rect x={cxYP - textW_YP / 2} y={cyYP - textH / 2} width={textW_YP} height={textH} fill="white" rx="3" stroke="none" />
+        <text
+          x={cxYP}
+          y={cyYP}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#475569"
+          fontSize="12"
+          fontWeight="700"
+          stroke="none"
+        >
+          {textYP}
+        </text>
+      </g>
+    );
+  }
+
+  nodes.push(
+    <circle
+      key="cp-point-ref"
+      cx={pCP.x}
+      cy={pCP.y}
+      r={4}
+      fill="#2563eb"
+      stroke="#ffffff"
+      strokeWidth="1.5"
+      pointerEvents="none"
+    />
+  );
+
+  return nodes;
+}
+
 
 export interface OpcoesOverlayEstabilidade {
   stability?: ResultadoEstabilidadeBarragem | null;

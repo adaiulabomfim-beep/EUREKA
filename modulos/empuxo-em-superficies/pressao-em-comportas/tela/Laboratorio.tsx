@@ -111,7 +111,9 @@ export const Laboratorio: React.FC<GatePressureLabProps> = ({ onContextUpdate })
       salvarNoHistorico({
         modulo: 'comportas',
         moduloNome: 'Comportas',
-        titulo: `Comporta ${gateShape} (${gateHeight}m × ${gateWidth}m)`,
+        titulo: activePresetKey && PRESETS[activePresetKey]
+          ? PRESETS[activePresetKey].title
+          : `Comporta ${gateShape} (${gateHeight}m × ${gateWidth}m)`,
         parametros: {
           'Forma': gateShape,
           'Estado': opLabel,

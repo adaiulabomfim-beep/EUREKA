@@ -41,19 +41,25 @@ export const simular = (config: ConfiguracaoSimulacaoBarragem): ResultadoSimulac
     gravity,
   } = config;
 
-  const gamma = density * gravity;
+  const gamma = config.fluidKey === 'agua20C' ? 9790 : density * gravity;
+  const exactTriAngle = damBaseWidth > 0 ? (Math.atan2(damHeight, damBaseWidth) * 180) / Math.PI : inclinationAngle;
+  const effectiveInclinationAngle =
+    damCrestWidth === 0 && damBaseWidth > 0 && Math.abs(inclinationAngle - exactTriAngle) < 0.05
+      ? exactTriAngle
+      : inclinationAngle;
+
   const { profile, actualBaseWidth } = construirGeometria(
     damHeight,
     damBaseWidth,
     damCrestWidth,
-    inclinationAngle
+    effectiveInclinationAngle
   );
 
   const thetaDown = obterAnguloJusanteDoPerfil(profile);
   const mudOpcoes = extrairOpcoesLama(hasMudLayer, mudHeight, mudDensity, upstreamLevel, gravity);
   const forceData = calcularHidrostatica(
     damHeight,
-    inclinationAngle,
+    effectiveInclinationAngle,
     upstreamLevel,
     downstreamLevel,
     gamma,
@@ -61,13 +67,12 @@ export const simular = (config: ConfiguracaoSimulacaoBarragem): ResultadoSimulac
     mudOpcoes
   );
 
-  // Para sim1/sim2 legadas (sem showTriangularMode nem d explícito), mantém γ_mat = 24000 N/m³;
-  // Quando showTriangularMode ou d_conc for informado, usa γ_conc = d_conc * ρ_ref * g (ou d_conc * γ_água)
+  // Quando showTriangularMode ou d_conc for informado, usa γ_conc = d_conc * γ_água (ex.: 2,40 * 9.790 = 23.496 N/m³)
   const dConc = concreteSpecificGravity ?? 2.4;
   const gammaConcrete = showTriangularMode
-    ? dConc * 1000 * gravity
+    ? dConc * gamma
     : concreteSpecificGravity !== undefined
-    ? dConc * 1000 * gravity
+    ? dConc * gamma
     : 24000;
 
   const stabilityData = calcularEstabilidadeBarragem(damHeight, profile, forceData, {

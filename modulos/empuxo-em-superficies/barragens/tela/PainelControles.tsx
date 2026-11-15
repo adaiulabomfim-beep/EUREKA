@@ -375,8 +375,8 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                 value={fluidKey}
                 onChange={(e) => setFluidKey(e.target.value as 'agua' | 'agua20C')}
               >
-                <option value="agua">Água Doce Padrão (ρ = 1.000 kg/m³ · γ = 9,81 kN/m³)</option>
-                <option value="agua20C">Água a 20 °C (ρ = 998,2 kg/m³ · γ ≈ 9,79 kN/m³)</option>
+                <option value="agua">Água Doce Padrão (ρ = 1.000 kg/m³ · γ = 9.810 N/m³)</option>
+                <option value="agua20C">Água a 20 °C (γ = 9.790 N/m³)</option>
               </select>
             </div>
           )}

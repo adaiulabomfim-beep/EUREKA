@@ -430,6 +430,16 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     setFloatingEquilibriumMode(false);
     setInterfaceEquilibriumMode(false);
     setAnchoredBuoyMode(false);
+    setBuoyDiameterM(1.5);
+    setBuoyWeightKN(8.5);
+    setRealWeightN(445);
+    setApparentWeightN(267);
+    setFluidSpecificWeight(9802);
+    setBodyRelativeDensity(7.85);
+    setUpperFluidRelativeDensity(1.0);
+    setLowerFluidRelativeDensity(13.56);
+    setIllustrativeWidthCm(80);
+    setIllustrativeHeightCm(90);
     setCurrentEnunciado(null);
     setTwoBlocks(false);
     setExtraWeight(0);
@@ -462,101 +472,111 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const EXERCISES = [
     {
       id: 'sim1',
-      title: 'Simulação 1: Cubo de Carvalho',
-      subtitle: 'Aresta 100 cm em Óleo de Soja (400 cm)',
-      enunciado: 'Um cubo de madeira (Carvalho, ρ = 750 kg/m³) com aresta de 100 cm é colocado em um reservatório contendo Óleo de Soja (ρ = 920 kg/m³) com 400 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.',
+      title: 'Simulação 1 – Boia Esférica Submersa Ancorada por Cabo',
+      subtitle: 'Boia Esférica: D = 1,50 m, W = 8,5 kN submersa em Água do Mar',
+      enunciado: 'A Fig. E2.10a mostra o esboço de uma boia, com diâmetro e peso iguais a 1,5 m e 8,5 kN, que está presa ao fundo do mar por um cabo. Normalmente, a boia flutua na superfície do mar, mas em certas ocasiões, o nível do mar sobe e a boia fica completamente submersa. Determine a força que tensiona o cabo na condição mostrada na figura.',
       load: () => {
         setIsSimulating(false);
+        setShowCalculations(false);
         setActiveExerciseId('sim1');
+        setAnchoredBuoyMode(true);
         setInverseSpecificWeightMode(false);
         setFloatingEquilibriumMode(false);
         setInterfaceEquilibriumMode(false);
-        setAnchoredBuoyMode(false);
-        setCurrentEnunciado('Um cubo de madeira (Carvalho, ρ = 750 kg/m³) com aresta de 100 cm é colocado em um reservatório contendo Óleo de Soja (ρ = 920 kg/m³) com 400 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
+        setBuoyDiameterM(1.5);
+        setBuoyWeightKN(8.5);
+        setCurrentEnunciado('A Fig. E2.10a mostra o esboço de uma boia, com diâmetro e peso iguais a 1,5 m e 8,5 kN, que está presa ao fundo do mar por um cabo. Normalmente, a boia flutua na superfície do mar, mas em certas ocasiões, o nível do mar sobe e a boia fica completamente submersa. Determine a força que tensiona o cabo na condição mostrada na figura.');
         setTwoBlocks(false);
         setExtraWeight(0);
-        setShape(ObjectShape.CUBE);
-        setDim1(100);
-        setSelectedMaterial('Madeira (Carvalho)');
-        setCustomObjDensity(750);
-        setSelectedFluid('Óleo de Soja');
-        setCustomFluidDensity(920);
+        setShape(ObjectShape.SPHERE);
+        setDim1(75);
+        setSelectedMaterial('Plástico (PVC)');
+        setCustomObjDensity(490.4);
+        setSelectedFluid('Água do Mar');
+        setCustomFluidDensity(1025);
         setEnableTwoFluids(false);
-        setDepthA(400);
-        setTankWidth(500);
-        setTankDepth(500);
-        setTankHeight(500);
+        setDepthA(280);
+        setTankWidth(320);
+        setTankDepth(320);
+        setTankHeight(310);
         setToastMsg('Simulação 1 Carregada!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     },
     {
       id: 'sim2',
-      title: 'Simulação 2: Cubo de Ouro',
-      subtitle: 'Aresta 200 cm em Mercúrio (Tanque 600x600 cm)',
-      enunciado: 'Um cubo de Ouro (ρ = 19300 kg/m³) com aresta de 200 cm é imerso em um reservatório de 600 × 600 cm contendo Mercúrio (ρ = 13534 kg/m³) com 600 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o peso aparente e o volume deslocado.',
+      title: 'Simulação 2 – Determinação do Peso Específico de um Corpo Imerso',
+      subtitle: 'Bloco de Concreto: P = 445 N, P_ap = 267 N em Água Doce (9.802 N/m³)',
+      enunciado: "Um bloco de concreto pesa 445 N no ar e 'pesa' apenas 267 N quando imerso em água doce (9.802 N/m³). Qual é o peso específico médio do bloco?",
       load: () => {
         setIsSimulating(false);
+        setShowCalculations(false);
         setActiveExerciseId('sim2');
-        setInverseSpecificWeightMode(false);
+        setAnchoredBuoyMode(false);
+        setInverseSpecificWeightMode(true);
         setFloatingEquilibriumMode(false);
         setInterfaceEquilibriumMode(false);
-        setAnchoredBuoyMode(false);
-        setCurrentEnunciado('Um cubo de Ouro (ρ = 19300 kg/m³) com aresta de 200 cm é imerso em um reservatório de 600 × 600 cm contendo Mercúrio (ρ = 13534 kg/m³) com 600 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o peso aparente e o volume deslocado.');
+        setRealWeightN(445);
+        setApparentWeightN(267);
+        setFluidSpecificWeight(9802);
+        setCurrentEnunciado("Um bloco de concreto pesa 445 N no ar e 'pesa' apenas 267 N quando imerso em água doce (9.802 N/m³). Qual é o peso específico médio do bloco?");
         setTwoBlocks(false);
         setExtraWeight(0);
         setShape(ObjectShape.CUBE);
-        setDim1(200);
-        setSelectedMaterial('Ouro');
-        setCustomObjDensity(19300);
-        setSelectedFluid('Mercúrio');
-        setCustomFluidDensity(13534);
+        setSelectedMaterial('Concreto');
+        setCustomObjDensity(2498);
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(9802 / 9.81);
         setEnableTwoFluids(false);
-        setDepthA(600);
-        setTankWidth(600);
-        setTankDepth(600);
-        setTankHeight(600);
+        setDepthA(80);
+        setTankWidth(90);
+        setTankDepth(90);
+        setTankHeight(100);
         setToastMsg('Simulação 2 Carregada!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     },
     {
       id: 'sim3',
-      title: 'Simulação 3: Esfera de Isopor',
-      subtitle: 'Raio 50 cm em Óleo de Soja (Tanque 500x500 cm)',
-      enunciado: 'Uma esfera de Isopor (ρ = 30 kg/m³) com raio de 50 cm é colocada em um tanque de 500 × 500 cm contendo Óleo de Soja (ρ = 920 kg/m³). Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.',
+      title: 'Simulação 3 – Determinação do Peso Específico pelo Empuxo',
+      subtitle: 'Bloco Retangular: P = 50 N, P_ap = 40 N em Água (10.000 N/m³)',
+      enunciado: 'Um bloco uniforme pesa 50 N no ar e, quando completamente submerso em água, tem 40 N de peso aparente. Determine o peso específico do material do bloco, sabendo que o da água é de 10.000 N/m³.',
       load: () => {
         setIsSimulating(false);
+        setShowCalculations(false);
         setActiveExerciseId('sim3');
-        setInverseSpecificWeightMode(false);
+        setAnchoredBuoyMode(false);
+        setInverseSpecificWeightMode(true);
         setFloatingEquilibriumMode(false);
         setInterfaceEquilibriumMode(false);
-        setAnchoredBuoyMode(false);
-        setCurrentEnunciado('Uma esfera de Isopor (ρ = 30 kg/m³) com raio de 50 cm é colocada em um tanque de 500 × 500 cm contendo Óleo de Soja (ρ = 920 kg/m³). Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.');
+        setRealWeightN(50);
+        setApparentWeightN(40);
+        setFluidSpecificWeight(10000);
+        setCurrentEnunciado('Um bloco uniforme pesa 50 N no ar e, quando completamente submerso em água, tem 40 N de peso aparente. Determine o peso específico do material do bloco, sabendo que o da água é de 10.000 N/m³.');
         setTwoBlocks(false);
         setExtraWeight(0);
-        setShape(ObjectShape.SPHERE);
-        setDim1(50);
-        setSelectedMaterial('Isopor');
-        setCustomObjDensity(30);
-        setSelectedFluid('Óleo de Soja');
-        setCustomFluidDensity(920);
+        setShape(ObjectShape.CUBE);
+        setSelectedMaterial('Ferro');
+        setCustomObjDensity(5000);
+        setSelectedFluid('Água Doce');
+        setCustomFluidDensity(1000);
         setEnableTwoFluids(false);
-        setDepthA(300);
-        setTankWidth(500);
-        setTankDepth(500);
-        setTankHeight(500);
+        setDepthA(80);
+        setTankWidth(90);
+        setTankDepth(90);
+        setTankHeight(100);
         setToastMsg('Simulação 3 Carregada!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     },
     {
       id: 'sim4',
-      title: 'Simulação 4: Esfera de Pinho',
+      title: 'Simulação 4 – Esfera de Madeira de Pinho em Água do Mar',
       subtitle: 'Raio 150 cm em Água do Mar (Tanque 1000x1000 cm)',
       enunciado: 'Uma esfera de Madeira (Pinho, ρ = 500 kg/m³) com raio de 150 cm é colocada em um tanque de 1000 × 1000 cm contendo Água do Mar (ρ = 1025 kg/m³) com 500 cm de profundidade. Determine o estado de equilíbrio, o empuxo, o volume deslocado e a altura submersa.',
       load: () => {
         setIsSimulating(false);
+        setShowCalculations(false);
         setActiveExerciseId('sim4');
         setInverseSpecificWeightMode(false);
         setFloatingEquilibriumMode(false);
@@ -582,177 +602,13 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     },
     {
       id: 'sim5',
-      title: 'Simulação 5: Cubo de Concreto (2 Líquidos)',
-      subtitle: 'Aresta 100 cm em Mel (300 cm) e Mercúrio (100 cm)',
-      enunciado: 'Um cubo de Concreto (ρ = 2400 kg/m³) com aresta de 100 cm é imerso em dois líquidos imiscíveis: Mel (superior, ρ = 1420 kg/m³, 300 cm) e Mercúrio (inferior, ρ = 13534 kg/m³, 100 cm). Determine o equilíbrio na interface e a fração submersa em cada fluido.',
-      load: () => {
-        setIsSimulating(false);
-        setActiveExerciseId('sim5');
-        setInverseSpecificWeightMode(false);
-        setFloatingEquilibriumMode(false);
-        setInterfaceEquilibriumMode(false);
-        setAnchoredBuoyMode(false);
-        setCurrentEnunciado('Um cubo de Concreto (ρ = 2400 kg/m³) com aresta de 100 cm é imerso em dois líquidos imiscíveis: Mel (superior, ρ = 1420 kg/m³, 300 cm) e Mercúrio (inferior, ρ = 13534 kg/m³, 100 cm). Determine o equilíbrio na interface e a fração submersa em cada fluido.');
-        setTwoBlocks(false);
-        setExtraWeight(0);
-        setShape(ObjectShape.CUBE);
-        setDim1(100);
-        setSelectedMaterial('Concreto');
-        setCustomObjDensity(2400);
-        setSelectedFluid('Mel');
-        setCustomFluidDensity(1420);
-        setDepthA(300);
-        setEnableTwoFluids(true);
-        setSelectedFluidB('Mercúrio');
-        setCustomFluidDensityB(13534);
-        setDepthB(100);
-        setTankWidth(500);
-        setTankDepth(500);
-        setTankHeight(500);
-        setToastMsg('Simulação 5 Carregada!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'ex_2_10',
-      title: 'Exemplo 2.10 – Boia Submersa Ancorada por Cabo',
-      subtitle: 'Boia Esférica: D = 1,5 m, W = 8,5 kN submersa em Água do Mar',
-      enunciado: 'A Fig. E2.10a mostra o esboço de uma boia, com diâmetro e peso iguais a 1,5 m e 8,5 kN, que está presa ao fundo do mar por um cabo. Normalmente, a boia flutua na superfície do mar, mas em certas ocasiões, o nível do mar sobe e a boia fica completamente submersa. Determine a força que tensiona o cabo na condição mostrada na figura.',
-      load: () => {
-        setIsSimulating(false);
-        setShowCalculations(false);
-        setActiveExerciseId('ex_2_10');
-        setAnchoredBuoyMode(true);
-        setInverseSpecificWeightMode(false);
-        setFloatingEquilibriumMode(false);
-        setInterfaceEquilibriumMode(false);
-        setBuoyDiameterM(1.5);
-        setBuoyWeightKN(8.5);
-        setCurrentEnunciado('A Fig. E2.10a mostra o esboço de uma boia, com diâmetro e peso iguais a 1,5 m e 8,5 kN, que está presa ao fundo do mar por um cabo. Normalmente, a boia flutua na superfície do mar, mas em certas ocasiões, o nível do mar sobe e a boia fica completamente submersa. Determine a força que tensiona o cabo na condição mostrada na figura.');
-        setTwoBlocks(false);
-        setExtraWeight(0);
-        setShape(ObjectShape.SPHERE);
-        setDim1(75);
-        setSelectedMaterial('Plástico (PVC)');
-        setCustomObjDensity(490.4);
-        setSelectedFluid('Água do Mar');
-        setCustomFluidDensity(1025);
-        setEnableTwoFluids(false);
-        setDepthA(280);
-        setTankWidth(320);
-        setTankDepth(320);
-        setTankHeight(310);
-        setToastMsg('Exemplo 2.10 Carregado!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'ex_2_11',
-      title: 'Exemplo 2.11 – Determinação do Peso Específico de um Corpo Imerso',
-      subtitle: 'Bloco de Concreto: P = 445 N, P_ap = 267 N em Água Doce (9.802 N/m³)',
-      enunciado: "Um bloco de concreto pesa 445 N no ar e 'pesa' apenas 267 N quando imerso em água doce (9.802 N/m³). Qual é o peso específico médio do bloco?",
-      load: () => {
-        setIsSimulating(false);
-        setActiveExerciseId('ex_2_11');
-        setAnchoredBuoyMode(false);
-        setInverseSpecificWeightMode(true);
-        setFloatingEquilibriumMode(false);
-        setInterfaceEquilibriumMode(false);
-        setRealWeightN(445);
-        setApparentWeightN(267);
-        setFluidSpecificWeight(9802);
-        setCurrentEnunciado("Um bloco de concreto pesa 445 N no ar e 'pesa' apenas 267 N quando imerso em água doce (9.802 N/m³). Qual é o peso específico médio do bloco?");
-        setTwoBlocks(false);
-        setExtraWeight(0);
-        setShape(ObjectShape.CUBE);
-        setSelectedMaterial('Concreto');
-        setCustomObjDensity(2498);
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(9802 / 9.81);
-        setEnableTwoFluids(false);
-        setDepthA(80);
-        setTankWidth(90);
-        setTankDepth(90);
-        setTankHeight(100);
-        setToastMsg('Exemplo 2.11 Carregado!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'questao_01',
-      title: 'Questão 01 – Determinação do Peso Específico pelo Peso Aparente',
-      subtitle: 'Bloco Retangular: P = 50 N, P_ap = 40 N em Água (10.000 N/m³)',
-      enunciado: 'Um bloco uniforme pesa 50 N no ar e, quando completamente submerso em água, tem 40 N de peso aparente. Determine o peso específico do material do bloco, sabendo que o da água é de 10.000 N/m³.',
-      load: () => {
-        setIsSimulating(false);
-        setActiveExerciseId('questao_01');
-        setAnchoredBuoyMode(false);
-        setInverseSpecificWeightMode(true);
-        setFloatingEquilibriumMode(false);
-        setInterfaceEquilibriumMode(false);
-        setRealWeightN(50);
-        setApparentWeightN(40);
-        setFluidSpecificWeight(10000);
-        setCurrentEnunciado('Um bloco uniforme pesa 50 N no ar e, quando completamente submerso em água, tem 40 N de peso aparente. Determine o peso específico do material do bloco, sabendo que o da água é de 10.000 N/m³.');
-        setTwoBlocks(false);
-        setExtraWeight(0);
-        setShape(ObjectShape.CUBE);
-        setSelectedMaterial('Ferro');
-        setCustomObjDensity(5000);
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
-        setEnableTwoFluids(false);
-        setDepthA(80);
-        setTankWidth(90);
-        setTankDepth(90);
-        setTankHeight(100);
-        setToastMsg('Questão 01 Carregada!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'prob_2_104',
-      title: 'Problema 2.104 – Equilíbrio de uma Lata Flutuante',
-      subtitle: 'Lata Cilíndrica: D = 9 cm, H = 11 cm (h_sub = 8 cm, h_em = 3 cm) em Água',
-      enunciado: 'A lata na Figura P2.104 flutua na posição mostrada. Qual é seu peso em N?',
-      load: () => {
-        setIsSimulating(false);
-        setActiveExerciseId('prob_2_104');
-        setAnchoredBuoyMode(false);
-        setInverseSpecificWeightMode(false);
-        setFloatingEquilibriumMode(true);
-        setInterfaceEquilibriumMode(false);
-        setCylinderDiameterCm(9);
-        setCylinderHeightCm(11);
-        setSubmergedHeightCm(8);
-        setCurrentEnunciado('A lata na Figura P2.104 flutua na posição mostrada. Qual é seu peso em N?');
-        setTwoBlocks(false);
-        setExtraWeight(0);
-        setShape(ObjectShape.CYLINDER);
-        setDim1(4.5);
-        setDim2(11);
-        setSelectedMaterial('Alumínio');
-        setCustomObjDensity(727.3);
-        setSelectedFluid('Água Doce');
-        setCustomFluidDensity(1000);
-        setEnableTwoFluids(false);
-        setDepthA(16);
-        setTankWidth(28);
-        setTankDepth(28);
-        setTankHeight(22);
-        setToastMsg('Problema 2.104 Carregado!');
-        setTimeout(() => setToastMsg(null), 1500);
-      }
-    },
-    {
-      id: 'prob_2_122',
-      title: 'Problema 2.122 – Equilíbrio de um Bloco de Aço na Interface Água-Mercúrio',
+      title: 'Simulação 5 – Equilíbrio de um Bloco de Aço na Interface Água-Mercúrio',
       subtitle: 'Aço (d = 7,85) na interface Água (d = 1,00) / Mercúrio (d = 13,56)',
       enunciado: "Um bloco uniforme de aço (d = 7,85) 'flutuará' em uma interface mercúrio-água, como mostra a Figura P2.122. Qual é a razão entre as distâncias a e b para essa condição?",
       load: () => {
         setIsSimulating(false);
         setShowCalculations(false);
-        setActiveExerciseId('prob_2_122');
+        setActiveExerciseId('sim5');
         setAnchoredBuoyMode(false);
         setInverseSpecificWeightMode(false);
         setFloatingEquilibriumMode(false);
@@ -780,7 +636,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         setTankWidth(260);
         setTankDepth(260);
         setTankHeight(230);
-        setToastMsg('Problema 2.122 Carregado!');
+        setToastMsg('Simulação 5 Carregada!');
         setTimeout(() => setToastMsg(null), 1500);
       }
     }
@@ -908,7 +764,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
               <option value="" disabled className="text-gray-800">Selecione uma simulação...</option>
               {EXERCISES.map(ex => (
                 <option key={ex.id} value={ex.id} className="text-gray-800">
-                  {ex.title} ({ex.subtitle})
+                  {ex.title}
                 </option>
               ))}
             </select>
@@ -1229,19 +1085,20 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                   const E_eq = physics.eqBuoyancyForce ?? physics.buoyancyForce;
                   const V_eq = physics.eqVolDeslocado ?? physics.vol_deslocado;
                   const H_eq = physics.eqHSubActual ?? physics.h_sub_actual;
+                  const activeEx = EXERCISES.find((ex) => ex.id === activeExerciseId);
                   salvarNoHistorico({
                     modulo: 'corpos-imersos',
                     moduloNome: 'Corpos Imersos',
-                    titulo: anchoredBuoyMode
-                      ? 'Exemplo 2.10 – Boia Submersa Ancorada por Cabo'
+                    titulo: activeEx
+                      ? activeEx.title
+                      : anchoredBuoyMode
+                      ? 'Simulação 1 – Boia Esférica Submersa Ancorada por Cabo'
                       : interfaceEquilibriumMode
-                      ? 'Problema 2.122 – Equilíbrio de um Bloco de Aço na Interface Água-Mercúrio'
-                      : floatingEquilibriumMode
-                      ? 'Problema 2.104 – Equilíbrio de uma Lata Flutuante'
-                      : activeExerciseId === 'questao_01'
-                      ? 'Questão 01 – Determinação do Peso Específico pelo Peso Aparente'
+                      ? 'Simulação 5 – Equilíbrio de um Bloco de Aço na Interface Água-Mercúrio'
+                      : activeExerciseId === 'sim3'
+                      ? 'Simulação 3 – Determinação do Peso Específico pelo Empuxo'
                       : inverseSpecificWeightMode
-                      ? 'Exemplo 2.11 – Determinação do Peso Específico de um Corpo Imerso'
+                      ? 'Simulação 2 – Determinação do Peso Específico de um Corpo Imerso'
                       : `Corpo ${shape} (${selectedMaterial || 'Personalizado'})`,
                     parametros: anchoredBuoyMode
                       ? {

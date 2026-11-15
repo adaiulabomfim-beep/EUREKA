@@ -116,58 +116,115 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             >
               <div className="flex items-center justify-between border-b border-emerald-200/70 dark:border-emerald-800/50 pb-1.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-300">
-                  A. Condição Sem Percolação (U = 0)
+                  Valores Totais na Largura (b = {apC.larguraLongitudinal.toFixed(2).replace('.', ',')} m)
                 </span>
                 <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 uppercase">
-                  b = {apC.larguraLongitudinal.toFixed(0)} m
+                  Total ({apC.larguraLongitudinal.toFixed(0)} m)
                 </span>
               </div>
 
-              <ResultsCard
-                title="Força Hidrostática Resultante (AB)"
-                value={formatTotalForce(apC.F_R_total)}
-                unit={totalForceUnit}
-                theme="blue"
-                leftIcon={Droplets}
-                secondaryValue={`FH = ${formatTotalForce(apC.F_H_total)} ${totalForceUnit} | FV = ${formatTotalForce(apC.F_V_total)} ${totalForceUnit} (${formatForceVal(fd.up.FR)} ${forceUnit})`}
-              />
+              <div className="rounded-xl border-y border-r border-l-[4px] border-slate-100 dark:border-slate-800 border-l-slate-400 bg-white dark:bg-slate-900/90 py-2.5 px-3 shadow-sm">
+                <div className="text-[9.5px] font-bold uppercase tracking-tight text-slate-400">
+                  Área Molhada (AB) e Centroide
+                </div>
+                <div className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                  A_AB = {fmtBrNum(apC.areaMolhadaTotal, 2)} m² | h_CG = {fmtBrNum(fd.up.h_cg, 2)} m
+                </div>
+                <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium">
+                  L_AB = {fmtBrNum(apC.L_AB, 2)} m | θ = {fd.thetaUp.toFixed(2).replace('.', ',')}°
+                </div>
+              </div>
 
-              <ResultsCard
-                title="Centro de Pressão (Face AB)"
-                value={`h_CP = ${fd.up.h_cp.toFixed(2).replace('.', ',')} m (hp)`}
-                unit=""
-                theme="cyan"
-                leftIcon={MoveVertical}
-                secondaryValue={`yp (Inclinado) = ${fd.up.s_cp.toFixed(2).replace('.', ',')} m | Dist. ao Fundo = ${fd.up.y_cp.toFixed(2).replace('.', ',')} m`}
-              />
+              <div className="rounded-xl border-y border-r border-l-[4px] border-slate-100 dark:border-slate-800 border-l-blue-600 bg-white dark:bg-slate-900/90 py-2.5 px-3 shadow-sm">
+                <div className="text-[9.5px] font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400">
+                  Força Hidrostática Total sobre AB (b = {apC.larguraLongitudinal.toFixed(0)} m)
+                </div>
+                <div className="text-[15px] font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                  F_R = {isKgf ? fmtBrNum(apC.F_R_total / gravity, 0) : fmtBrNum(apC.F_R_total, 0)} {isKgf ? 'kgf' : 'N'}
+                </div>
+                <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium">
+                  ({formatTotalForce(apC.F_R_total)} {totalForceUnit} — perpendicular ao paramento AB)
+                </div>
+              </div>
 
-              <ResultsCard
-                title="Momento Hidrostático em C (M_C)"
-                value={formatTotalMoment(Math.abs(apC.M_hidro_C_total))}
-                unit={totalMomentUnit}
-                theme={apC.M_hidro_C_total > 0 ? 'amber' : 'green'}
-                leftIcon={RotateCw}
-                secondaryValue={`Sentido: ${
-                  apC.M_hidro_C_total > 0 ? 'Horário (Tombante +)' : 'Anti-horário (Estabilizante)'
-                } | d_⊥,C = ${apC.braco_FR_C.toFixed(3).replace('.', ',')} m`}
-              />
+              <div className="rounded-xl border-y border-r border-l-[4px] border-slate-100 dark:border-slate-800 border-l-blue-500 bg-white dark:bg-slate-900/90 py-2.5 px-3 shadow-sm">
+                <div className="text-[9.5px] font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400">
+                  Componentes da Força (b = {apC.larguraLongitudinal.toFixed(0)} m)
+                </div>
+                <div className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5 space-y-0.5">
+                  <div>F_H = {isKgf ? fmtBrNum(apC.F_H_total / gravity, 0) : fmtBrNum(apC.F_H_total, 0)} {isKgf ? 'kgf' : 'N'} (horizontal →)</div>
+                  <div>F_V = {isKgf ? fmtBrNum(apC.F_V_total / gravity, 0) : fmtBrNum(apC.F_V_total, 0)} {isKgf ? 'kgf' : 'N'} (vertical ↓)</div>
+                </div>
+                <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium">
+                  A componente vertical F_V atua para baixo sobre a barragem
+                </div>
+              </div>
 
-              <ResultsCard
-                title="Peso Próprio (W) e Momento em C"
-                value={formatTotalForce(apC.W_total)}
-                unit={totalForceUnit}
-                theme="slate"
-                leftIcon={Construction}
-                secondaryValue={`M_W,C = ${formatTotalMoment(apC.M_W_C_total)} ${totalMomentUnit} (Anti-horário estabilizante | x_CG = ${st.x_cg.toFixed(1)} m)`}
-              />
+              <div className="rounded-xl border-y border-r border-l-[4px] border-slate-100 dark:border-slate-800 border-l-cyan-500 bg-white dark:bg-slate-900/90 py-2.5 px-3 shadow-sm">
+                <div className="text-[9.5px] font-bold uppercase tracking-tight text-cyan-600 dark:text-cyan-400">
+                  Centro de Pressão (CP sobre AB)
+                </div>
+                <div className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5 space-y-0.5">
+                  <div>• Ao longo de AB (a partir de A): {fmtBrNum(fd.up.s_cp, 2)} m</div>
+                  <div>• Profundidade vertical (abaixo da sup.): {fmtBrNum(fd.up.h_cp, 2)} m</div>
+                  <div>• Altura vertical acima da base: {fmtBrNum(fd.up.y_cp, 2)} m</div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border-y border-r border-l-[4px] border-slate-100 dark:border-slate-800 border-l-emerald-500 bg-white dark:bg-slate-900/90 py-2.5 px-3 shadow-sm">
+                <div className="text-[9.5px] font-bold uppercase tracking-tight text-emerald-600 dark:text-emerald-400">
+                  Momento em Relação ao Ponto C (M_C)
+                </div>
+                <div className="text-[15px] font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                  M_C = {isKgf ? fmtBrNum(Math.abs(apC.M_hidro_C_total) / gravity, 0) : fmtBrNum(Math.abs(apC.M_hidro_C_total), 0)} {isKgf ? 'kgf·m' : 'N·m'}
+                </div>
+                <div className="text-[10px] mt-0.5 text-emerald-700 dark:text-emerald-400 font-bold">
+                  Sentido: {apC.M_hidro_C_total > 0 ? 'Horário' : 'Anti-horário'} | Braço d_⊥,C = {fmtBrNum(apC.braco_FR_C, 2)} m
+                </div>
+              </div>
 
               <div className="p-2.5 rounded-xl bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-[11px] leading-snug text-emerald-950 dark:text-emerald-100">
                 <div className="font-black uppercase text-[10px] text-emerald-800 dark:text-emerald-300 mb-0.5">
-                  Avaliação de Tombamento (Sem Percolação):
+                  Verificação Qualitativa de Tombamento (Sem Percolação):
                 </div>
                 <div>
-                  <strong>Não pode tombar a barragem.</strong> A componente vertical <span className="font-bold">FV</span> sobre a face inclinada AB gera momento anti-horário estabilizante em C que reduz drasticamente o momento líquido de <span className="font-bold">FR</span> ({formatTotalMoment(Math.abs(apC.M_hidro_C_total))} {totalMomentUnit} ≪ M_W,C = {formatTotalMoment(apC.M_W_C_total)} {totalMomentUnit}, FS_tomb = {apC.fs_tomb_sem_percolacao.toFixed(2).replace('.', ',')}).
+                  <strong>A força hidrostática não pode tombar a barragem.</strong> A resultante <span className="font-bold">F_R</span> produz momento no sentido <strong>anti-horário</strong> em relação ao ponto C (<span className="font-mono">M_C = {fmtBrNum(Math.abs(apC.M_hidro_C_total), 0)} N·m</span>), pois o momento estabilizante da componente vertical descendente <span className="font-bold">F_V</span> supera o momento horário de <span className="font-bold">F_H</span>, impedindo o tombamento para a direita.
                 </div>
+              </div>
+            </div>
+
+            {/* BLOCO UNITÁRIO: POR METRO LINEAR DE BARRAGEM */}
+            <div className="rounded-2xl border border-blue-200 dark:border-blue-800/70 bg-blue-50/40 dark:bg-blue-950/20 p-3 space-y-2">
+              <div className="flex items-center justify-between border-b border-blue-200/70 dark:border-blue-800/50 pb-1.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-800 dark:text-blue-300">
+                  Valores Equivalentes por Metro Linear (1,00 m)
+                </span>
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200">
+                  Unitário (1 m)
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800">
+                  <div className="text-[9px] font-black text-slate-400 uppercase">F_R (1 m)</div>
+                  <div className="text-xs font-black text-blue-700 dark:text-blue-300">
+                    {fmtBrNum(fd.up.FR / 1000, 0)} kN/m
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800">
+                  <div className="text-[9px] font-black text-slate-400 uppercase">F_H (1 m)</div>
+                  <div className="text-xs font-black text-blue-700 dark:text-blue-300">
+                    {fmtBrNum(fd.up.FH / 1000, 0)} kN/m
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800">
+                  <div className="text-[9px] font-black text-slate-400 uppercase">F_V (1 m)</div>
+                  <div className="text-xs font-black text-blue-700 dark:text-blue-300">
+                    {fmtBrNum(fd.up.FV / 1000, 0)} kN/m
+                  </div>
+                </div>
+              </div>
+              <div className="text-[10px] text-slate-600 dark:text-slate-300 font-medium text-center">
+                γ_água (20 °C) = {fmtBrNum(st.analisePontoC ? st.analisePontoC.p_cg / Math.max(1e-6, fd.up.h_cg) : 9790, 0)} N/m³ | γ_concreto (d = {(st.concreteSpecificGravity ?? 2.4).toFixed(2).replace('.', ',')}) = {fmtBrNum(st.gammaMaterial, 0)} N/m³
               </div>
             </div>
 
@@ -181,42 +238,42 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             >
               <div className="flex items-center justify-between border-b border-purple-200/70 dark:border-purple-800/50 pb-1.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-purple-800 dark:text-purple-300">
-                  B. Condição Com Percolação (Subpressão U)
+                  B. Avaliação com Percolação (Base BC)
                 </span>
                 <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200">
-                  Hipótese Triangular
+                  Subpressão U
                 </span>
               </div>
 
               <ResultsCard
-                title="Força de Subpressão na Base (U)"
-                value={formatTotalForce(apC.subpressao.U_total)}
-                unit={totalForceUnit}
+                title={`Força de Subpressão na Base U (b = ${apC.larguraLongitudinal.toFixed(0)} m)`}
+                value={isKgf ? fmtBrNum(apC.subpressao.U_total / gravity, 0) : fmtBrNum(apC.subpressao.U_total, 0)}
+                unit={isKgf ? 'kgf' : 'N'}
                 theme="amber"
                 leftIcon={AlertCircle}
                 secondaryValue={`p_B = ${formatPressureVal(apC.subpressao.p_B)} ${pressureUnit} → p_C = ${formatPressureVal(apC.subpressao.p_C)} ${pressureUnit} | Braço B/3 = ${apC.subpressao.x_U.toFixed(1).replace('.', ',')} m`}
               />
 
               <ResultsCard
-                title="Momento de Subpressão em C (M_U,C)"
-                value={formatTotalMoment(apC.subpressao.M_U_ref_total)}
-                unit={totalMomentUnit}
+                title="Momento de Subpressão (M_U)"
+                value={isKgf ? fmtBrNum(apC.subpressao.M_U_ref_total / gravity, 0) : fmtBrNum(apC.subpressao.M_U_ref_total, 0)}
+                unit={isKgf ? 'kgf·m' : 'N·m'}
                 theme="red"
                 leftIcon={RotateCw}
-                secondaryValue={`Braço 20 m (B/3): ${formatTotalMoment(apC.subpressao.M_U_ref_total)} ${totalMomentUnit} | Dist. 40 m (2B/3 a C): ${formatTotalMoment(apC.subpressao.M_U_C_total)} ${totalMomentUnit}`}
+                secondaryValue={`Braço 20 m (B/3): ${formatTotalMoment(apC.subpressao.M_U_ref_total)} ${totalMomentUnit} | Braço 40 m (até C): ${formatTotalMoment(apC.subpressao.M_U_C_total)} ${totalMomentUnit}`}
               />
 
               <ResultsCard
-                title="Momento Total Hidrostático + Subpressão"
-                value={formatTotalMoment(Math.abs(apC.M_hidro_C_total) + apC.subpressao.M_U_ref_total)}
-                unit={totalMomentUnit}
-                theme={apC.estavel_com_percolacao ? 'green' : 'red'}
-                leftIcon={ShieldCheck}
-                secondaryValue={`Estab. M_W,C = ${formatTotalMoment(apC.M_W_C_total)} ${totalMomentUnit} | FS_tomb = ${apC.fs_tomb_com_percolacao.toFixed(2).replace('.', ',')}`}
+                title={`Peso Próprio do Concreto W (b = ${apC.larguraLongitudinal.toFixed(0)} m)`}
+                value={isKgf ? fmtBrNum(apC.W_total / gravity, 0) : fmtBrNum(apC.W_total, 0)}
+                unit={isKgf ? 'kgf' : 'N'}
+                theme="slate"
+                leftIcon={Construction}
+                secondaryValue={`M_W,C = ${isKgf ? fmtBrNum(apC.M_W_C_total / gravity, 0) : fmtBrNum(apC.M_W_C_total, 0)} ${isKgf ? 'kgf·m' : 'N·m'} (Anti-horário | b_W,C = ${st.lever_arm_weight.toFixed(1).replace('.', ',')} m)`}
               />
 
               <div className="p-2.5 rounded-xl bg-purple-100/70 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-800 text-[10.5px] leading-snug text-purple-950 dark:text-purple-100">
-                <strong>Nota sobre hipótese adotada:</strong> A distribuição triangular sob a base BC (<span className="font-mono">p_B = γ·h</span> até <span className="font-mono">p_C = 0</span>) é uma hipótese clássica de engenharia adotada para avaliar a percolação (não fornecida no enunciado). Com braço de <strong>{apC.subpressao.x_U.toFixed(0)} m</strong>, <span className="font-mono">M_U = {formatTotalMoment(apC.subpressao.M_U_ref_total)} {totalMomentUnit}</span> (ou <strong>{formatTotalMoment(apC.subpressao.M_U_C_total)} {totalMomentUnit}</strong> medido a {apC.subpressao.braco_U_C.toFixed(0)} m de C), e a barragem permanece estável (<span className="font-mono">M_W,C = {formatTotalMoment(apC.M_W_C_total)} {totalMomentUnit}</span>).
+                <strong>Efeito da percolação sob a barragem:</strong> A percolação sob a base BC introduz subpressão vertical para cima (<span className="font-mono">U</span>), modificando a distribuição das reações na fundação e produzindo momento horário (tombante) em relação a C, o que altera a avaliação da estabilidade da barragem.
               </div>
             </div>
           </>

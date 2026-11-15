@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { renderizarCotasHPeYP2D } from '../../visual/overlayEstabilidade';
 import { RenderizadorBarragensProps } from '../../dominio/tipos';
 import { construirGeometria } from './geometria';
 import {
@@ -289,51 +290,55 @@ export const Vista2D: React.FC<RenderizadorBarragensProps & { is3D: boolean, set
       dims.push(drawLevelSymbol('upstreamLevel', xBase, upstreamLevel, `NA=${upstreamLevel.toFixed(2)}`, true, 82));
     }
 
+    const effMud = hasMudLayer && mudHeight > 0 ? Math.min(mudHeight, upstreamLevel) : 0;
+    if (effMud > 0) {
+      const pL = project({ x: toWorldX(farLeft), y: effMud, z: 0 });
+      const pR = project({ x: toWorldX(getDamXAtY(effMud, 'UPSTREAM')), y: effMud, z: 0 });
+      const mudLabelX = Math.max(pL.x + 8, Math.min(pR.x - 165, 28));
+      dims.push(
+        <g key="mud-interface" pointerEvents="none">
+          <line
+            x1={pL.x}
+            y1={pL.y}
+            x2={pR.x}
+            y2={pR.y}
+            stroke="#fbbf24"
+            strokeWidth="1.3"
+            strokeDasharray="5 3"
+            opacity="0.85"
+          />
+          <text
+            x={mudLabelX}
+            y={pL.y - 5}
+            fill="#fef3c7"
+            fontSize="10"
+            fontWeight="bold"
+            stroke="#78350f"
+            strokeWidth="2.5"
+            paintOrder="stroke"
+          >
+            Lama = {effMud.toFixed(2)}m (d={(mudDensity / 1000).toFixed(2)})
+          </text>
+        </g>
+      );
+    }
+
     if (downstreamLevel > 0) {
       const xBase = toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM')) + 1;
       dims.push(drawLevelSymbol('downstreamLevel', xBase, downstreamLevel, `NA=${downstreamLevel.toFixed(2)}`, true, SVG_W - 28));
     }
 
-    if (isAnalyzed && up && up.FR > 0) {
-      const xTop = getDamXAtY(upstreamLevel, 'UPSTREAM');
-      const xCP = getDamXAtY(up.y_cp, 'UPSTREAM');
-      const isVertical = Math.abs(inclinationAngle - 90) < 0.1;
-
-      dims.push(
-        drawDim(
-          'hp',
-          { x: xTop, y: upstreamLevel },
-          { x: xTop, y: up.y_cp },
-          `HP = ${up.h_cp.toFixed(2)}m`,
-          { x: -120, y: 0 },
-          { x: -40, y: 0 }
-        )
-      );
-
-      if (!isVertical) {
-        dims.push(
-          drawDim(
-            'yp',
-            { x: xTop, y: upstreamLevel },
-            { x: xCP, y: up.y_cp },
-            `YP = ${up.s_cp.toFixed(2)}m`,
-            { x: -55, y: 0 },
-            { x: -40, y: 0 }
-          )
-        );
-      }
-
-      dims.push(
-        drawDim(
-          'distFundo',
-          { x: xTop - 2, y: 0 },
-          { x: xTop - 2, y: up.y_cp },
-          `Fundo = ${up.y_cp.toFixed(2)}m`,
-          { x: -180, y: 0 },
-          { x: -40, y: 0 }
-        )
-      );
-    }
+    dims.push(
+      ...renderizarCotasHPeYP2D({
+        isAnalyzed,
+        upstreamLevel,
+        inclinationAngle,
+        up,
+        getDamXAtY,
+        toWorldX,
+        project,
+      })
+    );
 
     const actualAngleRad = (inclinationAngle * Math.PI) / 180;
     const actualAngleDeg = inclinationAngle;

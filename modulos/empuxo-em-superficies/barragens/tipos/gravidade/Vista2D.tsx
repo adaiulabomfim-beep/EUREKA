@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { renderizarEstabilidade2D } from '../../visual/overlayEstabilidade';
+import { renderizarCotasHPeYP2D, renderizarEstabilidade2D } from '../../visual/overlayEstabilidade';
 import { RenderizadorBarragensProps } from '../../dominio/tipos';
 import { construirGeometria } from './geometria';
 import {
@@ -180,6 +180,10 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     autoFitParams
   );
 
+  const isTriangularABCMode = Boolean(
+    props.showTriangularMode || (damCrestWidth <= 0.01 && (props.damWidth ?? 1) > 1.001)
+  );
+
   const vectors = useMemo(
     () =>
       gerarVetoresBarragem2D({
@@ -203,7 +207,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         hasMudLayer,
         mudHeight,
         mudDensity,
-      }),
+      }).map((v) => (isTriangularABCMode && v.isResultant ? { ...v, val: '' } : v)),
     [
       showVectors,
       isAnalyzed,
@@ -222,6 +226,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       hasMudLayer,
       mudHeight,
       mudDensity,
+      isTriangularABCMode,
     ]
   );
 
@@ -448,46 +453,17 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       dims.push(drawLevelSymbol('downstreamLevel', xBase, downstreamLevel, `NA=${downstreamLevel.toFixed(2)}`, true, SVG_W - 28));
     }
 
-    if (isAnalyzed && up && up.FR > 0) {
-      const xTop = getDamXAtY(upstreamLevel, 'UPSTREAM');
-      const xCP = getDamXAtY(up.y_cp, 'UPSTREAM');
-      const isVertical = Math.abs(inclinationAngle - 90) < 0.1;
-
-      dims.push(
-        drawDim(
-          'hp',
-          { x: xTop, y: upstreamLevel },
-          { x: xTop, y: up.y_cp },
-          `HP = ${up.h_cp.toFixed(2)}m`,
-          { x: -120, y: 0 },
-          { x: -40, y: 0 }
-        )
-      );
-
-      if (!isVertical) {
-        dims.push(
-          drawDim(
-            'yp',
-            { x: xTop, y: upstreamLevel },
-            { x: xCP, y: up.y_cp },
-            `YP = ${up.s_cp.toFixed(2)}m`,
-            { x: -55, y: 0 },
-            { x: -40, y: 0 }
-          )
-        );
-      }
-
-      dims.push(
-        drawDim(
-          'distFundo',
-          { x: xTop - 2, y: 0 },
-          { x: xTop - 2, y: up.y_cp },
-          `Fundo = ${up.y_cp.toFixed(2)}m`,
-          { x: -180, y: 0 },
-          { x: -40, y: 0 }
-        )
-      );
-    }
+    dims.push(
+      ...renderizarCotasHPeYP2D({
+        isAnalyzed,
+        upstreamLevel,
+        inclinationAngle,
+        up,
+        getDamXAtY,
+        toWorldX,
+        project,
+      })
+    );
 
     const isTriangularABC = Boolean(
       props.showTriangularMode || (damCrestWidth <= 0.01 && (props.damWidth ?? 1) > 1.001)
@@ -583,18 +559,207 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
             </text>
           </g>
 
-          {/* Marcador do Centro de Pressão (CP) sobre a face AB */}
+          {/* Marcador do Centro de Pressão (CP), Componentes FH e FV e Braço de Momento em C */}
           {isAnalyzed && up && up.FR > 0 && (
             (() => {
               const xCpWorld = toWorldX(getDamXAtY(up.y_cp, 'UPSTREAM'));
               const ptCP = project({ x: xCpWorld, y: up.y_cp, z: 0 });
-              const fTotalKn = ((up.FR * bLong) / 1000).toLocaleString('pt-BR', {
+              const fTotalN = (up.FR * bLong).toLocaleString('pt-BR', {
                 maximumFractionDigits: 0,
               });
-              const cpBadgeText = `CP (s=${up.s_cp.toFixed(1)}m) | FR=${fTotalKn} kN`;
-              const cpBoxW = cpBadgeText.length * 5.8 + 14;
+              const fhTotalN = (up.FH * bLong).toLocaleString('pt-BR', {
+                maximumFractionDigits: 0,
+              });
+              const fvTotalN = (up.FV * bLong).toLocaleString('pt-BR', {
+                maximumFractionDigits: 0,
+              });
+              const cpBadgeText = `CP (s=${up.s_cp.toFixed(2)}m) | FR = ${fTotalN} N (b=${bLong.toFixed(0)}m)`;
+              const cpBoxW = cpBadgeText.length * 5.6 + 14;
+
+              // Projeção perpendicular D de C sobre AB (AD = 64 m a partir de A => x_D = 21.6 m, y_D = 28.8 m)
+              const sinT = damHeight / Math.max(1e-6, L_AB);
+              const cosT = actualBaseWidth / Math.max(1e-6, L_AB);
+              const s_D = damHeight * sinT;
+              const xD_local = actualBaseWidth - s_D * cosT;
+              const yD_local = damHeight - s_D * sinT;
+              const ptD = project({ x: toWorldX(xD_local), y: yD_local, z: 0 });
+
+              // Pé da perpendicular baixada de C sobre a linha de ação de FR
+              const dPerp = Math.abs(up.s_cp - s_D);
+              const xP_local = actualBaseWidth - (up.s_cp - s_D) * cosT;
+              const yP_local = -(up.s_cp - s_D) * sinT;
+              const ptFootC = project({ x: toWorldX(xP_local), y: yP_local, z: 0 });
+
+              // Componentes FH (horizontal para a direita) e FV (vertical para baixo) a partir do CP
+              const fhLenPx = 46;
+              const fvLenPx = 36;
+              const ptFH_end = { x: ptCP.x + fhLenPx, y: ptCP.y };
+              const ptFV_end = { x: ptCP.x, y: ptCP.y + fvLenPx };
+
+              const mC_val = props.stability?.analisePontoC
+                ? Math.abs(props.stability.analisePontoC.M_hidro_C_total)
+                : up.FR * bLong * dPerp;
+              const mCFormatted = mC_val.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+              const mCLabel = `Braço d_⊥,C = ${dPerp.toFixed(2)} m | M_C = ${mCFormatted} N·m (↺)`;
+              const mCBoxW = mCLabel.length * 5.4 + 14;
+
               return (
                 <g key="cp-marker-ab">
+                  {showVectors && (
+                    <>
+                      {/* Linha de ação de FR até a perpendicular em C e referência DC */}
+                      <line
+                        x1={ptD.x}
+                        y1={ptD.y}
+                        x2={ptC.x}
+                        y2={ptC.y}
+                        stroke="#64748b"
+                        strokeWidth="1.2"
+                        strokeDasharray="3 3"
+                        opacity="0.65"
+                      />
+                      <line
+                        x1={ptCP.x}
+                        y1={ptCP.y}
+                        x2={ptFootC.x}
+                        y2={ptFootC.y}
+                        stroke="#1d4ed8"
+                        strokeWidth="1.5"
+                        strokeDasharray="5 3"
+                        opacity="0.85"
+                      />
+                      {/* Segmento do braço de momento perpendicular d_⊥,C junto a C */}
+                      <line
+                        x1={ptC.x}
+                        y1={ptC.y}
+                        x2={ptFootC.x}
+                        y2={ptFootC.y}
+                        stroke="#ea580c"
+                        strokeWidth="2.8"
+                      />
+
+                      {/* Decomposição retangular FH e FV no CP */}
+                      <line
+                        x1={ptFH_end.x}
+                        y1={ptFH_end.y}
+                        x2={ptFH_end.x}
+                        y2={ptFV_end.y}
+                        stroke="#0f766e"
+                        strokeWidth="1"
+                        strokeDasharray="2 2"
+                        opacity="0.6"
+                      />
+                      <line
+                        x1={ptFV_end.x}
+                        y1={ptFV_end.y}
+                        x2={ptFH_end.x}
+                        y2={ptFV_end.y}
+                        stroke="#0369a1"
+                        strokeWidth="1"
+                        strokeDasharray="2 2"
+                        opacity="0.6"
+                      />
+
+                      {/* Vetor Componente Horizontal FH */}
+                      <line
+                        x1={ptCP.x}
+                        y1={ptCP.y}
+                        x2={ptFH_end.x - 6}
+                        y2={ptFH_end.y}
+                        stroke="#0284c7"
+                        strokeWidth="2.6"
+                        strokeLinecap="round"
+                      />
+                      <polygon
+                        points={`${ptFH_end.x},${ptFH_end.y} ${ptFH_end.x - 8},${ptFH_end.y - 4.5} ${ptFH_end.x - 8},${ptFH_end.y + 4.5}`}
+                        fill="#0284c7"
+                      />
+                      <rect
+                        x={ptCP.x + 4}
+                        y={ptCP.y - 22}
+                        width={120}
+                        height={15}
+                        rx={4}
+                        fill="white"
+                        stroke="#0284c7"
+                        strokeWidth="1"
+                        opacity="0.95"
+                      />
+                      <text
+                        x={ptCP.x + 64}
+                        y={ptCP.y - 14.5}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize="9"
+                        fontWeight="800"
+                        fill="#0369a1"
+                      >
+                        {`FH = ${fhTotalN} N →`}
+                      </text>
+
+                      {/* Vetor Componente Vertical FV (para baixo) */}
+                      <line
+                        x1={ptCP.x}
+                        y1={ptCP.y}
+                        x2={ptFV_end.x}
+                        y2={ptFV_end.y - 6}
+                        stroke="#0d9488"
+                        strokeWidth="2.6"
+                        strokeLinecap="round"
+                      />
+                      <polygon
+                        points={`${ptFV_end.x},${ptFV_end.y} ${ptFV_end.x - 4.5},${ptFV_end.y - 8} ${ptFV_end.x + 4.5},${ptFV_end.y - 8}`}
+                        fill="#0d9488"
+                      />
+                      <rect
+                        x={ptFV_end.x - 126}
+                        y={ptFV_end.y - 6}
+                        width={122}
+                        height={15}
+                        rx={4}
+                        fill="white"
+                        stroke="#0d9488"
+                        strokeWidth="1"
+                        opacity="0.95"
+                      />
+                      <text
+                        x={ptFV_end.x - 65}
+                        y={ptFV_end.y + 1.5}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize="9"
+                        fontWeight="800"
+                        fill="#0f766e"
+                      >
+                        {`FV = ${fvTotalN} N ↓`}
+                      </text>
+
+                      {/* Etiqueta do Braço de Momento e Momento Anti-horário em C */}
+                      <rect
+                        x={ptC.x + 34}
+                        y={ptC.y - 10}
+                        width={mCBoxW}
+                        height={18}
+                        rx={5}
+                        fill="#fff7ed"
+                        stroke="#ea580c"
+                        strokeWidth="1.2"
+                        opacity="0.96"
+                      />
+                      <text
+                        x={ptC.x + 34 + mCBoxW / 2}
+                        y={ptC.y - 1}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize="9.5"
+                        fontWeight="800"
+                        fill="#c2410c"
+                      >
+                        {mCLabel}
+                      </text>
+                    </>
+                  )}
+
                   <circle cx={ptCP.x} cy={ptCP.y} r={5} fill="#2563eb" stroke="white" strokeWidth="1.8" />
                   <rect
                     x={ptCP.x - cpBoxW - 10}

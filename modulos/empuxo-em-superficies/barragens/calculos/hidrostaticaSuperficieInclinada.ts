@@ -133,8 +133,8 @@ export function calculateSurface(
 
   const clampedTheta = Math.max(1, Math.min(179, theta_deg));
   const theta_rad = (clampedTheta * Math.PI) / 180;
-  const sinT = Math.sin(theta_rad);
-  const cosT = Math.cos(theta_rad);
+  const sinT = Math.round(Math.sin(theta_rad) * 1e12) / 1e12;
+  const cosT = Math.round(Math.cos(theta_rad) * 1e12) / 1e12;
 
   const wetLength = h_max / Math.max(EPS, sinT);
   const area = wetLength * 1; // 1 m de largura unitária
@@ -471,8 +471,8 @@ export function calcularEstabilidadeBarragem(
     isArchDam && actualBaseWidth > EPS ? (p_max_up * archRadius) / actualBaseWidth : undefined;
 
   const thetaUpRad = (Math.max(1, thetaUp) * Math.PI) / 180;
-  const sinThetaUp = Math.sin(thetaUpRad);
-  const cosThetaUp = Math.cos(thetaUpRad);
+  const sinThetaUp = Math.round(Math.sin(thetaUpRad) * 1e12) / 1e12;
+  const cosThetaUp = Math.round(Math.cos(thetaUpRad) * 1e12) / 1e12;
   const L_AB = damHeight / Math.max(EPS, sinThetaUp);
   const projecao_AD = damHeight * sinThetaUp;
   const projecao_BD = actualBaseWidth * cosThetaUp;

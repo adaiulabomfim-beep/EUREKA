@@ -31,82 +31,7 @@ export const CONFIG_PADRAO_COMPORTA: ConfiguracaoSimulacaoComporta = {
 
 export const PRESETS: { [key: string]: PresetComporta } = {
   sim1: {
-    title: 'Simulação 1: Comporta Circular Vertical sob Pressão de Melaço',
-    subtitle: 'D = 0,90 m | h_topo = 2,40 m | d = 1,50',
-    enunciado:
-      'Uma comporta circular vertical, com diâmetro D = 0,90 m, está submetida à pressão de melaço, cuja densidade relativa é d = 1,50. A superfície livre do fluido encontra-se a 2,40 m acima do topo da comporta. Determine o empuxo hidrostático e a posição do centro de pressão.',
-    sistemaUnidades: SistemaUnidades.TECNICO_KGF,
-    fluidoMontante: { chave: 'personalizado', nivel: 3.3, densidade: 1500, gravidade: 9.81 },
-    fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.CIRCULAR,
-      largura: 0.9,
-      altura: 0.9,
-      profundidadeTopo: 2.4,
-      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
-      angulo: 90,
-      posicaoDobradica: PosicaoDobradica.NONE,
-      temTirante: false,
-      posicaoTiranteRelativa: 1,
-      anguloTirante: 0,
-      pesoProprio: 0,
-      pesoProprioAtivo: false,
-    },
-  },
-  sim2: {
-    title: 'Simulação 2: Comporta Articulada com Peso Próprio e Haste',
-    subtitle: 'b = 4,00 m | h = 3,00 m | θ = 60° | P = 10.000 kgf | d_P = 1,20 m',
-    enunciado:
-      'Uma comporta plana, com largura b = 4,00 m, está articulada no ponto A e é manobrada por uma haste instalada no ponto B. A comporta encontra-se inclinada a θ = 60° em relação à horizontal, com uma altura de água de h = 3,00 m. Seu peso próprio é de P = 10.000 kgf, cuja linha de ação está situada a 1,20 m da articulação. Considerando a distância de 1,60 m entre o nível da água e o ponto de aplicação da haste, determine a força exercida pela haste e a reação na articulação.',
-    sistemaUnidades: SistemaUnidades.TECNICO_KGF,
-    fluidoMontante: { chave: 'agua', nivel: 3, densidade: 1000, gravidade: 9.81 },
-    fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.RETANGULAR,
-      largura: 4,
-      altura: 3 / Math.sin((60 * Math.PI) / 180), // L = 3,4641 m
-      profundidadeTopo: 0,
-      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
-      angulo: 60,
-      posicaoDobradica: PosicaoDobradica.BOTTOM,
-      temTirante: true,
-      // Haste a 1,60 m acima do nível da água, ao longo do prolongamento da comporta:
-      // d_B = L + 1,60  ⇒  rel = -1,60 / L (medido a partir do topo)
-      posicaoTiranteRelativa: -1.6 / (3 / Math.sin((60 * Math.PI) / 180)),
-      anguloTirante: -30, // haste perpendicular à comporta
-      pesoProprio: 10000,
-      pesoProprioAtivo: true,
-      bracoPesoHorizontal: 1.2,
-    },
-  },
-  sim3: {
-    title: 'Simulação 3: Comporta Retangular sob Dois Fluidos (Glicerina × Água a 30°)',
-    subtitle: 'b = 3,00 m | H = 4,00 m | θ = 30° | ρ_mont = 1.260 | ρ_jus = 1.000 kg/m³',
-    enunciado:
-      'Uma comporta retangular de largura b = 3,00 m e comprimento H = 4,00 m, inclinada a θ = 30° com a horizontal e articulada na base, separa dois reservatórios: a montante, glicerina (ρ_mont = 1.260 kg/m³, nível 5,00 m, profundidade do topo da comporta h_topo,mont = 2,00 m); a jusante, água (ρ_jus = 1.000 kg/m³, nível 4,00 m, resultando em h_topo,jus = 1,00 m). Determine as forças de montante, jusante e líquida (F_R,líq), a posição do centro de pressão líquido a partir do topo (s_CP,líq) e o momento resultante na articulação da base (M_t).',
-    sistemaUnidades: SistemaUnidades.SI,
-    fluidoMontante: { chave: 'glicerina', nivel: 5, densidade: 1260, gravidade: 9.81 },
-    fluidoJusante: { chave: 'agua', nivel: 4, densidade: 1000, gravidade: 9.81, ativo: true },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.RETANGULAR,
-      largura: 3,
-      altura: 4,
-      profundidadeTopo: 2,
-      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
-      angulo: 30,
-      posicaoDobradica: PosicaoDobradica.BOTTOM,
-      temTirante: false,
-      posicaoTiranteRelativa: 1,
-      anguloTirante: 0,
-      pesoProprio: 0,
-      pesoProprioAtivo: false,
-    },
-  },
-  sim4: {
-    title: 'Simulação 4: Comporta Retangular Inclinada sob Pressão de Óleo',
+    title: 'Simulação 1 – Comporta Retangular Inclinada sob Pressão de Óleo',
     subtitle: 'b = 3,00 m | L = 1,80 m | h_topo = 1,50 m | θ = 60° | d = 0,85',
     enunciado:
       'Uma comporta plana retangular AB, com largura de 3,00 m e comprimento inclinado de 1,80 m, está submetida à pressão de óleo cuja densidade relativa é d = 0,85. A comporta encontra-se inclinada a 60° em relação à horizontal, com seu bordo superior a 1,50 m abaixo da superfície livre. Determine o empuxo hidrostático e a localização do centro de pressão.',
@@ -115,6 +40,7 @@ export const PRESETS: { [key: string]: PresetComporta } = {
     fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
     comporta: {
       ativa: true,
+      aberturaPercent: 0,
       forma: FormaComporta.RETANGULAR,
       largura: 3,
       altura: 1.8,
@@ -129,32 +55,8 @@ export const PRESETS: { [key: string]: PresetComporta } = {
       pesoProprioAtivo: false,
     },
   },
-  sim5: {
-    title: 'Simulação 5: Comporta Semicircular Vertical de Fundo',
-    subtitle: 'R = 3,00 m | b = 6,00 m | h_topo = 5,00 m | θ = 90°',
-    enunciado:
-      'Uma comporta plana semicircular de raio R = 3,00 m (largura da base b = 6,00 m) está posicionada verticalmente (θ = 90°) no fundo de um reservatório de água (γ = 9.810 N/m³) com nível total de 8,00 m (profundidade da crista da comporta h_topo = 5,00 m). Determine a área molhada (A), o momento de inércia centroidal (I_xx,CG), a força hidrostática resultante (F_R) e a profundidade do centro de pressão (y_CP).',
-    sistemaUnidades: SistemaUnidades.SI,
-    fluidoMontante: { chave: 'agua', nivel: 8, densidade: 1000, gravidade: 9.81 },
-    fluidoJusante: { chave: 'agua', nivel: 0, densidade: 1000, gravidade: 9.81, ativo: false },
-    comporta: {
-      ativa: true,
-      forma: FormaComporta.SEMI_CIRCULAR,
-      largura: 6,
-      altura: 3,
-      profundidadeTopo: 5,
-      modoPosicionamento: ModoPosicionamentoComporta.PADRAO_H_TOPO,
-      angulo: 90,
-      posicaoDobradica: PosicaoDobradica.NONE,
-      temTirante: false,
-      posicaoTiranteRelativa: 1,
-      anguloTirante: 0,
-      pesoProprio: 0,
-      pesoProprioAtivo: false,
-    },
-  },
-  sim6: {
-    title: 'Exemplo 2.5 – Comporta Inclinada com Articulação e Apoio',
+  sim2: {
+    title: 'Simulação 2 – Comporta Inclinada com Articulação e Apoio',
     subtitle: 'b = 1,50 m | L = 3,00 m | θ = 36,87° | h_A = 2,70 m | h_B = 4,50 m | γ = 10.054 N/m³',
     enunciado:
       'A comporta retangular AB de largura b = 1,50 m e comprimento inclinado L = 3,00 m está inclinada a θ = 36,87° com a horizontal (distância horizontal de 2,40 m e desnível vertical de 1,80 m entre B e A). Sua extremidade inferior B é articulada a 4,50 m de profundidade, enquanto a extremidade superior A apoia-se em uma parede vertical lisa a 2,70 m abaixo da superfície livre de água do mar (γ = 10.054 N/m³). Desprezando o peso próprio e o atrito no apoio A, determine a força hidrostática resultante (F_R), o centro de pressão (h_CP), a reação horizontal na parede lisa (P) e as componentes da reação na articulação B (B_x e B_y).',
@@ -185,8 +87,8 @@ export const PRESETS: { [key: string]: PresetComporta } = {
       pesoProprioAtivo: false,
     },
   },
-  sim7: {
-    title: 'Problema 2.61 – Comporta Inclinada entre Glicerina e Água',
+  sim3: {
+    title: 'Simulação 3 – Comporta Inclinada entre Glicerina e Água',
     subtitle: 'AB = 1,00 m | b = 1,20 m | m = 180 kg | θ = 60° | Glicerina (2,00 m) × Água (h, 20 °C)',
     enunciado:
       'Uma comporta AB na Figura P2.61 tem uma massa homogênea de 180 kg, 1,2 m de largura, é articulada em A e está apoiada sobre um fundo liso em B. Todos os fluidos estão a 20 °C. Para qual profundidade h da água a força no ponto B será zero?',
@@ -223,8 +125,8 @@ export const PRESETS: { [key: string]: PresetComporta } = {
       pesoProprioAtivo: true,
     },
   },
-  sim8: {
-    title: 'Exemplo 2.6 – Comporta Circular Inclinada com Eixo de Rotação',
+  sim4: {
+    title: 'Simulação 4 – Comporta Circular Inclinada com Eixo de Rotação',
     subtitle: 'D = 4,00 m | R = 2,00 m | θ = 60° | h_eixo = 10,00 m | γ = 9,80 kN/m³',
     enunciado:
       'A Figura E2.6a mostra o esboço de uma comporta circular inclinada que está localizada num grande reservatório de água (γ = 9,80 kN/m³). A comporta está montada num eixo que corre ao longo do diâmetro horizontal da comporta. Se o eixo está localizado a 10 m da superfície livre, determine:\n\n(a) o módulo e o ponto de aplicação da força resultante na comporta;\n\n(b) o momento que deve ser aplicado no eixo para abrir a comporta.',
@@ -263,8 +165,8 @@ export const PRESETS: { [key: string]: PresetComporta } = {
       pesoProprioAtivo: false,
     },
   },
-  sim9: {
-    title: 'Exemplo 3.5 – Força Resultante em Comporta Plana Inclinada Submersa',
+  sim5: {
+    title: 'Simulação 5 – Força Resultante em Comporta Plana Inclinada Submersa',
     subtitle: 'w = 5,00 m | L = 4,00 m | θ = 30° | D = 2,00 m | γ = 9,81 kN/m³',
     enunciado:
       'A superfície inclinada mostrada está articulada ao longo de A, tem 5 m de largura. Determine a força resultante FR da água e do ar sobre a superfície inclinada.',
