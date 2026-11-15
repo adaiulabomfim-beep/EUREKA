@@ -90,14 +90,40 @@ const renderFormattedText = (rawText: string, isUser: boolean) => {
   });
 };
 
+const MAX_OUTBOUND_MESSAGES = 12; // Até 6 turnos enviados à API
+const SEND_COOLDOWN_MS = 3000;
+const DUPLICATE_WINDOW_MS = 15000;
+const SESSION_STORAGE_KEY = 'eureka_tutor_session_id';
+
+function getOrCreateSessionHint(): string {
+  try {
+    const existing = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (existing && /^[A-Za-z0-9_-]{8,64}$/.test(existing)) {
+      return existing;
+    }
+    const generated =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `sess_${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`;
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, generated);
+    return generated;
+  } catch {
+    return `mem_${Math.random().toString(36).slice(2, 12)}`;
+  }
+}
+
 export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastSentAtRef = useRef<number>(0);
+  const lastSubmissionRef = useRef<{ signature: string; at: number } | null>(null);
+  const sessionHintRef = useRef<string>('');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,29 +148,47 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
     const textToSend = forcedText || input;
     if ((!textToSend.trim() && !selectedImage) || isLoading) return;
 
-    // Se o usuário pediu explicação do ensaio e temos contexto, adicionamos o contexto à mensagem do usuário de forma oculta para a IA
-    // ou simplesmente concatenamos para garantir que a IA veja.
-    let fullPrompt = textToSend;
-    
-    // Check if the message implies asking about the simulation
-    const isAskingAboutSimulation = textToSend.toLowerCase().includes('ensaio') || textToSend.toLowerCase().includes('simulação') || textToSend.toLowerCase().includes('experimento');
-    
-    // If context exists and user is likely asking about it, prepend context.
-    // To be safe and helpful, if the context is available, we attach it as system info for the turn.
-    if (simulationContext && isAskingAboutSimulation) {
-        fullPrompt = `${simulationContext}\n\nPergunta do usuário: ${textToSend}`;
+    const now = Date.now();
+    const activeContext = simulationContext?.trim() || '';
+    const trimmedText = textToSend.trim();
+    const imageToAttach = forcedText ? undefined : (selectedImage || undefined);
+
+    if (lastSentAtRef.current > 0 && now - lastSentAtRef.current < SEND_COOLDOWN_MS) {
+      const waitSec = Math.max(1, Math.ceil((SEND_COOLDOWN_MS - (now - lastSentAtRef.current)) / 1000));
+      setAvailabilityNotice(`Aguarde ${waitSec}s antes de enviar outra pergunta.`);
+      return;
+    }
+
+    const submissionSignature = `${trimmedText}::${imageToAttach ? imageToAttach.length : 0}::${activeContext}`;
+    if (
+      lastSubmissionRef.current &&
+      lastSubmissionRef.current.signature === submissionSignature &&
+      now - lastSubmissionRef.current.at < DUPLICATE_WINDOW_MS
+    ) {
+      setAvailabilityNotice('Esta mesma pergunta acabou de ser enviada. Aguarde antes de repetir.');
+      return;
+    }
+
+    setAvailabilityNotice(null);
+    lastSentAtRef.current = now;
+    lastSubmissionRef.current = { signature: submissionSignature, at: now };
+
+    if (!sessionHintRef.current) {
+      sessionHintRef.current = getOrCreateSessionHint();
     }
 
     const userMessage: ChatMessage = {
       role: 'user',
-      text: textToSend, // We show the original clean text in UI
-      image: selectedImage || undefined
+      text: textToSend,
+      image: imageToAttach,
     };
 
     const previousMessages = messages;
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setSelectedImage(null);
+    if (!forcedText) {
+      setInput('');
+      setSelectedImage(null);
+    }
     setIsLoading(true);
 
     try {
@@ -170,23 +214,42 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
         return parts;
       };
 
-      const contents = previousMessages.map(msg => ({
-        role: msg.role,
-        parts: buildParts(msg.text, msg.image),
-      }));
+      // Reduz o histórico enviado aos últimos turnos mantendo imagens necessárias à compreensão:
+      // preserva a imagem da mensagem atual e a imagem mais recente anterior dentro da janela.
+      const outboundWindow = [...previousMessages, userMessage].slice(-MAX_OUTBOUND_MESSAGES);
+      const lastIdx = outboundWindow.length - 1;
+      let keptPriorImage = false;
+      const includeImageFlags = outboundWindow.map(() => false);
+      for (let i = lastIdx; i >= 0; i -= 1) {
+        if (!outboundWindow[i].image) continue;
+        if (i === lastIdx) {
+          includeImageFlags[i] = true;
+        } else if (!keptPriorImage) {
+          includeImageFlags[i] = true;
+          keptPriorImage = true;
+        }
+      }
 
-      // Add current message with potentially augmented prompt
-      contents.push({
-        role: 'user',
-        parts: buildParts(fullPrompt, userMessage.image),
-      });
+      const contents = outboundWindow.map((msg, idx) =>
+        ({
+          role: msg.role,
+          parts: buildParts(
+            msg.text || (!includeImageFlags[idx] && msg.image ? '[Imagem anterior omitida]' : ''),
+            includeImageFlags[idx] ? msg.image : undefined
+          ),
+        })
+      );
 
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Eureka-Session': sessionHintRef.current,
         },
-        body: JSON.stringify({ contents }),
+        body: JSON.stringify({
+          contents,
+          ...(activeContext ? { simulationContext: activeContext } : {}),
+        }),
       });
 
       const contentType = response.headers.get('content-type') || '';
@@ -196,6 +259,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
         text?: unknown;
         error?: unknown;
         code?: unknown;
+        retryAfterSeconds?: unknown;
         finishReason?: unknown;
         diagnostics?: {
           model?: unknown;
@@ -246,14 +310,20 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
             ? ` | Gemini HTTP: ${payload.diagnostics.geminiHttpStatus}`
             : '';
 
-        if (serverError) {
-          throw new Error(
-            `${serverError} (HTTP ${response.status}${errorCode ? ` / ${errorCode}` : ''}${modelInfo}${geminiStatusInfo})`
-          );
+        const handledMessage = serverError
+          ? `${serverError} (HTTP ${response.status}${errorCode ? ` / ${errorCode}` : ''}${modelInfo}${geminiStatusInfo})`
+          : `Erro na API /api/chat (HTTP ${response.status}${errorCode ? ` / ${errorCode}` : ''}${modelInfo}${geminiStatusInfo}).`;
+
+        if (response.status === 429 || errorCode === 'QUEUE_FULL') {
+          setAvailabilityNotice(serverError || 'Tutor temporariamente indisponível por limite de utilização.');
         }
-        throw new Error(
-          `Erro na API /api/chat (HTTP ${response.status}${errorCode ? ` / ${errorCode}` : ''}${modelInfo}${geminiStatusInfo}).`
-        );
+
+        console.warn('[ChatBot /api/chat] Resposta de erro tratada:', handledMessage);
+        setMessages(prev => [...prev, {
+          role: 'model',
+          text: handledMessage
+        }]);
+        return;
       }
 
       if (typeof payload.text !== 'string' || !payload.text.trim()) {
@@ -333,7 +403,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
               </div>
               <div>
                 <h3 className="font-black text-[10px] uppercase tracking-widest leading-tight">Tutor Inteligente</h3>
-                <p className="text-[9px] text-blue-100 dark:text-slate-400 font-bold uppercase tracking-wider">Powered by Gemini 3.1 Pro</p>
+                <p className="text-[9px] text-blue-100 dark:text-slate-400 font-bold uppercase tracking-wider">Powered by Gemini 3.8 Flash</p>
               </div>
             </div>
             <button 
@@ -403,6 +473,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
 
           {/* Input Area */}
           <div className="p-4 bg-white/90 dark:bg-slate-900/90 border-t border-blue-50 dark:border-slate-800 shrink-0 transition-colors">
+            {availabilityNotice && (
+              <div className="mb-2.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/70 text-[11px] font-medium text-amber-800 dark:text-amber-200 leading-snug">
+                {availabilityNotice}
+              </div>
+            )}
             
             {/* Context Suggestion */}
             {simulationContext && !isLoading && messages.length < 2 && (

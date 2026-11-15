@@ -75,8 +75,10 @@ interface PainelControlesProps {
   anchoredBuoyMode?: boolean;
   buoyDiameterM?: number;
   buoyWeightKN?: number;
+  buoyFluidSpecificWeightKN?: number;
   onBuoyDiameterChange?: (val: number) => void;
   onBuoyWeightChange?: (val: number) => void;
+  onBuoyFluidSpecificWeightKNChange?: (val: number) => void;
 }
 
 export const PainelControles: React.FC<PainelControlesProps> = ({
@@ -143,8 +145,10 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
   anchoredBuoyMode = false,
   buoyDiameterM = 1.5,
   buoyWeightKN = 8.5,
+  buoyFluidSpecificWeightKN = 10.1,
   onBuoyDiameterChange,
   onBuoyWeightChange,
+  onBuoyFluidSpecificWeightKNChange,
 }) => {
   const inputGroupClass = 'space-y-1.5';
   const labelClass = "block text-[9px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest mb-1.5";
@@ -622,6 +626,27 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                     Densidade equiv.: <span className="font-semibold text-slate-600 dark:text-slate-300">{(fluidSpecificWeight / gravity).toFixed(1).replace('.', ',')} kg/m³</span> (g = {gravity.toFixed(2).replace('.', ',')} m/s²)
                   </p>
                 </div>
+              ) : anchoredBuoyMode ? (
+                <div className="space-y-2 mt-2">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Peso Específico γ (kN/m³)</label>
+                      <NumberInput
+                        value={buoyFluidSpecificWeightKN}
+                        min={0.1}
+                        step="0.05"
+                        onChange={(v) => onBuoyFluidSpecificWeightKNChange?.(v)}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mb-1 block">Profund. (cm)</label>
+                      <NumberInput value={depthA} min={1} max={1000} step="1" onChange={onDepthAChange} />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-400">
+                    Densidade equiv.: <span className="font-semibold text-slate-600 dark:text-slate-300">{((buoyFluidSpecificWeightKN * 1000) / gravity).toFixed(1).replace('.', ',')} kg/m³</span> (γ = {(buoyFluidSpecificWeightKN * 1000).toFixed(0)} N/m³)
+                  </p>
+                </div>
               ) : (
               <div className="space-y-2 mt-2">
                 <div className="flex gap-3">
@@ -634,7 +659,7 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                     <NumberInput value={depthA} min={1} max={1000} step="1" onChange={onDepthAChange} />
                   </div>
                 </div>
-                {(floatingEquilibriumMode || (anchoredBuoyMode && isSimulating)) && (
+                {floatingEquilibriumMode && (
                   <p className="text-[10px] text-slate-400 dark:text-slate-400">
                     Peso específico γ: <span className="font-semibold text-slate-600 dark:text-slate-300">{((customFluidDensity * gravity) / 1000).toFixed(2).replace('.', ',')} kN/m³ ({(customFluidDensity * gravity).toFixed(1).replace('.', ',')} N/m³)</span>
                   </p>

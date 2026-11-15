@@ -113,6 +113,7 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
   let Rx_hinge = 0;
   let Ry_hinge = 0;
   let R_hinge = 0;
+  let d_cp_hinge = 0;
 
   const rad = ((comporta.angulo || 90) * Math.PI) / 180;
   const sinTheta = Math.sin(rad);
@@ -140,6 +141,7 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
 
     d_cp_up_A = forceData.up.FR > 1e-9 ? forceData.up.s_cp : 0;
     d_cp_down_A = forceData.down.FR > 1e-9 ? forceData.down.s_cp : 0;
+    d_cp_hinge = d_cp_up_A;
     M_up_A = forceData.up.FR * d_cp_up_A;
     M_down_A = forceData.down.FR * d_cp_down_A;
 
@@ -168,6 +170,7 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
     } else if (comporta.posicaoDobradica === PosicaoDobradica.CENTER) {
       d_cp = Math.abs(forceData.s_cp_net - y_cg_gate);
     }
+    d_cp_hinge = d_cp;
 
     // Moment due to hydrostatic force (positive = tending to open gate towards downstream/bottom-right)
     // Note: About TOP hinge, FR_net (>0) rotates counter-clockwise (+);
@@ -284,6 +287,7 @@ export function calcularMomentos(config: ConfiguracaoSimulacaoComporta, resultad
     Rx_hinge,
     Ry_hinge,
     R_hinge,
+    d_cp_hinge,
     deltaX_BA,
     deltaY_BA,
     eixoCentralAtivo,

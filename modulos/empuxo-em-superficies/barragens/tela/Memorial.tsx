@@ -1,8 +1,9 @@
 import React from 'react';
 import { FileText, BookOpen, Info } from 'lucide-react';
 import { ResultadoSimulacaoBarragem, SistemaUnidadesBarragem } from '../dominio/tipos';
+import { identificarLadosHidraulicos } from '../calculos/hidrostaticaSuperficieInclinada';
 import { CalculationLine } from '@/src/components/ui/CalculationLine';
-import { MathTex, RichMathText } from '@/src/components/ui/MathTex';
+import { MathTex, RichMathText, texNum } from '@/src/components/ui/MathTex';
 
 export { CalculationLine };
 
@@ -52,6 +53,8 @@ export const Memorial: React.FC<MemorialProps> = ({
   const fhDown = fd.down?.FH ?? 0;
   const fvDown = fd.down?.FV ?? 0;
   const mud = fd.up?.mudLayer;
+  const lados = identificarLadosHidraulicos(fd, hUp, hDown);
+  const temDoisLados = lados.temDoisLados && !!lados.jusante;
 
   const isTriangular3DMode = Boolean(
     analyzedResults.normalizedInputs.showTriangularMode ||
@@ -778,225 +781,427 @@ export const Memorial: React.FC<MemorialProps> = ({
             </div>
           </section>
 
+          {st?.isArchDam && !isTriangular3DMode && (
+            <section>
+              <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div className="w-6 h-px bg-blue-300 dark:bg-blue-800"></div>
+                PRESSÃO HIDROSTÁTICA MÁXIMA NA BASE
+                <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+              </h4>
+              <div className="bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-blue-100 dark:border-blue-900/50 space-y-4">
+                {(() => {
+                  const gammaSubst = isKgf
+                    ? fmtBrTex(density, 0)
+                    : fmtBrTex((density * gravity) / 1000, 2);
+                  const gammaUnitDisp = isKgf ? '\\text{kgf/m}^3' : '\\text{kN/m}^3';
+                  const hSubst = Number.isInteger(hUp) ? String(hUp) : fmtBrTex(hUp, 2);
+                  const pMaxDisplay = isKgf
+                    ? fmtBrTex(fd.p_max_up / gravity, 0)
+                    : fmtBrTex(fd.p_max_up / 1000, 2);
+
+                  const eqTex = mud
+                    ? 'p = \\gamma_{\\text{água}} \\cdot h_{\\text{água}} + \\gamma_{\\text{lama}} \\cdot h_{\\text{lama}}'
+                    : 'p = \\gamma_{\\text{água}} \\cdot h';
+
+                  const subTex = mud
+                    ? `p_{\\max} = ${texNum(gammaSubst)} \\cdot ${texNum(fmtBrTex(mud.waterHeight, 2))} + ${texNum(
+                        isKgf
+                          ? fmtBrTex(mud.mudDensity, 0)
+                          : fmtBrTex((mud.mudDensity * gravity) / 1000, 2)
+                      )} \\cdot ${texNum(fmtBrTex(mud.mudHeight, 2))}`
+                    : `p_{\\max} = ${texNum(gammaSubst)} \\cdot ${texNum(hSubst)}`;
+
+                  const boxedTex = `\\boxed{p_{\\max} = ${texNum(pMaxDisplay)}\\ ${unitPTex}}`;
+
+                  return (
+                    <>
+                      <CalculationLine
+                        theme="blue"
+                        isSubHeader
+                        label="Pressão hidrostática máxima na base"
+                        symbol={<MathTex tex="p_{\max}" />}
+                        formula={<MathTex tex={eqTex} />}
+                        substitution={<MathTex tex={subTex.replace(/^p_\{\\max\}\s*=\s*/, '')} />}
+                        result={<MathTex tex={texNum(pMaxDisplay)} />}
+                        unit={<MathTex tex={unitPTex} />}
+                      />
+
+                      <div className="rounded-xl bg-slate-50/80 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 p-4 space-y-3 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+                        <div>
+                          <span className="font-bold text-slate-600 dark:text-slate-300">
+                            Pressão hidrostática ({' '}
+                            <MathTex tex={`\\gamma_{\\text{água}} = ${texNum(gammaSubst)}\\ ${gammaUnitDisp}`} />
+                            {!mud && (
+                              <>
+                                , <MathTex tex={`h = ${texNum(hSubst)}\\ \\text{m}`} />
+                              </>
+                            )}
+                            ):
+                          </span>
+                          <div className="mt-1.5">
+                            <MathTex display tex={eqTex} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="font-bold text-slate-600 dark:text-slate-300">
+                            Substituição dos valores do cenário:
+                          </span>
+                          <div className="mt-1.5">
+                            <MathTex display tex={subTex} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="font-bold text-slate-600 dark:text-slate-300">
+                            Resultado:
+                          </span>
+                          <div className="mt-1.5 text-blue-700 dark:text-blue-300">
+                            <MathTex display tex={boxedTex} />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </section>
+          )}
+
           <section>
             <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2">
               <div className="w-6 h-px bg-blue-200 dark:bg-blue-900"></div> Forças Hidrostáticas{' '}
               <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
             </h4>
             <div className="flex flex-col gap-0 bg-white dark:bg-slate-900/90 shadow-sm p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <CalculationLine
-                theme="blue"
-                isSubHeader
-                label={
+              {(() => {
+                const montLado = temDoisLados ? lados.montante : lados.esquerda;
+                const montTheta = montLado.theta;
+                const montH = montLado.nivelAgua;
+                const montRes = montLado.res;
+                const montSideTag = temDoisLados ? ` – Face ${montLado.ladoRotulo}` : '';
+                const montTagTex = temDoisLados ? '\\text{mont}' : '\\text{up}';
+
+                return (
                   <>
-                    Montante (<MathTex tex={`\\theta = ${thetaUp.toFixed(1)}^\\circ`} />)
+                    <CalculationLine
+                      theme="blue"
+                      isSubHeader
+                      label={
+                        <>
+                          Montante{montSideTag} (<MathTex tex={`\\theta = ${montTheta.toFixed(1)}^\\circ`} />)
+                        </>
+                      }
+                      symbol={temDoisLados ? montLado.ladoRotulo : 'Upstream'}
+                      result=""
+                      unit=""
+                    />
+
+                    {mud && !temDoisLados ? (
+                      <>
+                        <CalculationLine
+                          theme="blue"
+                          label="Camada de Água (Topo)"
+                          symbol={<MathTex tex="h_{\text{água}}" />}
+                          formula={<MathTex tex="H_{\text{up}} - h_{\text{lama}}" />}
+                          substitution={<MathTex tex={`${hUp.toFixed(2)} - ${mud.mudHeight.toFixed(2)}`} />}
+                          result={<MathTex tex={mud.waterHeight.toFixed(2)} />}
+                          unit={<MathTex tex="\text{m}" />}
+                        />
+                        <CalculationLine
+                          theme="blue"
+                          label={
+                            <>
+                              Empuxo na Camada de Água (<MathTex tex="P'" />)
+                            </>
+                          }
+                          symbol={<MathTex tex="P'" />}
+                          formula={
+                            <MathTex tex="\frac{1}{2} \cdot \gamma_{\text{água}} \cdot \frac{h_{\text{água}}^2}{\operatorname{sen}(\theta)}" />
+                          }
+                          substitution={
+                            <MathTex
+                              tex={`0.5 \\cdot ${gammaUnitVal} \\cdot \\frac{${mud.waterHeight.toFixed(2)}^2}{\\operatorname{sen}(${thetaUp.toFixed(1)}^\\circ)}`}
+                            />
+                          }
+                          result={<MathTex tex={fmtF(mud.F_water)} />}
+                          unit={<MathTex tex={unitFTex} />}
+                        />
+                        <CalculationLine
+                          theme="blue"
+                          label={
+                            <>
+                              Centro de Pressão de <MathTex tex="P'" /> (<MathTex tex="C'" /> do fundo)
+                            </>
+                          }
+                          symbol={<MathTex tex="y_{C'}" />}
+                          formula={<MathTex tex="h_{\text{lama}} + \frac{h_{\text{água}}}{3}" />}
+                          substitution={
+                            <MathTex tex={`${mud.mudHeight.toFixed(2)} + ${(mud.waterHeight / 3).toFixed(2)}`} />
+                          }
+                          result={<MathTex tex={mud.y_cp_water.toFixed(2)} />}
+                          unit={<MathTex tex="\text{m}" />}
+                        />
+                        <CalculationLine
+                          theme="amber"
+                          label={
+                            <>
+                              Pressão na Interface (<MathTex tex={`y = ${mud.mudHeight.toFixed(2)}\\text{ m}`} />)
+                            </>
+                          }
+                          symbol={<MathTex tex="p_{\text{int}}" />}
+                          formula={<MathTex tex="\gamma_{\text{água}} \cdot h_{\text{água}}" />}
+                          substitution={<MathTex tex={`${gammaUnitVal} \\cdot ${mud.waterHeight.toFixed(2)}`} />}
+                          result={<MathTex tex={fmtP(mud.p_interface)} />}
+                          unit={<MathTex tex={unitPTex} />}
+                        />
+                        <CalculationLine
+                          theme="amber"
+                          label="Parcela Retangular na Lama"
+                          symbol={<MathTex tex="P''_{\text{ret}}" />}
+                          formula={<MathTex tex="p_{\text{int}} \cdot \frac{h_{\text{lama}}}{\operatorname{sen}(\theta)}" />}
+                          result={<MathTex tex={fmtF(mud.F_mud_rect)} />}
+                          unit={<MathTex tex={unitFTex} />}
+                        />
+                        <CalculationLine
+                          theme="amber"
+                          label={
+                            <>
+                              Parcela Triangular na Lama (<MathTex tex={`\\rho = ${mud.mudDensity}\\text{ kg/m}^3`} />)
+                            </>
+                          }
+                          symbol={<MathTex tex="P''_{\text{tri}}" />}
+                          formula={
+                            <MathTex tex="\frac{1}{2} \cdot \gamma_{\text{lama}} \cdot \frac{h_{\text{lama}}^2}{\operatorname{sen}(\theta)}" />
+                          }
+                          result={<MathTex tex={fmtF(mud.F_mud_tri)} />}
+                          unit={<MathTex tex={unitFTex} />}
+                        />
+                        <CalculationLine
+                          theme="amber"
+                          label={
+                            <>
+                              Empuxo na Camada de Lama (<MathTex tex="P''" />)
+                            </>
+                          }
+                          symbol={<MathTex tex="P''" />}
+                          formula={<MathTex tex="P''_{\text{ret}} + P''_{\text{tri}}" />}
+                          substitution={<MathTex tex={`${fmtF(mud.F_mud_rect)} + ${fmtF(mud.F_mud_tri)}`} />}
+                          result={<MathTex tex={fmtF(mud.F_mud)} />}
+                          unit={<MathTex tex={unitFTex} />}
+                        />
+                        <CalculationLine
+                          theme="amber"
+                          label={
+                            <>
+                              Centro de Pressão de <MathTex tex="P''" /> (<MathTex tex="C''" /> do fundo)
+                            </>
+                          }
+                          symbol={<MathTex tex="y_{C''}" />}
+                          result={<MathTex tex={mud.y_cp_mud.toFixed(2)} />}
+                          unit={<MathTex tex="\text{m}" />}
+                        />
+                        <CalculationLine
+                          theme="blue"
+                          label={
+                            <>
+                              Empuxo Total a Montante (<MathTex tex="P = P' + P''" />)
+                            </>
+                          }
+                          symbol={<MathTex tex="F_{R,\text{up}}" />}
+                          formula={<MathTex tex="P' + P''" />}
+                          substitution={<MathTex tex={`${fmtF(mud.F_water)} + ${fmtF(mud.F_mud)}`} />}
+                          result={<MathTex tex={fmtF(frUp)} />}
+                          unit={<MathTex tex={unitFTex} />}
+                        />
+                        <CalculationLine
+                          theme="blue"
+                          label="Centro de Pressão Total (do fundo)"
+                          symbol={<MathTex tex="y_{\text{cp},\text{up}}" />}
+                          formula={<MathTex tex="\frac{P' \cdot y_{C'} + P'' \cdot y_{C''}}{F_{R,\text{up}}}" />}
+                          result={<MathTex tex={(fd.up?.y_cp ?? 0).toFixed(2)} />}
+                          unit={<MathTex tex="\text{m}" />}
+                        />
+                        <CalculationLine
+                          theme="blue"
+                          label="Profundidade Vertical do CP (da superfície)"
+                          symbol={<MathTex tex="h_p" />}
+                          formula={<MathTex tex="h_{\text{up}} - y_{\text{cp},\text{up}}" />}
+                          substitution={
+                            <MathTex tex={`${hUp.toFixed(2)} - ${(fd.up?.y_cp ?? 0).toFixed(2)}`} />
+                          }
+                          result={<MathTex tex={(fd.up?.h_cp ?? 0).toFixed(2)} />}
+                          unit={<MathTex tex="\text{m}" />}
+                        />
+                        <CalculationLine
+                          theme="blue"
+                          label="Distância Inclinada do CP (ao longo de montante)"
+                          symbol={<MathTex tex="y_p" />}
+                          formula={<MathTex tex="\frac{h_p}{\operatorname{sen}(\theta)}" />}
+                          substitution={
+                            <MathTex
+                              tex={`\\frac{${(fd.up?.h_cp ?? 0).toFixed(2)}}{\\operatorname{sen}(${thetaUp.toFixed(1)}^\\circ)}`}
+                            />
+                          }
+                          result={<MathTex tex={(fd.up?.s_cp ?? 0).toFixed(2)} />}
+                          unit={<MathTex tex="\text{m}" />}
+                        />
+                      </>
+                    ) : (
+                      (() => {
+                        const damH = analyzedResults.normalizedInputs.damHeight;
+                        const isSubmergedCrest = montH > damH + 1e-6;
+                        const hCpVal = montRes?.h_cp ?? 0;
+                        const sCpVal = montRes?.s_cp ?? 0;
+                        const yCpVal = montRes?.y_cp ?? 0;
+                        const areaVal = montRes?.area ?? 0;
+                        const hCgVal = montRes?.h_cg ?? 0;
+                        const wetLenVal = montRes?.wetLength ?? areaVal;
+                        const igVal = Math.pow(wetLenVal, 3) / 12;
+
+                        return (
+                          <>
+                            <CalculationLine
+                              theme="blue"
+                              label="Área Molhada (Montante)"
+                              symbol={<MathTex tex={`A_{${montTagTex}}`} />}
+                              formula={
+                                isSubmergedCrest ? (
+                                  <MathTex tex="\frac{H_{\text{bar}}}{\operatorname{sen}(\theta)}" />
+                                ) : (
+                                  <MathTex tex={`\\frac{h_{${montTagTex}}}{\\operatorname{sen}(\\theta)}`} />
+                                )
+                              }
+                              substitution={
+                                <MathTex tex={`${Math.min(montH, damH).toFixed(2)} / \\operatorname{sen}(${montTheta.toFixed(1)}^\\circ)`} />
+                              }
+                              result={<MathTex tex={areaVal.toFixed(2)} />}
+                              unit={<MathTex tex="\text{m}^2/\text{m}" />}
+                            />
+                            <CalculationLine
+                              theme="blue"
+                              label="Prof. Centro de Gravidade"
+                              symbol={<MathTex tex={`h_{\\text{cg},${montTagTex}}`} />}
+                              formula={
+                                isSubmergedCrest ? (
+                                  <MathTex tex="\left(h_{\text{up}} - H_{\text{bar}}\right) + \frac{H_{\text{bar}}}{2}" />
+                                ) : (
+                                  <MathTex tex={`\\frac{h_{${montTagTex}}}{2}`} />
+                                )
+                              }
+                              substitution={
+                                isSubmergedCrest ? (
+                                  <MathTex tex={`${(montH - damH).toFixed(2)} + ${damH.toFixed(2)} / 2`} />
+                                ) : (
+                                  <MathTex tex={`${montH.toFixed(2)} / 2`} />
+                                )
+                              }
+                              result={<MathTex tex={hCgVal.toFixed(2)} />}
+                              unit={<MathTex tex="\text{m}" />}
+                            />
+                            <CalculationLine
+                              theme="blue"
+                              label={`Força Normal à Face (Montante${montSideTag})`}
+                              symbol={<MathTex tex={temDoisLados ? 'E_{\\text{mont}}' : 'F_{R,\\text{up}}'} />}
+                              formula={<MathTex tex={`\\gamma \\cdot h_{\\text{cg},${montTagTex}} \\cdot A_{${montTagTex}}`} />}
+                              substitution={
+                                <MathTex
+                                  tex={`${gammaUnitVal} \\cdot ${hCgVal.toFixed(2)} \\cdot ${areaVal.toFixed(2)}`}
+                                />
+                              }
+                              result={<MathTex tex={fmtF(montRes.FR)} />}
+                              unit={<MathTex tex={unitFTex} />}
+                              isSubHeader={temDoisLados}
+                            />
+                            <CalculationLine
+                              theme="blue"
+                              label={`Componente Horizontal (${temDoisLados ? montLado.sentidoTexto : 'Montante'})`}
+                              symbol={<MathTex tex={`F_{H,${montTagTex}}`} />}
+                              formula={<MathTex tex={`${temDoisLados ? 'E_{\\text{mont}}' : 'F_{R,\\text{up}}'} \\cdot \\operatorname{sen}(\\theta)`} />}
+                              substitution={
+                                <MathTex tex={`${fmtF(montRes.FR)} \\cdot \\operatorname{sen}(${montTheta.toFixed(1)}^\\circ)`} />
+                              }
+                              result={<MathTex tex={fmtF(montRes.FH)} />}
+                              unit={<MathTex tex={unitFTex} />}
+                            />
+                            <CalculationLine
+                              theme="blue"
+                              label="Componente Vertical (Montante, para baixo)"
+                              symbol={<MathTex tex={`F_{V,${montTagTex}}`} />}
+                              formula={<MathTex tex={`${temDoisLados ? 'E_{\\text{mont}}' : 'F_{R,\\text{up}}'} \\cdot \\cos(\\theta)`} />}
+                              substitution={
+                                <MathTex tex={`${fmtF(montRes.FR)} \\cdot \\cos(${montTheta.toFixed(1)}^\\circ)`} />
+                              }
+                              result={<MathTex tex={fmtF(montRes.FV)} />}
+                              unit={<MathTex tex={unitFTex} />}
+                            />
+                            <CalculationLine
+                              theme="blue"
+                              label="Profundidade Vertical do CP (da superfície)"
+                              symbol={<MathTex tex="h_p" />}
+                              formula={
+                                isSubmergedCrest ? (
+                                  <MathTex tex="h_{\text{cg},\text{up}} + \frac{I_G \cdot \operatorname{sen}^2(\theta)}{A_{\text{up}} \cdot h_{\text{cg},\text{up}}}" />
+                                ) : (
+                                  <MathTex tex={`\\frac{2 \\cdot h_{${montTagTex}}}{3}`} />
+                                )
+                              }
+                              substitution={
+                                isSubmergedCrest ? (
+                                  <MathTex
+                                    tex={`${hCgVal.toFixed(2)} + \\frac{${igVal.toFixed(2)} \\cdot \\operatorname{sen}^2(${montTheta.toFixed(1)}^\\circ)}{${areaVal.toFixed(2)} \\cdot ${hCgVal.toFixed(2)}}`}
+                                  />
+                                ) : (
+                                  <MathTex tex={`\\frac{2 \\cdot ${montH.toFixed(2)}}{3}`} />
+                                )
+                              }
+                              result={<MathTex tex={hCpVal.toFixed(2)} />}
+                              unit={<MathTex tex="\text{m}" />}
+                            />
+                            <CalculationLine
+                              theme="blue"
+                              label="Distância Inclinada do CP (ao longo de montante)"
+                              symbol={<MathTex tex="y_p" />}
+                              formula={
+                                isSubmergedCrest ? (
+                                  <MathTex tex="\frac{h_p}{\operatorname{sen}(\theta)}" />
+                                ) : (
+                                  <MathTex tex="\frac{h_p}{\operatorname{sen}(\theta)} = \frac{2}{3} \cdot L_{\text{molhado}}" />
+                                )
+                              }
+                              substitution={
+                                <MathTex
+                                  tex={`\\frac{${hCpVal.toFixed(2)}}{\\operatorname{sen}(${montTheta.toFixed(1)}^\\circ)}`}
+                                />
+                              }
+                              result={<MathTex tex={sCpVal.toFixed(2)} />}
+                              unit={<MathTex tex="\text{m}" />}
+                              isSubHeader
+                            />
+                            <CalculationLine
+                              theme="blue"
+                              label="Altura Vertical do CP (a partir do fundo)"
+                              symbol={<MathTex tex={`y_{\\text{cp},${montTagTex}}`} />}
+                              formula={
+                                isSubmergedCrest ? (
+                                  <MathTex tex="h_{\text{up}} - h_p" />
+                                ) : (
+                                  <MathTex tex={`h_{${montTagTex}} - h_p = \\frac{h_{${montTagTex}}}{3}`} />
+                                )
+                              }
+                              substitution={<MathTex tex={`${montH.toFixed(2)} - ${hCpVal.toFixed(2)}`} />}
+                              result={<MathTex tex={yCpVal.toFixed(2)} />}
+                              unit={<MathTex tex="\text{m}" />}
+                            />
+                          </>
+                        );
+                      })()
+                    )}
                   </>
-                }
-                symbol="Upstream"
-                result=""
-                unit=""
-              />
+                );
+              })()}
 
-              {mud ? (
-                <>
-                  <CalculationLine
-                    theme="blue"
-                    label="Camada de Água (Topo)"
-                    symbol={<MathTex tex="h_{\text{água}}" />}
-                    formula={<MathTex tex="H_{\text{up}} - h_{\text{lama}}" />}
-                    substitution={<MathTex tex={`${hUp.toFixed(2)} - ${mud.mudHeight.toFixed(2)}`} />}
-                    result={<MathTex tex={mud.waterHeight.toFixed(2)} />}
-                    unit={<MathTex tex="\text{m}" />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label={
-                      <>
-                        Empuxo na Camada de Água (<MathTex tex="P'" />)
-                      </>
-                    }
-                    symbol={<MathTex tex="P'" />}
-                    formula={
-                      <MathTex tex="\frac{1}{2} \cdot \gamma_{\text{água}} \cdot \frac{h_{\text{água}}^2}{\operatorname{sen}(\theta)}" />
-                    }
-                    substitution={
-                      <MathTex
-                        tex={`0.5 \\cdot ${gammaUnitVal} \\cdot \\frac{${mud.waterHeight.toFixed(2)}^2}{\\operatorname{sen}(${thetaUp.toFixed(1)}^\\circ)}`}
-                      />
-                    }
-                    result={<MathTex tex={fmtF(mud.F_water)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label={
-                      <>
-                        Centro de Pressão de <MathTex tex="P'" /> (<MathTex tex="C'" /> do fundo)
-                      </>
-                    }
-                    symbol={<MathTex tex="y_{C'}" />}
-                    formula={<MathTex tex="h_{\text{lama}} + \frac{h_{\text{água}}}{3}" />}
-                    substitution={
-                      <MathTex tex={`${mud.mudHeight.toFixed(2)} + ${(mud.waterHeight / 3).toFixed(2)}`} />
-                    }
-                    result={<MathTex tex={mud.y_cp_water.toFixed(2)} />}
-                    unit={<MathTex tex="\text{m}" />}
-                  />
-                  <CalculationLine
-                    theme="amber"
-                    label={
-                      <>
-                        Pressão na Interface (<MathTex tex={`y = ${mud.mudHeight.toFixed(2)}\\text{ m}`} />)
-                      </>
-                    }
-                    symbol={<MathTex tex="p_{\text{int}}" />}
-                    formula={<MathTex tex="\gamma_{\text{água}} \cdot h_{\text{água}}" />}
-                    substitution={<MathTex tex={`${gammaUnitVal} \\cdot ${mud.waterHeight.toFixed(2)}`} />}
-                    result={<MathTex tex={fmtP(mud.p_interface)} />}
-                    unit={<MathTex tex={unitPTex} />}
-                  />
-                  <CalculationLine
-                    theme="amber"
-                    label="Parcela Retangular na Lama"
-                    symbol={<MathTex tex="P''_{\text{ret}}" />}
-                    formula={<MathTex tex="p_{\text{int}} \cdot \frac{h_{\text{lama}}}{\operatorname{sen}(\theta)}" />}
-                    result={<MathTex tex={fmtF(mud.F_mud_rect)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="amber"
-                    label={
-                      <>
-                        Parcela Triangular na Lama (<MathTex tex={`\\rho = ${mud.mudDensity}\\text{ kg/m}^3`} />)
-                      </>
-                    }
-                    symbol={<MathTex tex="P''_{\text{tri}}" />}
-                    formula={
-                      <MathTex tex="\frac{1}{2} \cdot \gamma_{\text{lama}} \cdot \frac{h_{\text{lama}}^2}{\operatorname{sen}(\theta)}" />
-                    }
-                    result={<MathTex tex={fmtF(mud.F_mud_tri)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="amber"
-                    label={
-                      <>
-                        Empuxo na Camada de Lama (<MathTex tex="P''" />)
-                      </>
-                    }
-                    symbol={<MathTex tex="P''" />}
-                    formula={<MathTex tex="P''_{\text{ret}} + P''_{\text{tri}}" />}
-                    substitution={<MathTex tex={`${fmtF(mud.F_mud_rect)} + ${fmtF(mud.F_mud_tri)}`} />}
-                    result={<MathTex tex={fmtF(mud.F_mud)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="amber"
-                    label={
-                      <>
-                        Centro de Pressão de <MathTex tex="P''" /> (<MathTex tex="C''" /> do fundo)
-                      </>
-                    }
-                    symbol={<MathTex tex="y_{C''}" />}
-                    result={<MathTex tex={mud.y_cp_mud.toFixed(2)} />}
-                    unit={<MathTex tex="\text{m}" />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label={
-                      <>
-                        Empuxo Total a Montante (<MathTex tex="P = P' + P''" />)
-                      </>
-                    }
-                    symbol={<MathTex tex="F_{R,\text{up}}" />}
-                    formula={<MathTex tex="P' + P''" />}
-                    substitution={<MathTex tex={`${fmtF(mud.F_water)} + ${fmtF(mud.F_mud)}`} />}
-                    result={<MathTex tex={fmtF(frUp)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label="Centro de Pressão Total (do fundo)"
-                    symbol={<MathTex tex="y_{\text{cp},\text{up}}" />}
-                    formula={<MathTex tex="\frac{P' \cdot y_{C'} + P'' \cdot y_{C''}}{F_{R,\text{up}}}" />}
-                    result={<MathTex tex={(fd.up?.y_cp ?? 0).toFixed(2)} />}
-                    unit={<MathTex tex="\text{m}" />}
-                  />
-                </>
-              ) : (
-                <>
-                  <CalculationLine
-                    theme="blue"
-                    label="Área Molhada (Montante)"
-                    symbol={<MathTex tex="A_{\text{up}}" />}
-                    formula={<MathTex tex="\frac{h_{\text{up}}}{\operatorname{sen}(\theta)}" />}
-                    substitution={
-                      <MathTex tex={`${hUp.toFixed(2)} / \\operatorname{sen}(${thetaUp.toFixed(1)}^\\circ)`} />
-                    }
-                    result={<MathTex tex={(fd.up?.area ?? 0).toFixed(2)} />}
-                    unit={<MathTex tex="\text{m}^2/\text{m}" />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label="Prof. Centro de Gravidade"
-                    symbol={<MathTex tex="h_{\text{cg},\text{up}}" />}
-                    formula={<MathTex tex="\frac{h_{\text{up}}}{2}" />}
-                    substitution={<MathTex tex={`${hUp.toFixed(2)} / 2`} />}
-                    result={<MathTex tex={(fd.up?.h_cg ?? 0).toFixed(2)} />}
-                    unit={<MathTex tex="\text{m}" />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label="Força Normal à Face (Montante)"
-                    symbol={<MathTex tex="F_{R,\text{up}}" />}
-                    formula={<MathTex tex="\gamma \cdot h_{\text{cg},\text{up}} \cdot A_{\text{up}}" />}
-                    substitution={
-                      <MathTex
-                        tex={`${gammaUnitVal} \\cdot ${(fd.up?.h_cg ?? 0).toFixed(2)} \\cdot ${(fd.up?.area ?? 0).toFixed(2)}`}
-                      />
-                    }
-                    result={<MathTex tex={fmtF(frUp)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label="Componente Horizontal (Montante)"
-                    symbol={<MathTex tex="F_{H,\text{up}}" />}
-                    formula={<MathTex tex="F_{R,\text{up}} \cdot \operatorname{sen}(\theta)" />}
-                    substitution={
-                      <MathTex tex={`${fmtF(frUp)} \\cdot \\operatorname{sen}(${thetaUp.toFixed(1)}^\\circ)`} />
-                    }
-                    result={<MathTex tex={fmtF(fhUp)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label="Componente Vertical (Montante)"
-                    symbol={<MathTex tex="F_{V,\text{up}}" />}
-                    formula={<MathTex tex="F_{R,\text{up}} \cdot \cos(\theta)" />}
-                    substitution={
-                      <MathTex tex={`${fmtF(frUp)} \\cdot \\cos(${thetaUp.toFixed(1)}^\\circ)`} />
-                    }
-                    result={<MathTex tex={fmtF(fvUp)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="blue"
-                    label="Centro de Pressão (do fundo / da superfície)"
-                    symbol={<MathTex tex="y_{\text{cp},\text{up}}" />}
-                    formula={<MathTex tex="\frac{h_{\text{up}}}{3}\;\left(h_{\text{cp}} = \frac{2\cdot h_{\text{up}}}{3}\right)" />}
-                    substitution={
-                      <MathTex
-                        tex={`${hUp.toFixed(2)} / 3\\;\\left(h_{\\text{cp}} = ${(fd.up?.h_cp ?? 0).toFixed(2)}\\text{ m}\\right)`}
-                      />
-                    }
-                    result={<MathTex tex={(fd.up?.y_cp ?? 0).toFixed(2)} />}
-                    unit={<MathTex tex="\text{m}" />}
-                  />
-                </>
-              )}
-
-              {hDown > 0 && fd.down && (
+              {temDoisLados && lados.jusante && (
                 <>
                   <div className="mt-4 pt-2"></div>
                   <CalculationLine
@@ -1004,70 +1209,71 @@ export const Memorial: React.FC<MemorialProps> = ({
                     isSubHeader
                     label={
                       <>
-                        Jusante (<MathTex tex={`\\theta_{\\text{jus}} = ${thetaDown.toFixed(1)}^\\circ`} /> |{' '}
-                        <MathTex tex={`${(90 - thetaDown).toFixed(1)}^\\circ`} /> c/ vertical)
+                        Jusante – Face {lados.jusante.ladoRotulo} (<MathTex tex={`\\theta_{\\text{jus}} = ${lados.jusante.theta.toFixed(1)}^\\circ`} /> |{' '}
+                        <MathTex tex={`${(90 - lados.jusante.theta).toFixed(1)}^\\circ`} /> c/ vertical)
                       </>
                     }
-                    symbol="Downstream"
+                    symbol={lados.jusante.ladoRotulo}
                     result=""
                     unit=""
                   />
                   <CalculationLine
                     theme="indigo"
                     label="Área / Comprimento Molhado (Jusante)"
-                    symbol={<MathTex tex="A_{\text{down}}" />}
-                    formula={<MathTex tex="\frac{h_{\text{down}}}{\operatorname{sen}(\theta_{\text{jus}})}" />}
+                    symbol={<MathTex tex="A_{\text{jus}}" />}
+                    formula={<MathTex tex="\frac{h_{\text{jus}}}{\operatorname{sen}(\theta_{\text{jus}})}" />}
                     substitution={
-                      <MathTex tex={`${hDown.toFixed(2)} / \\operatorname{sen}(${thetaDown.toFixed(1)}^\\circ)`} />
+                      <MathTex tex={`${lados.jusante.nivelAgua.toFixed(2)} / \\operatorname{sen}(${lados.jusante.theta.toFixed(1)}^\\circ)`} />
                     }
-                    result={<MathTex tex={(fd.down.area ?? 0).toFixed(2)} />}
+                    result={<MathTex tex={(lados.jusante.res.area ?? 0).toFixed(2)} />}
                     unit={<MathTex tex="\text{m}^2/\text{m}" />}
                   />
                   <CalculationLine
                     theme="indigo"
-                    label="Força Normal à Face (Jusante)"
-                    symbol={<MathTex tex="F_{R,\text{down}}" />}
-                    formula={<MathTex tex="\gamma \cdot h_{\text{cg},\text{down}} \cdot A_{\text{down}}" />}
+                    label={`Força Normal à Face (Jusante – ${lados.jusante.ladoRotulo})`}
+                    symbol={<MathTex tex="E_{\text{jus}}" />}
+                    formula={<MathTex tex="\gamma \cdot h_{\text{cg},\text{jus}} \cdot A_{\text{jus}}" />}
                     substitution={
                       <MathTex
-                        tex={`${gammaUnitVal} \\cdot ${(fd.down.h_cg ?? 0).toFixed(2)} \\cdot ${(fd.down.area ?? 0).toFixed(2)}`}
+                        tex={`${gammaUnitVal} \\cdot ${(lados.jusante.res.h_cg ?? 0).toFixed(2)} \\cdot ${(lados.jusante.res.area ?? 0).toFixed(2)}`}
                       />
                     }
-                    result={<MathTex tex={fmtF(frDown)} />}
+                    result={<MathTex tex={fmtF(lados.jusante.res.FR)} />}
+                    unit={<MathTex tex={unitFTex} />}
+                    isSubHeader
+                  />
+                  <CalculationLine
+                    theme="indigo"
+                    label={`Componente Horizontal (${lados.jusante.sentidoTexto})`}
+                    symbol={<MathTex tex="F_{H,\text{jus}}" />}
+                    formula={<MathTex tex="E_{\text{jus}} \cdot \operatorname{sen}(\theta_{\text{jus}})" />}
+                    result={<MathTex tex={fmtF(lados.jusante.res.FH)} />}
                     unit={<MathTex tex={unitFTex} />}
                   />
                   <CalculationLine
                     theme="indigo"
-                    label="Componente Horizontal (Jusante)"
-                    symbol={<MathTex tex="F_{H,\text{down}}" />}
-                    formula={<MathTex tex="F_{R,\text{down}} \cdot \operatorname{sen}(\theta_{\text{jus}})" />}
-                    result={<MathTex tex={fmtF(fhDown)} />}
-                    unit={<MathTex tex={unitFTex} />}
-                  />
-                  <CalculationLine
-                    theme="indigo"
-                    label="Componente Vertical (Jusante)"
-                    symbol={<MathTex tex="F_{V,\text{down}}" />}
-                    formula={<MathTex tex="F_{R,\text{down}} \cdot \cos(\theta_{\text{jus}})" />}
-                    result={<MathTex tex={fmtF(fvDown)} />}
+                    label="Componente Vertical (Jusante, para baixo)"
+                    symbol={<MathTex tex="F_{V,\text{jus}}" />}
+                    formula={<MathTex tex="E_{\text{jus}} \cdot \cos(\theta_{\text{jus}})" />}
+                    result={<MathTex tex={fmtF(lados.jusante.res.FV)} />}
                     unit={<MathTex tex={unitFTex} />}
                   />
                   <CalculationLine
                     theme="indigo"
                     label="Centro de Pressão ao Longo da Face (da sup.)"
-                    symbol={<MathTex tex="s_{\text{cp},\text{down}}" />}
+                    symbol={<MathTex tex="y_{p,\text{jus}}" />}
                     formula={<MathTex tex="\frac{2}{3} \cdot L_{\text{molhado}}" />}
-                    substitution={<MathTex tex={`\\frac{2}{3} \\cdot ${(fd.down.wetLength ?? 0).toFixed(2)}`} />}
-                    result={<MathTex tex={(fd.down.s_cp ?? 0).toFixed(2)} />}
+                    substitution={<MathTex tex={`\\frac{2}{3} \\cdot ${(lados.jusante.res.wetLength ?? 0).toFixed(2)}`} />}
+                    result={<MathTex tex={(lados.jusante.res.s_cp ?? 0).toFixed(2)} />}
                     unit={<MathTex tex="\text{m}" />}
                   />
                   <CalculationLine
                     theme="indigo"
                     label="Altura Vertical do CP (Jusante, do fundo)"
-                    symbol={<MathTex tex="y_{\text{cp},\text{down}}" />}
-                    formula={<MathTex tex="\frac{h_{\text{down}}}{3}" />}
-                    substitution={<MathTex tex={`${hDown.toFixed(2)} / 3`} />}
-                    result={<MathTex tex={(fd.down.y_cp ?? 0).toFixed(2)} />}
+                    symbol={<MathTex tex="y_{\text{cp},\text{jus}}" />}
+                    formula={<MathTex tex="\frac{h_{\text{jus}}}{3}" />}
+                    substitution={<MathTex tex={`${lados.jusante.nivelAgua.toFixed(2)} / 3`} />}
+                    result={<MathTex tex={(lados.jusante.res.y_cp ?? 0).toFixed(2)} />}
                     unit={<MathTex tex="\text{m}" />}
                   />
                 </>
@@ -1083,18 +1289,18 @@ export const Memorial: React.FC<MemorialProps> = ({
             <div className="bg-cyan-50/30 dark:bg-cyan-950/20 p-6 rounded-2xl border border-cyan-100/50 dark:border-cyan-900/40 space-y-1">
               <CalculationLine
                 theme="cyan"
-                label="Resultante Horizontal Líquida"
+                label={`Resultante Horizontal Líquida (${fd.FH_net < -1e-3 ? '← para a esquerda' : fd.FH_net > 1e-3 ? '→ para a direita' : 'nula'})`}
                 symbol={<MathTex tex="F_{H,\text{net}}" />}
-                formula={<MathTex tex="F_{H,\text{up}} - F_{H,\text{down}}" />}
+                formula={<MathTex tex="F_{H,\text{esq}} - F_{H,\text{dir}}" />}
                 substitution={<MathTex tex={`${fmtF(fhUp)} - ${fmtF(fhDown)}`} />}
                 result={<MathTex tex={fmtF(fd.FH_net)} />}
                 unit={<MathTex tex={unitFTex} />}
               />
               <CalculationLine
                 theme="cyan"
-                label="Resultante Vertical (Água sobre faces)"
+                label="Resultante Vertical (Água sobre faces, ↓ para baixo)"
                 symbol={<MathTex tex="F_{V,\text{net}}" />}
-                formula={<MathTex tex="F_{V,\text{up}} + F_{V,\text{down}}" />}
+                formula={<MathTex tex="F_{V,\text{esq}} + F_{V,\text{dir}}" />}
                 substitution={<MathTex tex={`${fmtF(fvUp)} + ${fmtF(fvDown)}`} />}
                 result={<MathTex tex={fmtF(fd.FV_net)} />}
                 unit={<MathTex tex={unitFTex} />}
@@ -1174,7 +1380,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                     <CalculationLine
                       theme="emerald"
                       isSubHeader
-                      label="Tombamento (Pé de Jusante)"
+                      label={fd.FH_net < 0 ? 'Tombamento (Pé Esquerdo)' : 'Tombamento (Pé de Jusante)'}
                       symbol="Overturning"
                       result=""
                       unit=""
@@ -1183,9 +1389,15 @@ export const Memorial: React.FC<MemorialProps> = ({
                       theme="emerald"
                       label="Braço Real do Peso"
                       symbol={<MathTex tex="b_W" />}
-                      formula={<MathTex tex="B - x_{\text{cg}}" />}
+                      formula={<MathTex tex={fd.FH_net < 0 ? 'x_{\\text{cg}}' : 'B - x_{\\text{cg}}'} />}
                       substitution={
-                        <MathTex tex={`${st.actualBaseWidth.toFixed(2)} - ${st.x_cg.toFixed(2)}`} />
+                        <MathTex
+                          tex={
+                            fd.FH_net < 0
+                              ? `${st.x_cg.toFixed(2)}`
+                              : `${st.actualBaseWidth.toFixed(2)} - ${st.x_cg.toFixed(2)}`
+                          }
+                        />
                       }
                       result={<MathTex tex={st.lever_arm_weight.toFixed(2)} />}
                       unit={<MathTex tex="\text{m}" />}

@@ -465,8 +465,20 @@ export interface VetorHidrostática2D {
   start: { x: number; y: number };
   end: { x: number; y: number };
   color: string;
+  markerId?: string;
   isResultant: boolean;
+  dashed?: boolean;
+  hideEndDot?: boolean;
   val: string;
+  labelParts?: {
+    prefix: string;
+    sub?: string;
+    valueText: string;
+  };
+  labelPos?: { x: number; y: number };
+  badgeBg?: string;
+  badgeBorder?: string;
+  badgeTextColor?: string;
   opacity: number;
   strokeWidth: number;
 }
@@ -481,7 +493,10 @@ export interface GerarVetores2DParams {
   forceH?: number;
   forceV?: number;
   y_cp: number;
-  up?: { FR: number };
+  up?: { FR: number; FH?: number; FV?: number; y_cp?: number };
+  down?: { FR: number; FH?: number; FV?: number; y_cp?: number };
+  unitSystem?: 'SI' | 'TECNICO_KGF';
+  gravity?: number;
   getDamXAtY: (y: number, side: "UPSTREAM" | "DOWNSTREAM") => number;
   toWorldX: (x: number) => number;
   project: (p: Point3D) => { x: number; y: number; zDepth: number };
@@ -506,6 +521,9 @@ export function gerarVetoresBarragem2D({
   forceV,
   y_cp,
   up,
+  down,
+  unitSystem = 'SI',
+  gravity = 9.81,
   getDamXAtY,
   toWorldX,
   project,
@@ -524,6 +542,19 @@ export function gerarVetoresBarragem2D({
   const isInside = (p: { x: number; y: number }) =>
     p.x >= 10 && p.x <= SVG_W - 10 && p.y >= 10 && p.y <= SVG_H - 10;
 
+  const fmtForceText = (valN: number) => {
+    if (unitSystem === 'TECNICO_KGF') {
+      return `${(Math.abs(valN) / gravity).toLocaleString('pt-BR', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })} kgf/m`;
+    }
+    return `${(Math.abs(valN) / 1000).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} kN/m`;
+  };
+
   const pushArrow = (
     x: number,
     y: number,
@@ -533,7 +564,8 @@ export function gerarVetoresBarragem2D({
     magWorld: number,
     color: string,
     isResultant: boolean,
-    val?: string
+    val?: string,
+    extra?: Partial<VetorHidrostática2D>
   ) => {
     let finalMag = magWorld;
     const pEnd = project({ x, y, z });
@@ -559,6 +591,7 @@ export function gerarVetoresBarragem2D({
       val: val || "",
       opacity: isResultant ? 1 : distributionOpacity,
       strokeWidth: isResultant ? 3.5 : 1.35,
+      ...extra,
     });
   };
 
@@ -590,7 +623,25 @@ export function gerarVetoresBarragem2D({
     return { nx: nx / mag, ny: ny / mag };
   };
 
-  const Ny = 40;
+  const hasTwoSides =
+    upstreamLevel > 1e-6 &&
+    downstreamLevel > 1e-6 &&
+    !!up &&
+    up.FR > 1e-3 &&
+    !!down &&
+    down.FR > 1e-3;
+
+  const leftIsMontante =
+    !hasTwoSides ||
+    upstreamLevel > downstreamLevel + 1e-6 ||
+    (Math.abs(upstreamLevel - downstreamLevel) <= 1e-6 && (up?.FH ?? 0) >= (down?.FH ?? 0));
+
+  // Cores consistentes por papel hidráulico em dois lados: Montante (#2563eb azul) e Jusante (#0d9488 verde-água)
+  const leftDistColor = hasTwoSides ? (leftIsMontante ? "#2563eb" : "#0d9488") : "#2563eb";
+  const rightDistColor = hasTwoSides ? (leftIsMontante ? "#0d9488" : "#2563eb") : "#3b82f6";
+  const leftDistMarker = hasTwoSides ? (leftIsMontante ? "arrow-blue" : "arrow-teal") : "arrow-red";
+  const rightDistMarker = hasTwoSides ? (leftIsMontante ? "arrow-teal" : "arrow-blue") : "arrow-red";
+
   const effMud = hasMudLayer && mudHeight > 0 ? Math.min(mudHeight, upstreamLevel) : 0;
   const mudRatio = Math.max(0.1, mudDensity / Math.max(1e-6, density));
   const maxUpEffHead = effMud > 0 ? (upstreamLevel - effMud) + mudRatio * effMud : upstreamLevel;
@@ -598,34 +649,215 @@ export function gerarVetoresBarragem2D({
   const maxHead = Math.max(maxUpEffHead, downstreamLevel, 1e-9);
 
   if (upstreamLevel > 0) {
-    for (let i = 0; i < Ny; i++) {
-      const y = upstreamLevel - (i / (Ny - 1)) * upstreamLevel;
+    const NyLeft = hasTwoSides
+      ? Math.max(9, Math.min(24, Math.round((upstreamLevel * SCALE) / 10)))
+      : 40;
+    const startIdx = hasTwoSides ? 1 : 0;
+    for (let i = startIdx; i < NyLeft; i++) {
+      const y = upstreamLevel - (i / (NyLeft - 1)) * upstreamLevel;
       const inMud = effMud > 0 && y < effMud - 1e-6;
       const effDepth = inMud
         ? (upstreamLevel - effMud) + mudRatio * (effMud - y)
         : upstreamLevel - y;
       const { nx, ny } = localNormal(y, "UPSTREAM");
-      const Lpx = 10 + (72 - 10) * (effDepth / maxHead);
+      const Lpx = hasTwoSides
+        ? 6 + (72 - 6) * (effDepth / maxHead)
+        : 10 + (72 - 10) * (effDepth / maxHead);
       const Lw = Lpx / SCALE;
 
       const base = getDamXAtY(y, "UPSTREAM");
       const x = toWorldX(base);
-      pushArrow(x, y, 0, nx, ny, Lw, inMud ? "#b45309" : "#2563eb", false);
+      pushArrow(
+        x,
+        y,
+        0,
+        nx,
+        ny,
+        Lw,
+        inMud ? "#b45309" : leftDistColor,
+        false,
+        undefined,
+        hasTwoSides ? { markerId: inMud ? "arrow-amber" : leftDistMarker, opacity: 0.72 } : undefined
+      );
     }
   }
 
   if (downstreamLevel > 0) {
-    for (let i = 0; i < Ny; i++) {
-      const d = (i / (Ny - 1)) * downstreamLevel;
+    const NyRight = hasTwoSides
+      ? Math.max(9, Math.min(24, Math.round((downstreamLevel * SCALE) / 10)))
+      : 40;
+    const startIdx = hasTwoSides ? 1 : 0;
+    for (let i = startIdx; i < NyRight; i++) {
+      const d = (i / (NyRight - 1)) * downstreamLevel;
       const y = downstreamLevel - d;
       const { nx, ny } = localNormal(y, "DOWNSTREAM");
-      const Lpx = 10 + (72 - 10) * (d / maxHead);
+      const Lpx = hasTwoSides
+        ? 6 + (72 - 6) * (d / maxHead)
+        : 10 + (72 - 10) * (d / maxHead);
       const Lw = Lpx / SCALE;
 
       const base = getDamXAtY(y, "DOWNSTREAM");
       const x = toWorldX(base);
-      pushArrow(x, y, 0, nx, ny, Lw, "#3b82f6", false);
+      pushArrow(
+        x,
+        y,
+        0,
+        nx,
+        ny,
+        Lw,
+        rightDistColor,
+        false,
+        undefined,
+        hasTwoSides ? { markerId: rightDistMarker, opacity: 0.72 } : undefined
+      );
     }
+  }
+
+  if (hasTwoSides && up && down) {
+    const maxFR = Math.max(up.FR, down.FR, Math.abs(force), 1e-6);
+    const scaleLenPx = (magN: number) => Math.max(46, Math.min(125, 125 * (magN / maxFR)));
+
+    // 1. Vetor individual da face ESQUERDA (perpendicular à face esquerda no seu CP)
+    const yLeftCP = Math.max(0, Math.min(damHeight, up.y_cp ?? y_cp));
+    const xLeftWorld = toWorldX(getDamXAtY(yLeftCP, "UPSTREAM"));
+    const normLeft = localNormal(yLeftCP, "UPSTREAM");
+    const lenLeftPx = scaleLenPx(up.FR);
+    const pLeftEnd = project({ x: xLeftWorld, y: yLeftCP, z: 0 });
+    const pLeftStart = project({
+      x: xLeftWorld + normLeft.nx * (lenLeftPx / SCALE),
+      y: yLeftCP + normLeft.ny * (lenLeftPx / SCALE),
+      z: 0,
+    });
+    const pLeftSurf = project({
+      x: toWorldX(getDamXAtY(upstreamLevel, "UPSTREAM")),
+      y: upstreamLevel,
+      z: 0,
+    });
+
+    const leftRoleStyle = leftIsMontante
+      ? {
+          color: "#2563eb",
+          markerId: "arrow-blue",
+          badgeBg: "#eff6ff",
+          badgeBorder: "#93c5fd",
+          badgeTextColor: "#1d4ed8",
+          sub: "mont",
+        }
+      : {
+          color: "#0d9488",
+          markerId: "arrow-teal",
+          badgeBg: "#f0fdfa",
+          badgeBorder: "#5eead4",
+          badgeTextColor: "#0f766e",
+          sub: "jus",
+        };
+
+    const leftLabelPos = leftIsMontante
+      ? {
+          x: Math.max(110, (pLeftStart.x + pLeftEnd.x) / 2 - 14),
+          y: Math.min(pLeftStart.y, pLeftEnd.y) - 22,
+        }
+      : {
+          x: Math.max(150, Math.min(pLeftStart.x + 6, pLeftSurf.x - 68)),
+          y: pLeftSurf.y - 24,
+        };
+
+    pushArrow(
+      xLeftWorld,
+      yLeftCP,
+      0,
+      normLeft.nx,
+      normLeft.ny,
+      lenLeftPx / SCALE,
+      leftRoleStyle.color,
+      true,
+      "",
+      {
+        markerId: leftRoleStyle.markerId,
+        strokeWidth: 3.4,
+        labelParts: {
+          prefix: "E",
+          sub: leftRoleStyle.sub,
+          valueText: `= ${fmtForceText(up.FR)}`,
+        },
+        labelPos: leftLabelPos,
+        badgeBg: leftRoleStyle.badgeBg,
+        badgeBorder: leftRoleStyle.badgeBorder,
+        badgeTextColor: leftRoleStyle.badgeTextColor,
+      }
+    );
+
+    // 2. Vetor individual da face DIREITA (perpendicular à face direita no seu CP)
+    const yRightCP = Math.max(0, Math.min(damHeight, down.y_cp ?? y_cp));
+    const xRightWorld = toWorldX(getDamXAtY(yRightCP, "DOWNSTREAM"));
+    const normRight = localNormal(yRightCP, "DOWNSTREAM");
+    const lenRightPx = scaleLenPx(down.FR);
+    const pRightEnd = project({ x: xRightWorld, y: yRightCP, z: 0 });
+    const pRightStart = project({
+      x: xRightWorld + normRight.nx * (lenRightPx / SCALE),
+      y: yRightCP + normRight.ny * (lenRightPx / SCALE),
+      z: 0,
+    });
+    const pRightSurf = project({
+      x: toWorldX(getDamXAtY(downstreamLevel, "DOWNSTREAM")),
+      y: downstreamLevel,
+      z: 0,
+    });
+
+    const rightRoleStyle = !leftIsMontante
+      ? {
+          color: "#2563eb",
+          markerId: "arrow-blue",
+          badgeBg: "#eff6ff",
+          badgeBorder: "#93c5fd",
+          badgeTextColor: "#1d4ed8",
+          sub: "mont",
+        }
+      : {
+          color: "#0d9488",
+          markerId: "arrow-teal",
+          badgeBg: "#f0fdfa",
+          badgeBorder: "#5eead4",
+          badgeTextColor: "#0f766e",
+          sub: "jus",
+        };
+
+    const rightLabelPos = !leftIsMontante
+      ? {
+          x: Math.min(SVG_W - 155, (pRightStart.x + pRightEnd.x) / 2 + 8),
+          y: Math.min(pRightStart.y, pRightEnd.y) - 22,
+        }
+      : {
+          x: Math.min(SVG_W - 150, Math.max(pRightStart.x - 6, pRightSurf.x + 68)),
+          y: pRightSurf.y - 24,
+        };
+
+    pushArrow(
+      xRightWorld,
+      yRightCP,
+      0,
+      normRight.nx,
+      normRight.ny,
+      lenRightPx / SCALE,
+      rightRoleStyle.color,
+      true,
+      "",
+      {
+        markerId: rightRoleStyle.markerId,
+        strokeWidth: 3.4,
+        labelParts: {
+          prefix: "E",
+          sub: rightRoleStyle.sub,
+          valueText: `= ${fmtForceText(down.FR)}`,
+        },
+        labelPos: rightLabelPos,
+        badgeBg: rightRoleStyle.badgeBg,
+        badgeBorder: rightRoleStyle.badgeBorder,
+        badgeTextColor: rightRoleStyle.badgeTextColor,
+      }
+    );
+
+    return vecs;
   }
 
   if (up && Math.abs(force) > 1e-3) {

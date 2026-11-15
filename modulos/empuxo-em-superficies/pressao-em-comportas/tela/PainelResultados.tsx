@@ -1,5 +1,5 @@
 import React from 'react';
-import { ResultsPanel, ResultsCard } from '../../../../interface/PainelResultados';
+import { ResultsPanel, ResultsCard, Var } from '../../../../interface/PainelResultados';
 import {
   Calculator,
   ArrowDown,
@@ -38,7 +38,7 @@ interface PainelResultadosProps {
   hasVerticalWallHingeA?: boolean;
 }
 
-const SectionLabel: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
+const SectionLabel: React.FC<{ title: string; subtitle?: React.ReactNode }> = ({ title, subtitle }) => (
   <div className="pt-2 first:pt-0 pb-1 border-b border-slate-100 dark:border-slate-800">
     <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
       {title}
@@ -182,7 +182,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                   ? 'green'
                   : 'amber'
               }
-              title="Profundidade da Água para R_B = 0 (h)"
+              title={<>Profundidade da Água para <Var base="R" sub="B" /> = 0 (h)</>}
               value={
                 analyzedResults?.equilibrium?.h_jusante_eq !== undefined
                   ? `${analyzedResults.equilibrium.h_jusante_eq.toFixed(3).replace('.', ',')} m`
@@ -192,8 +192,8 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               secondaryValue={
                 analyzedResults
                   ? Math.abs(analyzedResults.equilibrium?.R_B ?? 0) < 1e-2
-                    ? 'Condição limite atingida: R_B = 0 (perda de contato em B)'
-                    : `Nível atual: ${(analyzedResults.hidraulica?.nivelJusanteEfetivo ?? 0).toFixed(3).replace('.', ',')} m | R_B ≠ 0`
+                    ? <>Condição limite atingida: <Var base="R" sub="B" /> = 0 (perda de contato em B)</>
+                    : <>Nível atual: {(analyzedResults.hidraulica?.nivelJusanteEfetivo ?? 0).toFixed(3).replace('.', ',')} m | <Var base="R" sub="B" /> ≠ 0</>
                   : 'Clique em Analisar para determinar h'
               }
             />
@@ -237,7 +237,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Profundidade do Centroide (h<sub>c</sub>)</>}
+                title={<>Profundidade do Centroide (<Var base="h" sub="c" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.h_cg !== undefined
                     ? analyzedResults.forceData.up.h_cg.toFixed(2).replace('.', ',')
@@ -246,15 +246,20 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
                   analyzedResults?.forceData?.up?.Y_CG !== undefined
-                    ? `y_c (inclinado) = ${analyzedResults.forceData.up.Y_CG.toFixed(2).replace('.', ',')} m | h_c = D + (L/2)·sen(θ)`
-                    : 'h_c = D + (L/2)·sen(θ)'
+                    ? (
+                      <>
+                        <span><Var base="y" sub="c" /> (inclinado) = {analyzedResults.forceData.up.Y_CG.toFixed(2).replace('.', ',')} m</span>
+                        <span><Var base="h" sub="c" /> = D + (L/2)·sen(θ)</span>
+                      </>
+                    )
+                    : <><Var base="h" sub="c" /> = D + (L/2)·sen(θ)</>
                 }
                 theme="slate"
                 leftIcon={MoveVertical}
               />
 
               <ResultsCard
-                title={<>Pressão no Centroide (p<sub>c</sub>)</>}
+                title={<>Pressão no Centroide (<Var base="p" sub="c" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.p_cg !== undefined
                     ? isKgf
@@ -263,38 +268,38 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                     : '???'
                 }
                 unit={analyzedResults ? (isKgf ? 'kgf/m²' : 'kPa') : ''}
-                secondaryValue="p_c = γ · h_c (pressão atmosférica se anula nas duas faces)"
+                secondaryValue={<><Var base="p" sub="c" /> = γ · <Var base="h" sub="c" /> (pressão atmosférica se anula nas duas faces)</>}
                 theme="blue"
                 leftIcon={Gauge}
               />
 
               <ResultsCard
-                title={<>Momento de Inércia (I<sub>G</sub>)</>}
+                title={<>Momento de Inércia (<Var base="I" sub="G" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.Ixx !== undefined
                     ? analyzedResults.forceData.up.Ixx.toFixed(4).replace('.', ',')
                     : '???'
                 }
                 unit={analyzedResults ? 'm⁴' : ''}
-                secondaryValue="I_G = w · L³ / 12"
+                secondaryValue={<><Var base="I" sub="G" /> = w · L³ / 12</>}
                 theme="slate"
                 leftIcon={Calculator}
               />
 
               <SectionLabel
                 title="B. Força Hidrostática e Centro de Pressão"
-                subtitle="Módulo da força resultante F_R e localização exata do CP"
+                subtitle={<>Módulo da força resultante <Var base="F" sub="R" /> e localização exata do CP</>}
               />
 
               <ResultsCard
                 highlight
                 highlightTheme="blue"
-                title="Força Hidrostática Resultante (F_R)"
+                title={<>Força Hidrostática Resultante (<Var base="F" sub="R" />)</>}
                 value={isKgf ? forceVal : forceVal.replace('.', ',')}
                 unit={forceUnit}
                 secondaryValue={
                   analyzedResults
-                    ? `${forceSec} | F_R = γ · h_c · A (perpendicular à comporta)`
+                    ? <>{forceSec} | <Var base="F" sub="R" /> = γ · <Var base="h" sub="c" /> · A (perpendicular à comporta)</>
                     : forceSec
                 }
                 badge={analyzedResults ? 'RESULTANTE' : undefined}
@@ -302,7 +307,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Profundidade Vertical do CP (h<sub>CP</sub>)</>}
+                title={<>Profundidade Vertical do CP (<Var base="h" sub="CP" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.h_cp !== undefined
                     ? analyzedResults.forceData.up.h_cp.toFixed(3).replace('.', ',')
@@ -311,7 +316,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
                   analyzedResults?.forceData?.up?.h_cp !== undefined
-                    ? `h_CP = h_c + (I_G · sen²θ)/(h_c · A) > h_c (${analyzedResults.forceData.up.h_cg.toFixed(2).replace('.', ',')} m)`
+                    ? <><Var base="h" sub="CP" /> = <Var base="h" sub="c" /> + (<Var base="I" sub="G" /> · sen²θ)/(<Var base="h" sub="c" /> · A) &gt; <Var base="h" sub="c" /> ({analyzedResults.forceData.up.h_cg.toFixed(2).replace('.', ',')} m)</>
                     : 'Profundidade vertical do centro de pressão'
                 }
                 theme="cyan"
@@ -319,7 +324,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Distância Inclinada do CP à Superfície Livre (y<sub>CP</sub>)</>}
+                title={<>Distância Inclinada do CP à Superfície Livre (<Var base="y" sub="CP" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.Y_CP !== undefined
                     ? analyzedResults.forceData.up.Y_CP.toFixed(3).replace('.', ',')
@@ -328,7 +333,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
                   analyzedResults?.forceData?.up?.Y_CP !== undefined
-                    ? `y_CP = h_CP / sen(θ) = y_c + Δy > y_c (${analyzedResults.forceData.up.Y_CG.toFixed(2).replace('.', ',')} m)`
+                    ? <><Var base="y" sub="CP" /> = <Var base="h" sub="CP" /> / sen(θ) = <Var base="y" sub="c" /> + Δy &gt; <Var base="y" sub="c" /> ({analyzedResults.forceData.up.Y_CG.toFixed(2).replace('.', ',')} m)</>
                     : 'Medida ao longo do plano inclinado a partir da superfície livre'
                 }
                 theme="cyan"
@@ -336,7 +341,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Distância entre CG e CP (Δy = y<sub>CP</sub> − y<sub>c</sub>)</>}
+                title={<>Distância entre CG e CP (Δy = <Var base="y" sub="CP" /> − <Var base="y" sub="c" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.delta_y !== undefined
                     ? analyzedResults.forceData.up.delta_y.toFixed(3).replace('.', ',')
@@ -345,7 +350,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
                   analyzedResults?.forceData?.up?.delta_y !== undefined
-                    ? `${(analyzedResults.forceData.up.delta_y * 100).toFixed(2).replace('.', ',')} cm abaixo do centroide (I_G / (y_c · A))`
+                    ? <>{(analyzedResults.forceData.up.delta_y * 100).toFixed(2).replace('.', ',')} cm abaixo do centroide (<Var base="I" sub="G" /> / (<Var base="y" sub="c" /> · A))</>
                     : 'Excentricidade entre o centroide e o centro de pressão'
                 }
                 theme="purple"
@@ -353,7 +358,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Distância entre Articulação A e CP (y<sub>CP,A</sub>)</>}
+                title={<>Distância entre Articulação A e CP (<Var base="y" sub="CP,A" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.s_cp !== undefined
                     ? analyzedResults.forceData.up.s_cp.toFixed(3).replace('.', ',')
@@ -362,7 +367,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
                   analyzedResults?.forceData?.up?.s_cp !== undefined
-                    ? `y_CP,A = L/2 + Δy = ${(analyzedResults.forceData.up.s_cg ?? 2).toFixed(3).replace('.', ',')} + ${(analyzedResults.forceData.up.delta_y ?? 0).toFixed(3).replace('.', ',')} m a partir de A`
+                    ? <><Var base="y" sub="CP,A" /> = L/2 + Δy = {(analyzedResults.forceData.up.s_cg ?? 2).toFixed(3).replace('.', ',')} + {(analyzedResults.forceData.up.delta_y ?? 0).toFixed(3).replace('.', ',')} m a partir de A</>
                     : 'Posição do CP medida ao longo da comporta a partir de A'
                 }
                 theme="amber"
@@ -374,7 +379,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               <ResultsCard
                 highlight
                 highlightTheme="blue"
-                title="Força Hidrostática Resultante (F_R)"
+                title={<>Força Hidrostática Resultante (<Var base="F" sub="R" />)</>}
                 value={forceVal}
                 unit={forceUnit}
                 secondaryValue={forceSec}
@@ -392,12 +397,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Profundidade do Centroide / Eixo (h<sub>c</sub>)</>}
+                title={<>Profundidade do Centroide / Eixo (<Var base="h" sub="c" />)</>}
                 value={analyzedResults?.forceData?.up?.h_cg !== undefined ? analyzedResults.forceData.up.h_cg.toFixed(2) : '???'}
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
                   analyzedResults?.forceData?.up?.Y_CG !== undefined
-                    ? `y_c (inclinado) = ${analyzedResults.forceData.up.Y_CG.toFixed(4)} m`
+                    ? <><Var base="y" sub="c" /> (inclinado) = {analyzedResults.forceData.up.Y_CG.toFixed(4)} m</>
                     : 'Profundidade vertical do eixo horizontal'
                 }
                 theme="slate"
@@ -405,7 +410,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Pressão no Centroide (p<sub>c</sub>)</>}
+                title={<>Pressão no Centroide (<Var base="p" sub="c" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.p_cg !== undefined
                     ? isKgf
@@ -414,13 +419,13 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                     : '???'
                 }
                 unit={analyzedResults ? (isKgf ? 'kgf/m²' : 'kPa') : ''}
-                secondaryValue="p_c = γ · h_c"
+                secondaryValue={<><Var base="p" sub="c" /> = γ · <Var base="h" sub="c" /></>}
                 theme="blue"
                 leftIcon={Gauge}
               />
 
               <ResultsCard
-                title={<>Profundidade do Centro de Pressão (h<sub>CP</sub>)</>}
+                title={<>Profundidade do Centro de Pressão (<Var base="h" sub="CP" />)</>}
                 value={analyzedResults?.forceData?.up?.h_cp !== undefined ? analyzedResults.forceData.up.h_cp.toFixed(3) : '???'}
                 unit={analyzedResults ? 'm' : ''}
                 badge={analyzedResults ? 'ITEM (a)' : undefined}
@@ -434,7 +439,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Posição Inclinada do Centro de Pressão (y<sub>CP</sub>)</>}
+                title={<>Posição Inclinada do Centro de Pressão (<Var base="y" sub="CP" />)</>}
                 value={analyzedResults?.forceData?.up?.Y_CP !== undefined ? analyzedResults.forceData.up.Y_CP.toFixed(4) : '???'}
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
@@ -470,8 +475,8 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 badge={analyzedResults && !isAberta ? 'ITEM (b)' : undefined}
                 secondaryValue={
                   !analyzedResults
-                    ? 'Clique em Analisar para calcular M = F_R · e'
-                    : `M = F_R · e | ${analyzedResults.equilibrium.sentidoMomentoAbertura ?? 'Sentido horário (oposto ao momento hidrostático)'}`
+                    ? <>Clique em Analisar para calcular M = <Var base="F" sub="R" /> · e</>
+                    : <>M = <Var base="F" sub="R" /> · e | {analyzedResults.equilibrium.sentidoMomentoAbertura ?? 'Sentido horário (oposto ao momento hidrostático)'}</>
                 }
                 leftIcon={RotateCw}
               />
@@ -490,11 +495,11 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? 'm' : ''}
                 secondaryValue={
                   analyzedResults
-                    ? `${(
+                    ? <>{(
                         (analyzedResults.equilibrium.excentricidadeEixo ??
                           analyzedResults.forceData.up.delta_y ??
                           0) * 100
-                      ).toFixed(2)} cm ao longo da comporta (y_CP − y_c = I_G / (y_c · A))`
+                      ).toFixed(2)} cm ao longo da comporta (<Var base="y" sub="CP" /> − <Var base="y" sub="c" /> = <Var base="I" sub="G" /> / (<Var base="y" sub="c" /> · A))</>
                     : 'Braço de alavanca entre o CG (eixo) e o CP'
                 }
                 theme="purple"
@@ -502,7 +507,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title="Momento Hidrostático Resistente (M_hid)"
+                title={<>Momento Hidrostático Resistente (<Var base="M" sub="hid" />)</>}
                 value={
                   !analyzedResults
                     ? '???'
@@ -526,7 +531,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           ) : isFloorSupport ? (
             <>
               <ResultsCard
-                title={<>Empuxo na Face Esquerda — Glicerina (F<sub>g</sub>)</>}
+                title={<>Empuxo na Face Esquerda — Glicerina (<Var base="F" sub="g" />)</>}
                 value={
                   analyzedResults
                     ? isKgf
@@ -537,7 +542,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? (isKgf ? 'kgf' : 'kN') : ''}
                 secondaryValue={
                   analyzedResults
-                    ? `Y_CP,g = ${(analyzedResults.forceData.up.Y_CP ?? 0).toFixed(3)} m | s_CP,g = ${(analyzedResults.forceData.up.s_cp ?? 0).toFixed(3)} m`
+                    ? (
+                      <>
+                        <span><Var base="Y" sub="CP,g" /> = {(analyzedResults.forceData.up.Y_CP ?? 0).toFixed(3)} m</span>
+                        <span><Var base="s" sub="CP,g" /> = {(analyzedResults.forceData.up.s_cp ?? 0).toFixed(3)} m</span>
+                      </>
+                    )
                     : 'Clique em Analisar para calcular'
                 }
                 theme="purple"
@@ -545,7 +555,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Empuxo na Face Direita — Água (F<sub>a</sub>)</>}
+                title={<>Empuxo na Face Direita — Água (<Var base="F" sub="a" />)</>}
                 value={
                   analyzedResults
                     ? isKgf
@@ -556,7 +566,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={analyzedResults ? (isKgf ? 'kgf' : 'kN') : ''}
                 secondaryValue={
                   analyzedResults
-                    ? `Y_CP,a = ${(analyzedResults.forceData.down.Y_CP ?? 0).toFixed(3)} m | s_CP,a = ${(analyzedResults.forceData.down.s_cp ?? 0).toFixed(3)} m`
+                    ? (
+                      <>
+                        <span><Var base="Y" sub="CP,a" /> = {(analyzedResults.forceData.down.Y_CP ?? 0).toFixed(3)} m</span>
+                        <span><Var base="s" sub="CP,a" /> = {(analyzedResults.forceData.down.s_cp ?? 0).toFixed(3)} m</span>
+                      </>
+                    )
                     : 'Clique em Analisar para calcular'
                 }
                 theme="cyan"
@@ -597,7 +612,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
           {!isCentralAxis && !isVerticalWallHingeA && (
             <>
               <ResultsCard
-                title={<>Distância Inclinada (y<sub>CG</sub>)</>}
+                title={<>Distância Inclinada (<Var base="y" sub="CG" />)</>}
                 value={analyzedResults?.forceData?.up?.Y_CG !== undefined ? analyzedResults.forceData.up.Y_CG.toFixed(2) : '???'}
                 unit={analyzedResults ? 'm' : ''}
                 theme="cyan"
@@ -606,7 +621,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Distância Inclinada (y<sub>CP</sub>)</>}
+                title={<>Distância Inclinada (<Var base="y" sub="CP" />)</>}
                 value={analyzedResults?.forceData?.up?.Y_CP !== undefined ? analyzedResults.forceData.up.Y_CP.toFixed(2) : '???'}
                 unit={analyzedResults ? 'm' : ''}
                 theme="cyan"
@@ -615,7 +630,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Profundidade do Centróide (h<sub>CG</sub>)</>}
+                title={<>Profundidade do Centróide (<Var base="h" sub="CG" />)</>}
                 value={analyzedResults?.forceData?.up?.h_cg !== undefined ? analyzedResults.forceData.up.h_cg.toFixed(2) : '???'}
                 unit={analyzedResults ? 'm' : ''}
                 theme="slate"
@@ -624,7 +639,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Pressão no Centróide (p<sub>CG</sub>)</>}
+                title={<>Pressão no Centróide (<Var base="p" sub="CG" />)</>}
                 value={
                   analyzedResults?.forceData?.up?.p_cg !== undefined
                     ? isKgf
@@ -645,7 +660,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               />
 
               <ResultsCard
-                title={<>Profundidade Vertical (h<sub>CP</sub>)</>}
+                title={<>Profundidade Vertical (<Var base="h" sub="CP" />)</>}
                 value={analyzedResults?.forceData?.up?.h_cp !== undefined ? analyzedResults.forceData.up.h_cp.toFixed(3) : '???'}
                 unit={analyzedResults ? 'm' : ''}
                 theme="slate"
@@ -657,6 +672,45 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 }
               />
 
+              {(hasSmoothWallSupport ||
+                analyzedResults?.equilibrium?.apoioParedeAtivo ||
+                hingePosition === PosicaoDobradica.BOTTOM) &&
+                !isFloorSupport && (
+                <ResultsCard
+                  title={<>Posição do CP a partir de B (<Var base="s" sub="CP" />)</>}
+                  value={
+                    analyzedResults
+                      ? (
+                          analyzedResults.equilibrium.d_cp_hinge ??
+                          Math.max(
+                            0,
+                            (analyzedResults.forceData.up.wetLength || 0) -
+                              analyzedResults.forceData.s_cp_net
+                          )
+                        )
+                          .toFixed(3)
+                          .replace('.', ',')
+                      : '???'
+                  }
+                  unit={analyzedResults ? 'm' : ''}
+                  theme="cyan"
+                  leftIcon={Compass}
+                  secondaryValue={
+                    analyzedResults
+                      ? (() => {
+                          const sCg = analyzedResults.forceData.up.s_cg ?? 0;
+                          const dy = analyzedResults.forceData.up.delta_y ?? 0;
+                          return (
+                            <>
+                              <Var base="s" sub="CP" /> = L/2 − Δy = {sCg.toFixed(3).replace('.', ',')} − {dy.toFixed(3).replace('.', ',')} m (a partir de B)
+                            </>
+                          );
+                        })()
+                      : 'Distância inclinada do CP até a articulação B'
+                  }
+                />
+              )}
+
               {(hingePosition !== PosicaoDobradica.NONE || hasTieRod || hasSmoothWallSupport || isFloorSupport) && (
                 <>
                   {isFloorSupport && (
@@ -667,7 +721,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                       />
 
                       <ResultsCard
-                        title={<>Reação Normal no Fundo em B (R<sub>B</sub>)</>}
+                        title={<>Reação Normal no Fundo em B (<Var base="R" sub="B" />)</>}
                         value={
                           !analyzedResults
                             ? '???'
@@ -681,7 +735,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                         badge={
                           analyzedResults && !isAberta
                             ? Math.abs(analyzedResults.equilibrium.R_B ?? 0) < 1e-2
-                              ? 'R_B = 0'
+                              ? <><Var base="R" sub="B" /> = 0</>
                               : (analyzedResults.equilibrium.R_B ?? 0) > 0
                               ? 'APOIO ↑'
                               : 'ABERTURA'
@@ -707,7 +761,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                       />
 
                       <ResultsCard
-                        title={<>Reação Horizontal na Articulação A (A<sub>x</sub>)</>}
+                        title={<>Reação Horizontal na Articulação A (<Var base="A" sub="x" />)</>}
                         value={
                           !analyzedResults
                             ? '???'
@@ -720,7 +774,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                         unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
                         secondaryValue={
                           !analyzedResults
-                            ? 'ΣFx = 0 na articulação A'
+                            ? <>Σ<Var base="F" sub="x" /> = 0 na articulação A</>
                             : isAberta
                             ? 'Não aplicável com a comporta totalmente aberta'
                             : `${(analyzedResults.equilibrium.Rx_hinge ?? 0) >= 0 ? 'Sentido: → (para a direita)' : 'Sentido: ← (para a esquerda)'}`
@@ -730,7 +784,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                       />
 
                       <ResultsCard
-                        title={<>Reação Vertical na Articulação A (A<sub>y</sub>)</>}
+                        title={<>Reação Vertical na Articulação A (<Var base="A" sub="y" />)</>}
                         value={
                           !analyzedResults
                             ? '???'
@@ -743,7 +797,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                         unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
                         secondaryValue={
                           !analyzedResults
-                            ? 'ΣFy = 0 na articulação A'
+                            ? <>Σ<Var base="F" sub="y" /> = 0 na articulação A</>
                             : isAberta
                             ? 'Não aplicável com a comporta totalmente aberta'
                             : `${(analyzedResults.equilibrium.Ry_hinge ?? 0) >= 0 ? 'Sentido: ↑ (para cima)' : 'Sentido: ↓ (para baixo)'}`
@@ -753,7 +807,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                       />
 
                       <ResultsCard
-                        title={<>Reação Resultante em A (R<sub>A</sub>)</>}
+                        title={<>Reação Resultante em A (<Var base="R" sub="A" />)</>}
                         value={
                           !analyzedResults
                             ? '???'
@@ -766,7 +820,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                         unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
                         secondaryValue={
                           analyzedResults && !isAberta
-                            ? 'Resultante vetorial: √(Ax² + Ay²)'
+                            ? <>Resultante vetorial: √(<Var base="A" sub="x" sup="2" /> + <Var base="A" sub="y" sup="2" />)</>
                             : undefined
                         }
                         theme="slate"
@@ -806,7 +860,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                       />
 
                       <ResultsCard
-                        title={<>Reação Horizontal na Articulação B (B<sub>x</sub>)</>}
+                        title={<>Reação Horizontal na Articulação B (<Var base="B" sub="x" />)</>}
                         value={
                           !analyzedResults
                             ? '???'
@@ -819,7 +873,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                         unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
                         secondaryValue={
                           !analyzedResults
-                            ? 'ΣFx = 0 na articulação B'
+                            ? <>Σ<Var base="F" sub="x" /> = 0 na articulação B</>
                             : isAberta
                             ? 'Não aplicável com a comporta totalmente aberta'
                             : `${(analyzedResults.equilibrium.Rx_hinge ?? 0) >= 0 ? 'Sentido: → (para a direita)' : 'Sentido: ← (para a esquerda)'}`
@@ -829,7 +883,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                       />
 
                       <ResultsCard
-                        title={<>Reação Vertical na Articulação B (B<sub>y</sub>)</>}
+                        title={<>Reação Vertical na Articulação B (<Var base="B" sub="y" />)</>}
                         value={
                           !analyzedResults
                             ? '???'
@@ -842,7 +896,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                         unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
                         secondaryValue={
                           !analyzedResults
-                            ? 'ΣFy = 0 na articulação B'
+                            ? <>Σ<Var base="F" sub="y" /> = 0 na articulação B</>
                             : isAberta
                             ? 'Não aplicável com a comporta totalmente aberta'
                             : `${(analyzedResults.equilibrium.Ry_hinge ?? 0) >= 0 ? 'Sentido: ↑ (para cima)' : 'Sentido: ↓ (para baixo)'}`
@@ -852,7 +906,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                       />
 
                       <ResultsCard
-                        title={<>Reação Resultante em B (R<sub>B</sub>)</>}
+                        title={<>Reação Resultante em B (<Var base="R" sub="B" />)</>}
                         value={
                           !analyzedResults
                             ? '???'
@@ -865,7 +919,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                         unit={analyzedResults && !isAberta ? (isKgf ? 'kgf' : 'kN') : ''}
                         secondaryValue={
                           analyzedResults && !isAberta
-                            ? 'Resultante vetorial: √(Bx² + By²)'
+                            ? <>Resultante vetorial: √(<Var base="B" sub="x" sup="2" /> + <Var base="B" sub="y" sup="2" />)</>
                             : undefined
                         }
                         theme="slate"

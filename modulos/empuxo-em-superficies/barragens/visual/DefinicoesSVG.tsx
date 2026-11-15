@@ -8,6 +8,20 @@ export const DefinicoesSVG: React.FC<{ pan?: { x: number; y: number } }> = ({ pa
   <defs>
     <DefinicoesSVGComum pan={pan} />
 
+    {/* Setas coloridas para vetores específicos */}
+    <marker id="arrow-blue" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#2563eb" />
+    </marker>
+    <marker id="arrow-teal" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#0d9488" />
+    </marker>
+    <marker id="arrow-orange" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#ea580c" />
+    </marker>
+    <marker id="arrow-amber" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+      <path d="M0,0 L6,2 L0,4 Z" fill="#b45309" />
+    </marker>
+
     {/* Água */}
     <linearGradient id="fluidDepthA" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stopColor={CORES_MATERIAIS.aguaPrimaria} stopOpacity="0.45" />

@@ -401,7 +401,11 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
           <div className="space-y-3 relative">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Profundidade Montante (m)
+                {hasDownstream
+                  ? downstreamLevel > upstreamLevel
+                    ? 'Nível Esquerda – Jusante (m)'
+                    : 'Nível Esquerda – Montante (m)'
+                  : 'Profundidade Montante (m)'}
               </label>
               <NumberInput
                 min={0}
@@ -409,7 +413,6 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
                 value={upstreamLevel}
                 onChange={(val) => {
                   setUpstreamLevel(val);
-                  if (downstreamLevel > val) setDownstreamLevel(val);
                   if (mudHeight > val) setMudHeight(val);
                 }}
               />
@@ -420,13 +423,15 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <div className="space-y-3 relative pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Jusante (m)
+                  {downstreamLevel > upstreamLevel
+                    ? 'Nível Direita – Montante (m)'
+                    : 'Nível Direita – Jusante (m)'}
                 </label>
                 <NumberInput
                   min={0}
-                  max={upstreamLevel}
-                  value={Math.min(downstreamLevel, upstreamLevel)}
-                  onChange={(val) => setDownstreamLevel(Math.min(val, upstreamLevel))}
+                  max={maxWaterLevel}
+                  value={downstreamLevel}
+                  onChange={(val) => setDownstreamLevel(val)}
                 />
               </div>
             </div>

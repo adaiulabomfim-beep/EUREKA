@@ -3,15 +3,43 @@ import { LucideIcon, Info } from 'lucide-react';
 
 export type CardTheme = 'red' | 'green' | 'blue' | 'purple' | 'amber' | 'cyan' | 'slate';
 
+export interface VarProps {
+  base: React.ReactNode;
+  sub?: React.ReactNode;
+  sup?: React.ReactNode;
+  className?: string;
+}
+
+export const Var: React.FC<VarProps> = ({
+  base,
+  sub,
+  sup,
+  className = '',
+}) => (
+  <span className={`normal-case inline-flex items-baseline whitespace-nowrap ${className}`}>
+    <span>{base}</span>
+    {sub !== undefined && sub !== null && sub !== '' && (
+      <sub className="text-[0.76em] leading-none font-semibold align-baseline relative top-[0.2em] ml-[0.03em] tracking-normal">
+        {sub}
+      </sub>
+    )}
+    {sup !== undefined && sup !== null && sup !== '' && (
+      <sup className="text-[0.72em] leading-none font-semibold align-baseline relative -top-[0.36em] ml-[0.02em] tracking-normal">
+        {sup}
+      </sup>
+    )}
+  </span>
+);
+
 export interface ResultsCardProps {
   title: React.ReactNode;
-  value: string | number;
-  unit?: string;
+  value: React.ReactNode;
+  unit?: React.ReactNode;
   icon?: LucideIcon; // Keeps backwards compatibility as rightIcon
   leftIcon?: LucideIcon;
   theme?: CardTheme;
-  badge?: string;
-  secondaryValue?: string;
+  badge?: React.ReactNode;
+  secondaryValue?: React.ReactNode;
   highlight?: boolean;
   highlightTheme?: string;
 }
@@ -60,14 +88,19 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
             <LeftIcon className={`w-5 h-5 ${ht.iconText}`} strokeWidth={2.5} />
           </div>
         )}
-        <div className={`text-[10px] font-bold uppercase tracking-widest ${ht.titleText} transition-colors duration-300`}>
+        <div className={`text-[10px] font-bold uppercase tracking-widest leading-snug pb-[1px] text-center ${ht.titleText} transition-colors duration-300`}>
           {title}
         </div>
-        <div className={`text-[16px] font-black uppercase tracking-wide mt-0.5 ${ht.valueText} transition-colors duration-300`}>
+        <div className={`text-[16px] font-black uppercase tracking-wide leading-snug pb-[1px] mt-0.5 text-center ${ht.valueText} transition-colors duration-300`}>
           {value}
+          {unit && (
+            <span className="text-[11px] font-bold ml-1 normal-case">
+              {unit}
+            </span>
+          )}
         </div>
         {secondaryValue && (
-          <div className={`text-[10px] mt-1 font-bold ${ht.secondaryText} transition-colors duration-300`}>
+          <div className={`text-[10px] mt-1 font-bold leading-snug pb-[1px] text-center ${ht.secondaryText} transition-colors duration-300`}>
             {secondaryValue}
           </div>
         )}
@@ -91,26 +124,28 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
 
       {/* Content Area */}
       <div className="flex-1 min-w-0">
-        <div className={`text-[10px] font-bold uppercase tracking-tight truncate ${currentTheme.title}`}>
+        <div className={`text-[10px] font-bold uppercase tracking-tight leading-snug pb-[1px] truncate ${currentTheme.title}`}>
           {title}
         </div>
 
         <div className="flex items-baseline mt-0.5">
-          <span className="text-[18px] font-bold text-slate-800 dark:text-slate-100 leading-none truncate">
+          <span className="text-[18px] font-bold text-slate-800 dark:text-slate-100 leading-snug pb-[1px] truncate">
             {value}
           </span>
           {unit && (
-            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 ml-1 shrink-0">
+            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 ml-1 shrink-0 leading-snug pb-[1px]">
               {unit}
             </span>
           )}
         </div>
 
         {secondaryValue && (
-          <div className="text-[10px] mt-1 text-blue-500 dark:text-blue-400 flex flex-wrap gap-x-2 truncate font-medium">
-            {secondaryValue.split('|').map((val, idx) => (
-              <span key={idx}>{val.trim()}</span>
-            ))}
+          <div className="text-[10px] mt-1 text-blue-500 dark:text-blue-400 flex flex-wrap items-baseline gap-x-2 leading-snug pb-[1px] font-medium">
+            {typeof secondaryValue === 'string'
+              ? secondaryValue.split('|').map((val, idx) => (
+                  <span key={idx}>{val.trim()}</span>
+                ))
+              : secondaryValue}
           </div>
         )}
       </div>
@@ -118,7 +153,7 @@ export const ResultsCard: React.FC<ResultsCardProps> = ({
       {/* Right Side (Badge or Right Icon) */}
       <div className="shrink-0 flex items-center justify-end">
         {badge ? (
-          <div className="bg-indigo-600 dark:bg-indigo-500 text-white text-[10px] font-bold px-2 py-1.5 rounded-md uppercase tracking-wider">
+          <div className="bg-indigo-600 dark:bg-indigo-500 text-white text-[10px] font-bold px-2 py-1.5 rounded-md uppercase tracking-wider leading-snug">
             {badge}
           </div>
         ) : RightIcon ? (

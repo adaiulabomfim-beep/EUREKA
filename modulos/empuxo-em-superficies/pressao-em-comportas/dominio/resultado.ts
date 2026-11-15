@@ -78,6 +78,7 @@ export interface ResultadoSimulacaoComporta {
     Rx_hinge?: number;
     Ry_hinge?: number;
     R_hinge?: number;
+    d_cp_hinge?: number;
     deltaX_BA?: number;
     deltaY_BA?: number;
     eixoCentralAtivo?: boolean;

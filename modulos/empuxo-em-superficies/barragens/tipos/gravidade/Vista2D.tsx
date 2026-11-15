@@ -36,6 +36,9 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     forceV,
     y_cp,
     up,
+    down,
+    unitSystem = 'SI',
+    gravity = 9.81,
     isAnalyzed,
     onCalculate,
     onReset,
@@ -184,6 +187,14 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
     props.showTriangularMode || (damCrestWidth <= 0.01 && (props.damWidth ?? 1) > 1.001)
   );
 
+  const hasTwoSides =
+    upstreamLevel > 1e-6 &&
+    downstreamLevel > 1e-6 &&
+    !!up &&
+    up.FR > 1e-3 &&
+    !!down &&
+    down.FR > 1e-3;
+
   const vectors = useMemo(
     () =>
       gerarVetoresBarragem2D({
@@ -197,6 +208,9 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         forceV,
         y_cp,
         up,
+        down,
+        unitSystem,
+        gravity,
         getDamXAtY,
         toWorldX,
         project,
@@ -219,6 +233,9 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
       forceV,
       y_cp,
       up,
+      down,
+      unitSystem,
+      gravity,
       getDamXAtY,
       toWorldX,
       project,
@@ -381,7 +398,7 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         { x: toWorldX(getDamXAtY(0, 'DOWNSTREAM')), y: 0 },
         { x: toWorldX(getDamXAtY(0, 'DOWNSTREAM')), y: damHeight },
         `${damHeight.toFixed(1)}m`,
-        { x: 58, y: 0 },
+        { x: hasTwoSides && isAnalyzed ? 162 : 58, y: 0 },
         { x: 28, y: 0 }
       )
     );
@@ -459,11 +476,53 @@ export const Vista2D: React.FC<GravityDam2DViewProps> = (props) => {
         upstreamLevel,
         inclinationAngle,
         up,
+        downstreamLevel,
+        down,
         getDamXAtY,
         toWorldX,
         project,
       })
     );
+
+    if (hasTwoSides && isAnalyzed && showVectors && up && down) {
+      const leftIsMont =
+        upstreamLevel > downstreamLevel + 1e-6 ||
+        (Math.abs(upstreamLevel - downstreamLevel) <= 1e-6 && up.FH >= down.FH);
+      const montLado = leftIsMont ? 'Esquerda' : 'Direita';
+      const jusLado = leftIsMont ? 'Direita' : 'Esquerda';
+
+      // Legenda compacta no canto superior esquerdo distinguindo Montante e Jusante
+      dims.push(
+        <g key="two-sided-legend" transform="translate(18, 18)" pointerEvents="none">
+          <rect
+            x={0}
+            y={0}
+            width={186}
+            height={52}
+            rx={10}
+            fill="#ffffff"
+            fillOpacity={0.94}
+            stroke="#cbd5e1"
+            strokeWidth={1.2}
+          />
+          <line x1={12} y1={17} x2={30} y2={17} stroke="#2563eb" strokeWidth={3} />
+          <circle cx={30} cy={17} r={2.5} fill="#2563eb" />
+          <text x={38} y={17} dominantBaseline="central" fontSize="10" fontWeight="700" fill="#1e3a8a">
+            E
+            <tspan dy="2" fontSize="7.5">montante</tspan>
+            <tspan dy="-2">{` (${montLado})`}</tspan>
+          </text>
+
+          <line x1={12} y1={35} x2={30} y2={35} stroke="#0d9488" strokeWidth={3} />
+          <circle cx={30} cy={35} r={2.5} fill="#0d9488" />
+          <text x={38} y={35} dominantBaseline="central" fontSize="10" fontWeight="700" fill="#115e59">
+            E
+            <tspan dy="2" fontSize="7.5">jusante</tspan>
+            <tspan dy="-2">{` (${jusLado})`}</tspan>
+          </text>
+        </g>
+      );
+    }
 
     const isTriangularABC = Boolean(
       props.showTriangularMode || (damCrestWidth <= 0.01 && (props.damWidth ?? 1) > 1.001)

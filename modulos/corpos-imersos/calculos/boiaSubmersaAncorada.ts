@@ -1,7 +1,8 @@
 export interface BoiaSubmersaAncoradaInput {
   diameterM: number; // m (ex.: 1,50 m)
   weightKN: number; // kN (ex.: 8,50 kN)
-  fluidDensity: number; // kg/m³ (ex.: 1025 kg/m³ para Água do Mar)
+  fluidDensity: number; // kg/m³
+  fluidSpecificWeightKN?: number; // kN/m³ (ex.: 10,1 kN/m³ para Água do Mar na Simulação 1)
   gravity: number; // m/s² (ex.: 9,81 m/s²)
   tankWidthCm: number;
   tankDepthCm: number;
@@ -55,6 +56,7 @@ export function calcularBoiaSubmersaAncorada(
     diameterM,
     weightKN,
     fluidDensity,
+    fluidSpecificWeightKN: inputSpecificWeightKN,
     gravity,
     tankWidthCm,
     tankDepthCm,
@@ -63,8 +65,17 @@ export function calcularBoiaSubmersaAncorada(
 
   const safeDiameterM = Math.max(0.05, diameterM);
   const safeWeightKN = Math.max(0.01, weightKN);
-  const safeFluidDensity = Math.max(1, fluidDensity);
   const safeGravity = Math.max(0.1, gravity);
+
+  const hasExplicitSpecificWeight =
+    typeof inputSpecificWeightKN === 'number' && Number.isFinite(inputSpecificWeightKN) && inputSpecificWeightKN > 0;
+  const fluidSpecificWeightKN = hasExplicitSpecificWeight
+    ? inputSpecificWeightKN
+    : (Math.max(1, fluidDensity) * safeGravity) / 1000;
+  const fluidSpecificWeightN = fluidSpecificWeightKN * 1000;
+  const safeFluidDensity = hasExplicitSpecificWeight
+    ? fluidSpecificWeightN / safeGravity
+    : Math.max(1, fluidDensity);
 
   const diameterCm = safeDiameterM * 100;
   const radiusM = safeDiameterM / 2;
@@ -79,9 +90,6 @@ export function calcularBoiaSubmersaAncorada(
   const crossSectionAreaM2 = (Math.PI * Math.pow(safeDiameterM, 2)) / 4;
 
   // Etapa 2: Peso específico do fluido e Empuxo E = γ_mar · V
-  const fluidSpecificWeightN = safeFluidDensity * safeGravity;
-  const fluidSpecificWeightKN = fluidSpecificWeightN / 1000;
-
   const buoyancyForceN = fluidSpecificWeightN * volumeSubmergedM3;
   const buoyancyForceKN = buoyancyForceN / 1000;
 
@@ -113,7 +121,10 @@ export function calcularBoiaSubmersaAncorada(
   const equilibriumCheckKN = equilibriumCheckN / 1000;
 
   const isValidInput =
-    diameterM > 0 && weightKN > 0 && fluidDensity > 0 && gravity > 0;
+    diameterM > 0 &&
+    weightKN > 0 &&
+    (hasExplicitSpecificWeight ? inputSpecificWeightKN > 0 : fluidDensity > 0) &&
+    gravity > 0;
 
   return {
     diameterM: safeDiameterM,

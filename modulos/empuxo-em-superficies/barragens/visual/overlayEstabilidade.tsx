@@ -12,6 +12,9 @@ export interface OpcoesCotasCentroPressao2D {
   upstreamLevel: number;
   inclinationAngle: number;
   up?: ResultadoSuperficieRetangular;
+  downstreamLevel?: number;
+  downstreamAngle?: number;
+  down?: ResultadoSuperficieRetangular;
   getDamXAtY: (y: number, side: 'UPSTREAM' | 'DOWNSTREAM') => number;
   toWorldX: (x: number) => number;
   project: (p: { x: number; y: number; z: number }) => Pt;
@@ -23,8 +26,24 @@ export interface OpcoesCotasCentroPressao2D {
  * coordenadas reais do Centro de Pressão (CP) como referência única.
  */
 export function renderizarCotasHPeYP2D(opts: OpcoesCotasCentroPressao2D): React.ReactNode[] {
-  const { isAnalyzed, upstreamLevel, inclinationAngle, up, getDamXAtY, toWorldX, project } = opts;
+  const {
+    isAnalyzed,
+    upstreamLevel,
+    inclinationAngle,
+    up,
+    downstreamLevel = 0,
+    down,
+    getDamXAtY,
+    toWorldX,
+    project,
+  } = opts;
   if (!isAnalyzed || !up || up.FR <= 0 || upstreamLevel <= 0) return [];
+
+  const hasTwoSides = downstreamLevel > 1e-6 && !!down && down.FR > 1e-3;
+  const leftIsMontante =
+    !hasTwoSides ||
+    upstreamLevel > downstreamLevel + 1e-6 ||
+    (Math.abs(upstreamLevel - downstreamLevel) <= 1e-6 && up.FH >= (down?.FH ?? 0));
 
   const ySurf = upstreamLevel;
   const yCP = up.y_cp;
@@ -44,10 +63,11 @@ export function renderizarCotasHPeYP2D(opts: OpcoesCotasCentroPressao2D): React.
   const textH = 18;
 
   const nodes: React.ReactNode[] = [];
+  const leftDotColor = hasTwoSides ? (leftIsMontante ? '#2563eb' : '#0d9488') : '#2563eb';
 
   if (isVertical) {
     // Em superfícies verticais, exibir somente HP, ocultando YP por serem numericamente iguais
-    const xHP = pCP.x - 75;
+    const xHP = pCP.x - (hasTwoSides ? 92 : 75);
     const p1HP = { x: xHP, y: pSurf.y };
     const p2HP = { x: xHP, y: pCP.y };
     const cxHP = xHP - textW_HP / 2 - 8;
@@ -88,7 +108,8 @@ export function renderizarCotasHPeYP2D(opts: OpcoesCotasCentroPressao2D): React.
     const lenFace = Math.hypot(dxFace, dyFace);
     const sinSlope = lenFace > 1e-3 ? dyFace / lenFace : 1;
     const tanSlope = dxFace > 1e-3 ? dyFace / dxFace : 10;
-    const dYP = Math.max(44, Math.min(64, Math.round(36 / Math.max(0.5, sinSlope))));
+    const baseDYP = Math.max(44, Math.min(64, Math.round(36 / Math.max(0.5, sinSlope))));
+    const dYP = hasTwoSides ? Math.max(baseDYP, 68) : baseDYP;
 
     const p1YP = { x: pSurf.x - dYP, y: pSurf.y };
     const p2YP = { x: pCP.x - dYP, y: pCP.y };
@@ -171,12 +192,72 @@ export function renderizarCotasHPeYP2D(opts: OpcoesCotasCentroPressao2D): React.
       cx={pCP.x}
       cy={pCP.y}
       r={4}
-      fill="#2563eb"
+      fill={leftDotColor}
       stroke="#ffffff"
       strokeWidth="1.5"
       pointerEvents="none"
     />
   );
+
+  // Cota HP e marcador do Centro de Pressão da face direita quando há água nos dois lados
+  if (hasTwoSides && down) {
+    const xSurfRight = toWorldX(getDamXAtY(downstreamLevel, 'DOWNSTREAM'));
+    const xCPRight = toWorldX(getDamXAtY(down.y_cp, 'DOWNSTREAM'));
+    const pSurfR = project({ x: xSurfRight, y: downstreamLevel, z: 0 });
+    const pCPR = project({ x: xCPRight, y: down.y_cp, z: 0 });
+    const rightDotColor = leftIsMontante ? '#0d9488' : '#2563eb';
+    const xHPR = Math.max(pSurfR.x, pCPR.x) + 136;
+    const textHPR = `HP = ${down.h_cp.toFixed(2)}m`;
+    const textW_HPR = textHPR.length * 6.6 + 10;
+    const cyHPR = Math.min(pSurfR.y + 42, (pSurfR.y + pCPR.y) / 2);
+
+    nodes.push(
+      <g key="cota-hp-right" stroke="#64748b" strokeWidth="1.5" fill="none" opacity="0.92" pointerEvents="none">
+        <line x1={pSurfR.x} y1={pSurfR.y} x2={xHPR} y2={pSurfR.y} strokeDasharray="3 3" opacity="0.45" />
+        <line x1={pCPR.x} y1={pCPR.y} x2={xHPR} y2={pCPR.y} strokeDasharray="3 3" opacity="0.45" />
+        <line
+          x1={xHPR}
+          y1={pSurfR.y}
+          x2={xHPR}
+          y2={pCPR.y}
+          markerStart="url(#arrow)"
+          markerEnd="url(#arrow)"
+        />
+        <rect
+          x={xHPR - textW_HPR - 6}
+          y={cyHPR - 9}
+          width={textW_HPR}
+          height={18}
+          fill="white"
+          rx="3"
+          stroke="none"
+          opacity="0.92"
+        />
+        <text
+          x={xHPR - textW_HPR / 2 - 6}
+          y={cyHPR}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#475569"
+          fontSize="11.5"
+          fontWeight="700"
+          stroke="none"
+        >
+          {textHPR}
+        </text>
+      </g>,
+      <circle
+        key="cp-point-right-ref"
+        cx={pCPR.x}
+        cy={pCPR.y}
+        r={4}
+        fill={rightDotColor}
+        stroke="#ffffff"
+        strokeWidth="1.5"
+        pointerEvents="none"
+      />
+    );
+  }
 
   return nodes;
 }

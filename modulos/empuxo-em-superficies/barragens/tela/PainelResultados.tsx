@@ -11,7 +11,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { ResultadoSimulacaoBarragem, SistemaUnidadesBarragem } from '../dominio/tipos';
-import { ResultsPanel, ResultsCard } from '../../../../interface/PainelResultados';
+import { identificarLadosHidraulicos } from '../calculos/hidrostaticaSuperficieInclinada';
+import { ResultsPanel, ResultsCard, Var } from '../../../../interface/PainelResultados';
 
 interface PainelResultadosProps {
   analyzedResults: ResultadoSimulacaoBarragem | null;
@@ -63,8 +64,19 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
 
   const pressureUnit = isKgf ? 'kgf/m²' : 'kPa';
 
-  const hasDownWater = !!fd && fd.down && fd.down.FR > 1e-3;
+  const hasDownWater = !!fd && !!fd.down && fd.down.FR > 1e-3 && !!fd.up && fd.up.FR > 1e-3;
   const mud = fd?.up?.mudLayer;
+  const lados =
+    fd && analyzedResults
+      ? identificarLadosHidraulicos(
+          fd,
+          analyzedResults.normalizedInputs.upstreamLevel,
+          analyzedResults.normalizedInputs.downstreamLevel
+        )
+      : null;
+
+  const fmtTwoSideForce = (valN: number) =>
+    isKgf ? fmtBrNum(Math.abs(valN) / gravity, 1) : fmtBrNum(Math.abs(valN) / 1000, 2);
 
   return (
     <div id="tour-resultados" data-tour="painel-resultados" className="lg:col-span-3 flex flex-col gap-4 h-[600px] lg:h-full lg:max-h-full min-h-0 overflow-hidden">
@@ -127,11 +139,11 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 <div className="text-[9.5px] font-bold uppercase tracking-tight text-slate-400">
                   Área Molhada (AB) e Centroide
                 </div>
-                <div className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">
-                  A_AB = {fmtBrNum(apC.areaMolhadaTotal, 2)} m² | h_CG = {fmtBrNum(fd.up.h_cg, 2)} m
+                <div className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5 leading-snug">
+                  <Var base="A" sub="AB" /> = {fmtBrNum(apC.areaMolhadaTotal, 2)} m² | <Var base="h" sub="CG" /> = {fmtBrNum(fd.up.h_cg, 2)} m
                 </div>
-                <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium">
-                  L_AB = {fmtBrNum(apC.L_AB, 2)} m | θ = {fd.thetaUp.toFixed(2).replace('.', ',')}°
+                <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium leading-snug">
+                  <Var base="L" sub="AB" /> = {fmtBrNum(apC.L_AB, 2)} m | θ = {fd.thetaUp.toFixed(2).replace('.', ',')}°
                 </div>
               </div>
 
@@ -139,8 +151,8 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 <div className="text-[9.5px] font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400">
                   Força Hidrostática Total sobre AB (b = {apC.larguraLongitudinal.toFixed(0)} m)
                 </div>
-                <div className="text-[15px] font-black text-slate-800 dark:text-slate-100 mt-0.5">
-                  F_R = {isKgf ? fmtBrNum(apC.F_R_total / gravity, 0) : fmtBrNum(apC.F_R_total, 0)} {isKgf ? 'kgf' : 'N'}
+                <div className="text-[15px] font-black text-slate-800 dark:text-slate-100 mt-0.5 leading-snug">
+                  <Var base="F" sub="R" /> = {isKgf ? fmtBrNum(apC.F_R_total / gravity, 0) : fmtBrNum(apC.F_R_total, 0)} {isKgf ? 'kgf' : 'N'}
                 </div>
                 <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium">
                   ({formatTotalForce(apC.F_R_total)} {totalForceUnit} — perpendicular ao paramento AB)
@@ -151,12 +163,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 <div className="text-[9.5px] font-bold uppercase tracking-tight text-blue-600 dark:text-blue-400">
                   Componentes da Força (b = {apC.larguraLongitudinal.toFixed(0)} m)
                 </div>
-                <div className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5 space-y-0.5">
-                  <div>F_H = {isKgf ? fmtBrNum(apC.F_H_total / gravity, 0) : fmtBrNum(apC.F_H_total, 0)} {isKgf ? 'kgf' : 'N'} (horizontal →)</div>
-                  <div>F_V = {isKgf ? fmtBrNum(apC.F_V_total / gravity, 0) : fmtBrNum(apC.F_V_total, 0)} {isKgf ? 'kgf' : 'N'} (vertical ↓)</div>
+                <div className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5 space-y-0.5 leading-snug">
+                  <div><Var base="F" sub="H" /> = {isKgf ? fmtBrNum(apC.F_H_total / gravity, 0) : fmtBrNum(apC.F_H_total, 0)} {isKgf ? 'kgf' : 'N'} (horizontal →)</div>
+                  <div><Var base="F" sub="V" /> = {isKgf ? fmtBrNum(apC.F_V_total / gravity, 0) : fmtBrNum(apC.F_V_total, 0)} {isKgf ? 'kgf' : 'N'} (vertical ↓)</div>
                 </div>
-                <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium">
-                  A componente vertical F_V atua para baixo sobre a barragem
+                <div className="text-[10px] mt-0.5 text-blue-600 dark:text-blue-400 font-medium leading-snug">
+                  A componente vertical <Var base="F" sub="V" /> atua para baixo sobre a barragem
                 </div>
               </div>
 
@@ -172,14 +184,14 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               </div>
 
               <div className="rounded-xl border-y border-r border-l-[4px] border-slate-100 dark:border-slate-800 border-l-emerald-500 bg-white dark:bg-slate-900/90 py-2.5 px-3 shadow-sm">
-                <div className="text-[9.5px] font-bold uppercase tracking-tight text-emerald-600 dark:text-emerald-400">
-                  Momento em Relação ao Ponto C (M_C)
+                <div className="text-[9.5px] font-bold uppercase tracking-tight text-emerald-600 dark:text-emerald-400 leading-snug">
+                  Momento em Relação ao Ponto C (<Var base="M" sub="C" />)
                 </div>
-                <div className="text-[15px] font-black text-slate-800 dark:text-slate-100 mt-0.5">
-                  M_C = {isKgf ? fmtBrNum(Math.abs(apC.M_hidro_C_total) / gravity, 0) : fmtBrNum(Math.abs(apC.M_hidro_C_total), 0)} {isKgf ? 'kgf·m' : 'N·m'}
+                <div className="text-[15px] font-black text-slate-800 dark:text-slate-100 mt-0.5 leading-snug">
+                  <Var base="M" sub="C" /> = {isKgf ? fmtBrNum(Math.abs(apC.M_hidro_C_total) / gravity, 0) : fmtBrNum(Math.abs(apC.M_hidro_C_total), 0)} {isKgf ? 'kgf·m' : 'N·m'}
                 </div>
-                <div className="text-[10px] mt-0.5 text-emerald-700 dark:text-emerald-400 font-bold">
-                  Sentido: {apC.M_hidro_C_total > 0 ? 'Horário' : 'Anti-horário'} | Braço d_⊥,C = {fmtBrNum(apC.braco_FR_C, 2)} m
+                <div className="text-[10px] mt-0.5 text-emerald-700 dark:text-emerald-400 font-bold leading-snug">
+                  Sentido: {apC.M_hidro_C_total > 0 ? 'Horário' : 'Anti-horário'} | Braço <Var base="d" sub="⊥,C" /> = {fmtBrNum(apC.braco_FR_C, 2)} m
                 </div>
               </div>
 
@@ -188,7 +200,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                   Verificação Qualitativa de Tombamento (Sem Percolação):
                 </div>
                 <div>
-                  <strong>A força hidrostática não pode tombar a barragem.</strong> A resultante <span className="font-bold">F_R</span> produz momento no sentido <strong>anti-horário</strong> em relação ao ponto C (<span className="font-mono">M_C = {fmtBrNum(Math.abs(apC.M_hidro_C_total), 0)} N·m</span>), pois o momento estabilizante da componente vertical descendente <span className="font-bold">F_V</span> supera o momento horário de <span className="font-bold">F_H</span>, impedindo o tombamento para a direita.
+                  <strong>A força hidrostática não pode tombar a barragem.</strong> A resultante <span className="font-bold"><Var base="F" sub="R" /></span> produz momento no sentido <strong>anti-horário</strong> em relação ao ponto C (<span className="font-mono"><Var base="M" sub="C" /> = {fmtBrNum(Math.abs(apC.M_hidro_C_total), 0)} N·m</span>), pois o momento estabilizante da componente vertical descendente <span className="font-bold"><Var base="F" sub="V" /></span> supera o momento horário de <span className="font-bold"><Var base="F" sub="H" /></span>, impedindo o tombamento para a direita.
                 </div>
               </div>
             </div>
@@ -205,26 +217,26 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               </div>
               <div className="grid grid-cols-3 gap-1.5 text-center">
                 <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800">
-                  <div className="text-[9px] font-black text-slate-400 uppercase">F_R (1 m)</div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase leading-snug"><Var base="F" sub="R" /> (1 m)</div>
                   <div className="text-xs font-black text-blue-700 dark:text-blue-300">
                     {fmtBrNum(fd.up.FR / 1000, 0)} kN/m
                   </div>
                 </div>
                 <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800">
-                  <div className="text-[9px] font-black text-slate-400 uppercase">F_H (1 m)</div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase leading-snug"><Var base="F" sub="H" /> (1 m)</div>
                   <div className="text-xs font-black text-blue-700 dark:text-blue-300">
                     {fmtBrNum(fd.up.FH / 1000, 0)} kN/m
                   </div>
                 </div>
                 <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800">
-                  <div className="text-[9px] font-black text-slate-400 uppercase">F_V (1 m)</div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase leading-snug"><Var base="F" sub="V" /> (1 m)</div>
                   <div className="text-xs font-black text-blue-700 dark:text-blue-300">
                     {fmtBrNum(fd.up.FV / 1000, 0)} kN/m
                   </div>
                 </div>
               </div>
-              <div className="text-[10px] text-slate-600 dark:text-slate-300 font-medium text-center">
-                γ_água (20 °C) = {fmtBrNum(st.analisePontoC ? st.analisePontoC.p_cg / Math.max(1e-6, fd.up.h_cg) : 9790, 0)} N/m³ | γ_concreto (d = {(st.concreteSpecificGravity ?? 2.4).toFixed(2).replace('.', ',')}) = {fmtBrNum(st.gammaMaterial, 0)} N/m³
+              <div className="text-[10px] text-slate-600 dark:text-slate-300 font-medium text-center leading-snug">
+                <Var base="γ" sub="água" /> (20 °C) = {fmtBrNum(st.analisePontoC ? st.analisePontoC.p_cg / Math.max(1e-6, fd.up.h_cg) : 9790, 0)} N/m³ | <Var base="γ" sub="concreto" /> (d = {(st.concreteSpecificGravity ?? 2.4).toFixed(2).replace('.', ',')}) = {fmtBrNum(st.gammaMaterial, 0)} N/m³
               </div>
             </div>
 
@@ -251,11 +263,18 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={isKgf ? 'kgf' : 'N'}
                 theme="amber"
                 leftIcon={AlertCircle}
-                secondaryValue={`p_B = ${formatPressureVal(apC.subpressao.p_B)} ${pressureUnit} → p_C = ${formatPressureVal(apC.subpressao.p_C)} ${pressureUnit} | Braço B/3 = ${apC.subpressao.x_U.toFixed(1).replace('.', ',')} m`}
+                secondaryValue={
+                  <>
+                    <span>
+                      <Var base="p" sub="B" /> = {formatPressureVal(apC.subpressao.p_B)} {pressureUnit} → <Var base="p" sub="C" /> = {formatPressureVal(apC.subpressao.p_C)} {pressureUnit}
+                    </span>
+                    <span>Braço B/3 = {apC.subpressao.x_U.toFixed(1).replace('.', ',')} m</span>
+                  </>
+                }
               />
 
               <ResultsCard
-                title="Momento de Subpressão (M_U)"
+                title={<>Momento de Subpressão (<Var base="M" sub="U" />)</>}
                 value={isKgf ? fmtBrNum(apC.subpressao.M_U_ref_total / gravity, 0) : fmtBrNum(apC.subpressao.M_U_ref_total, 0)}
                 unit={isKgf ? 'kgf·m' : 'N·m'}
                 theme="red"
@@ -269,7 +288,16 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 unit={isKgf ? 'kgf' : 'N'}
                 theme="slate"
                 leftIcon={Construction}
-                secondaryValue={`M_W,C = ${isKgf ? fmtBrNum(apC.M_W_C_total / gravity, 0) : fmtBrNum(apC.M_W_C_total, 0)} ${isKgf ? 'kgf·m' : 'N·m'} (Anti-horário | b_W,C = ${st.lever_arm_weight.toFixed(1).replace('.', ',')} m)`}
+                secondaryValue={
+                  <>
+                    <span>
+                      <Var base="M" sub="W,C" /> = {isKgf ? fmtBrNum(apC.M_W_C_total / gravity, 0) : fmtBrNum(apC.M_W_C_total, 0)} {isKgf ? 'kgf·m' : 'N·m'} (Anti-horário
+                    </span>
+                    <span>
+                      <Var base="b" sub="W,C" /> = {st.lever_arm_weight.toFixed(1).replace('.', ',')} m)
+                    </span>
+                  </>
+                }
               />
 
               <div className="p-2.5 rounded-xl bg-purple-100/70 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-800 text-[10.5px] leading-snug text-purple-950 dark:text-purple-100">
@@ -277,10 +305,155 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               </div>
             </div>
           </>
+        ) : hasDownWater && fd && lados && lados.jusante ? (
+          <>
+            {/* 1. Empuxo de Montante (lado de maior carga hidráulica) */}
+            <ResultsCard
+              title={`Empuxo de Montante (${lados.montante.ladoRotulo})`}
+              value={fmtTwoSideForce(lados.montante.res.FR)}
+              unit={forceUnit}
+              theme="blue"
+              leftIcon={Droplets}
+              secondaryValue={
+                <>
+                  <span>
+                    <Var base="E" sub="mont" /> ({lados.montante.theta.toFixed(1).replace('.', ',')}°)
+                  </span>
+                  <span>
+                    Sentido: {lados.montante.sentidoHorizontal} ({lados.montante.sentidoTexto})
+                  </span>
+                </>
+              }
+            />
+
+            {/* 2. Empuxo de Jusante (lado de menor carga hidráulica) */}
+            <ResultsCard
+              title={`Empuxo de Jusante (${lados.jusante.ladoRotulo})`}
+              value={fmtTwoSideForce(lados.jusante.res.FR)}
+              unit={forceUnit}
+              theme="cyan"
+              leftIcon={Droplets}
+              secondaryValue={
+                <>
+                  <span>
+                    <Var base="E" sub="jus" /> ({lados.jusante.theta.toFixed(1).replace('.', ',')}°)
+                  </span>
+                  <span>
+                    Sentido: {lados.jusante.sentidoHorizontal} ({lados.jusante.sentidoTexto})
+                  </span>
+                </>
+              }
+            />
+
+            {/* 3. Resultante Líquida Vetorial */}
+            <ResultsCard
+              title="Resultante Líquida"
+              value={fmtTwoSideForce(Math.abs(fd.FR_net))}
+              unit={forceUnit}
+              theme="amber"
+              leftIcon={MoveRight}
+              secondaryValue={
+                <>
+                  <span>
+                    <Var base="F" sub="R,líq" />
+                  </span>
+                  <span>
+                    Sentido:{' '}
+                    {Math.abs(fd.FH_net) <= 1e-3
+                      ? '↓ Vertical (para baixo)'
+                      : fd.FH_net < 0
+                      ? fd.FV_net > 1e-3
+                        ? '↙ Esquerda e para baixo'
+                        : '← Para a esquerda'
+                      : fd.FV_net > 1e-3
+                      ? '↘ Direita e para baixo'
+                      : '→ Para a direita'}
+                  </span>
+                </>
+              }
+            />
+
+            {/* 4. Componentes Horizontal e Vertical da Resultante */}
+            <ResultsCard
+              title="Componentes da Resultante"
+              value={`${fmtTwoSideForce(fd.FH_net)} | ${fmtTwoSideForce(fd.FV_net)}`}
+              unit={forceUnit}
+              theme="slate"
+              leftIcon={MoveRight}
+              secondaryValue={
+                <>
+                  <span>
+                    <Var base="F" sub="H,líq" /> = {fmtTwoSideForce(fd.FH_net)} {forceUnit} (
+                    {fd.FH_net < -1e-3 ? '← esquerda' : fd.FH_net > 1e-3 ? '→ direita' : 'nulo'})
+                  </span>
+                  <span>
+                    <Var base="F" sub="V,líq" /> = {fmtTwoSideForce(fd.FV_net)} {forceUnit} (↓ para baixo)
+                  </span>
+                </>
+              }
+            />
+
+            {/* 5. Centro de Pressão de Cada Face */}
+            <ResultsCard
+              title="Centro de Pressão (Por Face)"
+              value={`${lados.montante.res.h_cp.toFixed(2)} m`}
+              unit={
+                <>
+                  <Var base="h" sub="p,mont" />
+                </>
+              }
+              theme="cyan"
+              leftIcon={MoveVertical}
+              secondaryValue={
+                <>
+                  <span>
+                    Mont. ({lados.montante.ladoShort}): <Var base="h" sub="p" />={lados.montante.res.h_cp.toFixed(2)}m
+                    {Math.abs(lados.montante.theta - 90) >= 0.1
+                      ? <>, <Var base="y" sub="p" />={lados.montante.res.s_cp.toFixed(2)}m</>
+                      : null}{' '}
+                    (Fundo: {lados.montante.res.y_cp.toFixed(2)}m)
+                  </span>
+                  <span>
+                    Jus. ({lados.jusante.ladoShort}): <Var base="h" sub="p" />={lados.jusante.res.h_cp.toFixed(2)}m
+                    {Math.abs(lados.jusante.theta - 90) >= 0.1
+                      ? <>, <Var base="y" sub="p" />={lados.jusante.res.s_cp.toFixed(2)}m</>
+                      : null}{' '}
+                    (Fundo: {lados.jusante.res.y_cp.toFixed(2)}m)
+                  </span>
+                </>
+              }
+            />
+
+            <ResultsCard
+              title={`Pressão Máxima (Pé – ${lados.montante.ladoRotulo})`}
+              value={formatPressureVal(lados.montante.res.p_bot)}
+              unit={pressureUnit}
+              theme="blue"
+              leftIcon={AlertCircle}
+              secondaryValue={`Mont. (${lados.montante.ladoShort}): ${formatPressureVal(lados.montante.res.p_bot)} | Jus. (${lados.jusante.ladoShort}): ${formatPressureVal(lados.jusante.res.p_bot)} ${pressureUnit}`}
+            />
+
+            <ResultsCard
+              title={`Área Molhada (Montante – ${lados.montante.ladoRotulo})`}
+              value={lados.montante.res.area.toFixed(2)}
+              unit="m²/m"
+              theme="slate"
+              leftIcon={Maximize}
+              secondaryValue={`Jus. (${lados.jusante.ladoShort}): ${lados.jusante.res.area.toFixed(2)} m²/m`}
+            />
+
+            <ResultsCard
+              title="Peso Próprio"
+              value={st ? formatForceVal(st.weight) : '???'}
+              unit={st ? forceUnit : ''}
+              theme="slate"
+              leftIcon={Construction}
+            />
+          </>
         ) : (
           <>
             <ResultsCard
-              title={hasDownWater ? 'Resultante Líquida (Net)' : 'Força Hidrostática Resultante'}
+              title="Força Hidrostática Resultante"
               value={fd ? formatForceVal(Math.abs(fd.FR_net)) : '???'}
               unit={fd ? forceUnit : ''}
               theme="blue"
@@ -289,35 +462,32 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                 fd
                   ? mud
                     ? `P' (água) = ${formatForceVal(mud.F_water)} | P'' (lama) = ${formatForceVal(mud.F_mud)} ${forceUnit}`
-                    : `FH = ${formatForceVal(fd.FH_net, 1, 0)} | FV = ${formatForceVal(fd.FV_net, 1, 0)} ${forceUnit}`
+                    : (
+                      <>
+                        <span><Var base="F" sub="H" /> = {formatForceVal(fd.FH_net, 1, 0)}</span>
+                        <span><Var base="F" sub="V" /> = {formatForceVal(fd.FV_net, 1, 0)} {forceUnit}</span>
+                      </>
+                    )
                   : undefined
               }
             />
 
-            {hasDownWater && fd && (
-              <ResultsCard
-                title="Empuxos Individuais (Faces)"
-                value={formatForceVal(fd.up.FR)}
-                unit={forceUnit}
-                theme="cyan"
-                leftIcon={Droplets}
-                secondaryValue={`Montante: ${formatForceVal(fd.up.FR)} | Jusante: ${formatForceVal(fd.down.FR)} ${forceUnit}`}
-              />
-            )}
-
             <ResultsCard
               title="Centro de Pressão (CP)"
               value={fd ? `${fd.up.h_cp.toFixed(2)} m` : '?'}
-              unit="hp"
+              unit={<Var base="h" sub="p" />}
               theme="cyan"
               leftIcon={MoveVertical}
               secondaryValue={
                 fd
-                  ? hasDownWater
-                    ? `Mont: yp=${fd.up.s_cp.toFixed(2)}m, hp=${fd.up.h_cp.toFixed(2)}m (Fundo: ${fd.up.y_cp.toFixed(2)}m) | Jus: yp=${fd.down.s_cp.toFixed(2)}m`
-                    : mud
+                  ? mud
                     ? `P' a ${mud.y_cp_water.toFixed(2)}m | P'' a ${mud.y_cp_mud.toFixed(2)}m`
-                    : `yp (inclinado) = ${fd.up.s_cp.toFixed(2)}m | Dist. ao Fundo = ${fd.up.y_cp.toFixed(2)}m`
+                    : (
+                      <>
+                        <span><Var base="y" sub="p" /> (inclinado) = {fd.up.s_cp.toFixed(2)}m</span>
+                        <span>Dist. ao Fundo = {fd.up.y_cp.toFixed(2)}m</span>
+                      </>
+                    )
                   : undefined
               }
             />
@@ -361,7 +531,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                   leftIcon={ShieldCheck}
                   secondaryValue={
                     st?.archStressBase !== undefined
-                      ? `σ base ≈ ${(st.archStressBase / 1e6).toFixed(2)} MPa`
+                      ? <><Var base="σ" sub="base" /> ≈ {(st.archStressBase / 1e6).toFixed(2)} MPa</>
                       : undefined
                   }
                 />

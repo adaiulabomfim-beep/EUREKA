@@ -1354,6 +1354,46 @@ export const Memorial: React.FC<MemorialProps> = ({
                 unit={<MathTex tex="\text{m}" />}
                 isSubHeader
               />
+              {(analyzedResults.equilibrium.apoioParedeAtivo ||
+                config?.comporta?.posicaoDobradica === 'BOTTOM') && (() => {
+                const s_cp_A = analyzedResults.forceData.up?.s_cp ?? ybarRel + delta_y;
+                const s_cp_B =
+                  analyzedResults.equilibrium.d_cp_hinge ??
+                  Math.max(0, H - (analyzedResults.forceData.s_cp_net ?? s_cp_A));
+                const h_B = (config?.comporta?.profundidadeTopo ?? analyzedResults.h_top_up ?? 0) + H * sinTheta;
+                return (
+                  <CalculationLine
+                    theme="cyan"
+                    label={
+                      <>
+                        Posição do CP ao Longo da Comporta a partir da Articulação B (<MathTex tex="s_{\text{CP}}" />)
+                      </>
+                    }
+                    symbol={<MathTex tex="s_{\text{CP}}" />}
+                    formula={
+                      isRect || isCircular ? (
+                        <MathTex tex="\frac{L}{2} - \Delta y = L - s_{\text{CP},A} = \frac{h_B - h_{\text{CP}}}{\operatorname{sen}(\theta)}" />
+                      ) : (
+                        <MathTex tex="L - s_{\text{CP},A} = \frac{h_B - h_{\text{CP}}}{\operatorname{sen}(\theta)}" />
+                      )
+                    }
+                    substitution={
+                      isRect || isCircular ? (
+                        <MathTex
+                          tex={`\\frac{${H.toFixed(2)}}{2} - ${delta_y.toFixed(3)} = ${H.toFixed(3)} - ${s_cp_A.toFixed(3)} = \\frac{${h_B.toFixed(3)} - ${h_cp.toFixed(3)}}{\\operatorname{sen}(${gateInclination}^\\circ)}`}
+                        />
+                      ) : (
+                        <MathTex
+                          tex={`${H.toFixed(3)} - ${s_cp_A.toFixed(3)} = \\frac{${h_B.toFixed(3)} - ${h_cp.toFixed(3)}}{\\operatorname{sen}(${gateInclination}^\\circ)}`}
+                        />
+                      )
+                    }
+                    result={<MathTex tex={s_cp_B.toFixed(3)} />}
+                    unit={<MathTex tex="\text{m}" />}
+                    isSubHeader
+                  />
+                );
+              })()}
             </div>
           </section>
 
@@ -1374,7 +1414,9 @@ export const Memorial: React.FC<MemorialProps> = ({
                   const Bx_val = Math.abs(eq.Rx_hinge ?? 0) / fDiv;
                   const By_val = Math.abs(eq.Ry_hinge ?? 0) / fDiv;
                   const RB_val = (eq.R_hinge ?? 0) / fDiv;
-                  const d_cp_B = Math.max(0, H - analyzedResults.forceData.s_cp_net);
+                  const d_cp_B =
+                    eq.d_cp_hinge ?? Math.max(0, H - analyzedResults.forceData.s_cp_net);
+                  const h_B = (config?.comporta?.profundidadeTopo ?? analyzedResults.h_top_up ?? 0) + H * sinTheta;
                   const deltaY = eq.deltaY_BA ?? H * sinTheta;
                   const cosTheta = Math.cos(thetaRad);
                   const FR_scaled = FR_N / fDiv;
@@ -1400,11 +1442,28 @@ export const Memorial: React.FC<MemorialProps> = ({
                         theme="purple"
                         label={
                           <>
+                            Braço do Empuxo em Relação à Articulação B (<MathTex tex="s_{\text{CP}}" />)
+                          </>
+                        }
+                        symbol={<MathTex tex="s_{\text{CP}}" />}
+                        formula={<MathTex tex="\frac{L}{2} - \Delta y = \frac{h_B - h_{\text{CP}}}{\operatorname{sen}(\theta)}" />}
+                        substitution={
+                          <MathTex
+                            tex={`\\frac{${H.toFixed(2)}}{2} - ${delta_y.toFixed(3)} = \\frac{${h_B.toFixed(3)} - ${h_cp.toFixed(3)}}{\\operatorname{sen}(${gateInclination}^\\circ)}`}
+                          />
+                        }
+                        result={<MathTex tex={d_cp_B.toFixed(3)} />}
+                        unit={<MathTex tex="\text{m}" />}
+                      />
+                      <CalculationLine
+                        theme="purple"
+                        label={
+                          <>
                             Reação Horizontal na Parede Lisa em A (<MathTex tex="P" />)
                           </>
                         }
                         symbol={<MathTex tex="P" />}
-                        formula={<MathTex tex="\frac{F_R \cdot d_{\text{CP},B}}{\Delta y_{BA}}" />}
+                        formula={<MathTex tex="\frac{F_R \cdot s_{\text{CP}}}{\Delta y_{BA}}" />}
                         substitution={
                           <MathTex tex={`\\frac{${FR_scaled.toFixed(2)} \\cdot ${d_cp_B.toFixed(3)}}{${deltaY.toFixed(3)}}`} />
                         }

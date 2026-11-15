@@ -1261,8 +1261,44 @@ export const RelatorioVisualEureka = ({
     ];
 
     if (st.isArchDam) {
+      const gammaSub = isKgf ? fmtBr(rho, 0, 0) : fmtBr((rho * g) / 1000, 2, 2);
+      const gammaUnitSubTex = isKgf ? '\\text{kgf/m}^3' : '\\text{kN/m}^3';
+      const hSub = Number.isInteger(hUp) ? String(hUp) : fmtBr(hUp, 2, 2);
+      const pMaxStep = {
+        number: 2,
+        title: 'PRESSÃO HIDROSTÁTICA MÁXIMA NA BASE',
+        equation: mud ? (
+          <MathTex display tex="p = \gamma_{\text{água}} \cdot h_{\text{água}} + \gamma_{\text{lama}} \cdot h_{\text{lama}}" />
+        ) : (
+          <MathTex display tex="p = \gamma_{\text{água}} \cdot h" />
+        ),
+        variables: mud ? (
+          <>
+            <MathTex tex={`\\gamma_{\\text{água}} = ${texNum(gammaSub)}\\;${gammaUnitSubTex}`} />; <MathTex tex={`h_{\\text{água}} = ${texNum(fmtBr(mud.waterHeight))}\\text{ m}`} />; <MathTex tex={`h_{\\text{lama}} = ${texNum(fmtBr(mud.mudHeight))}\\text{ m}`} />
+          </>
+        ) : (
+          <>
+            <MathTex tex={`\\gamma_{\\text{água}} = ${texNum(gammaSub)}\\;${gammaUnitSubTex}`} />; <MathTex tex={`h = ${texNum(hSub)}\\text{ m}`} />
+          </>
+        ),
+        substitution: mud ? (
+          <MathTex
+            tex={`p_{\\max} = ${texNum(gammaSub)} \\cdot ${texNum(fmtBr(mud.waterHeight))} + ${texNum(
+              isKgf ? fmtBr(mud.mudDensity, 0, 0) : fmtBr((mud.mudDensity * g) / 1000, 2, 2)
+            )} \\cdot ${texNum(fmtBr(mud.mudHeight))}`}
+          />
+        ) : (
+          <MathTex tex={`p_{\\max} = ${texNum(gammaSub)} \\cdot ${texNum(hSub)}`} />
+        ),
+        result: <MathTex tex={`\\boxed{p_{\\max} = ${texNum(fmtP(fd.p_max_up))}\\ ${unitPTex}}`} />,
+        note: 'Pressão máxima atuante no pé de montante na base da barragem em arco.',
+        tone: 'blue',
+        estimatedHeight: 168,
+      };
+
+      steps.splice(1, 0, pMaxStep);
       steps.push({
-        number: 5,
+        number: 6,
         title: 'Verificação estrutural pelo efeito de arco',
         equation: <MathTex display tex="N_{\text{arco}} = p_{\text{máx}} \cdot R_{\text{arco}} \quad | \quad \sigma_{\text{arco}} = \frac{N_{\text{arco}}}{B_{\text{base}}}" />,
         variables: (
@@ -1279,6 +1315,9 @@ export const RelatorioVisualEureka = ({
         note: 'Em barragens em arco, o empuxo é transferido às ombreiras por compressão em arco (FS 2D de gravidade não aplicáveis).',
         tone: 'green',
         estimatedHeight: 172,
+      });
+      steps.forEach((s, idx) => {
+        s.number = idx + 1;
       });
     } else {
       const deslOk = st.fs_desl >= 1.5;

@@ -93,6 +93,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   const [anchoredBuoyMode, setAnchoredBuoyMode] = useState<boolean>(false);
   const [buoyDiameterM, setBuoyDiameterM] = useState<number>(1.5);
   const [buoyWeightKN, setBuoyWeightKN] = useState<number>(8.5);
+  const [buoyFluidSpecificWeightKN, setBuoyFluidSpecificWeightKN] = useState<number>(10.1);
 
   // --- LAYOUT CALCULATIONS ---
   const svgHeight = 600;
@@ -170,7 +171,9 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
   }
 
   // --- PHYSICS CALCULATIONS ---
-  const rhoA = interfaceEquilibriumMode
+  const rhoA = anchoredBuoyMode
+    ? (buoyFluidSpecificWeightKN * 1000) / gravity
+    : interfaceEquilibriumMode
     ? upperFluidRelativeDensity * 1000
     : inverseSpecificWeightMode
     ? fluidSpecificWeight / gravity
@@ -218,7 +221,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     anchoredBuoyMode,
     buoyDiameterM,
     buoyWeightKN,
-  }), [shape, effectiveDim1, effectiveDim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId, inverseSpecificWeightMode, realWeightN, apparentWeightN, fluidSpecificWeight, floatingEquilibriumMode, cylinderDiameterCm, cylinderHeightCm, submergedHeightCm, interfaceEquilibriumMode, bodyRelativeDensity, upperFluidRelativeDensity, lowerFluidRelativeDensity, illustrativeWidthCm, illustrativeHeightCm, anchoredBuoyMode, buoyDiameterM, buoyWeightKN]);
+    buoyFluidSpecificWeightKN,
+  }), [shape, effectiveDim1, effectiveDim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId, inverseSpecificWeightMode, realWeightN, apparentWeightN, fluidSpecificWeight, floatingEquilibriumMode, cylinderDiameterCm, cylinderHeightCm, submergedHeightCm, interfaceEquilibriumMode, bodyRelativeDensity, upperFluidRelativeDensity, lowerFluidRelativeDensity, illustrativeWidthCm, illustrativeHeightCm, anchoredBuoyMode, buoyDiameterM, buoyWeightKN, buoyFluidSpecificWeightKN]);
 
   const equilibriumBlockY = originalFluidSurfaceY + (initialPhysics.d_eq * visualScaleFactor) - (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0) - visualHeight;
   const totalInitialVisualH = visualHeight + (twoBlocks ? (initialPhysics.H2_cm * visualScaleFactor + initialPhysics.actualCordLength * visualScaleFactor) : 0);
@@ -339,7 +343,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     anchoredBuoyMode,
     buoyDiameterM,
     buoyWeightKN,
-  }), [shape, effectiveDim1, effectiveDim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId, inverseSpecificWeightMode, realWeightN, apparentWeightN, fluidSpecificWeight, floatingEquilibriumMode, cylinderDiameterCm, cylinderHeightCm, submergedHeightCm, interfaceEquilibriumMode, bodyRelativeDensity, upperFluidRelativeDensity, lowerFluidRelativeDensity, illustrativeWidthCm, illustrativeHeightCm, anchoredBuoyMode, buoyDiameterM, buoyWeightKN]);
+    buoyFluidSpecificWeightKN,
+  }), [shape, effectiveDim1, effectiveDim2, customObjDensity, rhoA, rhoB, depthA, depthB, enableTwoFluids, gravity, tankWidth, tankDepth, visualScaleFactor, visualHeight, originalFluidSurfaceY, h_in_A, h_in_B, h_in_A_2, h_in_B_2, extraWeight, twoBlocks, density2, dim1_2, dim2_2, cordLength, shape2, activeExerciseId, inverseSpecificWeightMode, realWeightN, apparentWeightN, fluidSpecificWeight, floatingEquilibriumMode, cylinderDiameterCm, cylinderHeightCm, submergedHeightCm, interfaceEquilibriumMode, bodyRelativeDensity, upperFluidRelativeDensity, lowerFluidRelativeDensity, illustrativeWidthCm, illustrativeHeightCm, anchoredBuoyMode, buoyDiameterM, buoyWeightKN, buoyFluidSpecificWeightKN]);
 
   const exportData = useMemo(() => ({
     tipo: 'corpos-imersos',
@@ -432,6 +437,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     setAnchoredBuoyMode(false);
     setBuoyDiameterM(1.5);
     setBuoyWeightKN(8.5);
+    setBuoyFluidSpecificWeightKN(10.1);
     setRealWeightN(445);
     setApparentWeightN(267);
     setFluidSpecificWeight(9802);
@@ -493,7 +499,8 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
         setSelectedMaterial('Plástico (PVC)');
         setCustomObjDensity(490.4);
         setSelectedFluid('Água do Mar');
-        setCustomFluidDensity(1025);
+        setBuoyFluidSpecificWeightKN(10.1);
+        setCustomFluidDensity(Number((10100 / gravity).toFixed(2)));
         setEnableTwoFluids(false);
         setDepthA(280);
         setTankWidth(320);
@@ -705,6 +712,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
     anchoredBuoyMode,
     buoyDiameterM,
     buoyWeightKN,
+    buoyFluidSpecificWeightKN,
   ]);
 
   const objectWidthCm = shape === ObjectShape.CUBE ? effectiveDim1 : effectiveDim1 * 2;
@@ -811,7 +819,15 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                 setSelectedFluid(e.target.value);
                 if (e.target.value !== 'Custom') {
                   const foundDensity = FLUIDS.find((f) => f.name === e.target.value)?.density || 0;
-                  setCustomFluidDensity(foundDensity);
+                  if (anchoredBuoyMode && e.target.value === 'Água do Mar') {
+                    setBuoyFluidSpecificWeightKN(10.1);
+                    setCustomFluidDensity(Number((10100 / gravity).toFixed(2)));
+                  } else {
+                    setCustomFluidDensity(foundDensity);
+                    if (anchoredBuoyMode) {
+                      setBuoyFluidSpecificWeightKN(Number(((foundDensity * gravity) / 1000).toFixed(3)));
+                    }
+                  }
                   if (inverseSpecificWeightMode) {
                     setFluidSpecificWeight(Math.round(foundDensity * gravity));
                   }
@@ -886,11 +902,16 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
             anchoredBuoyMode={anchoredBuoyMode}
             buoyDiameterM={buoyDiameterM}
             buoyWeightKN={buoyWeightKN}
+            buoyFluidSpecificWeightKN={buoyFluidSpecificWeightKN}
             onBuoyDiameterChange={(val) => {
               setBuoyDiameterM(val);
               setDim1((val * 100) / 2);
             }}
             onBuoyWeightChange={setBuoyWeightKN}
+            onBuoyFluidSpecificWeightKNChange={(val) => {
+              setBuoyFluidSpecificWeightKN(val);
+              setCustomFluidDensity(Number(((val * 1000) / gravity).toFixed(2)));
+            }}
           />
         </ScrollablePanel>
 
@@ -1105,7 +1126,7 @@ export const Laboratorio: React.FC<BodyFallLabProps> = ({ onContextUpdate }) => 
                           'Objeto': 'Boia Esférica Submersa Ancorada',
                           'Diâmetro (D)': `${buoyDiameterM.toFixed(2)} m (R = ${(buoyDiameterM / 2).toFixed(2)} m)`,
                           'Peso Próprio (W)': `${buoyWeightKN.toFixed(2)} kN`,
-                          'Fluido': `${selectedFluid} (ρ = ${rhoA} kg/m³, γ = ${(physics.fluidSpecificWeightKN ?? 10.06).toFixed(2)} kN/m³)`,
+                          'Fluido': `${selectedFluid} (γ = ${(physics.fluidSpecificWeightKN ?? 10.1).toFixed(2)} kN/m³, ρ = ${physics.rhoA.toFixed(1)} kg/m³)`,
                           'Condição': 'Totalmente submersa e presa ao fundo por cabo',
                         }
                       : interfaceEquilibriumMode

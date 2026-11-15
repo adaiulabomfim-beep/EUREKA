@@ -32,10 +32,22 @@ type VectorItem = {
   start: Point2D;
   end: Point2D;
   color?: string;
+  markerId?: string;
   strokeWidth?: number;
   opacity?: number;
   isResultant?: boolean;
+  dashed?: boolean;
+  hideEndDot?: boolean;
   val?: string | number;
+  labelParts?: {
+    prefix: string;
+    sub?: string;
+    valueText: string;
+  };
+  labelPos?: Point2D;
+  badgeBg?: string;
+  badgeBorder?: string;
+  badgeTextColor?: string;
 };
 
 interface SceneContainerProps {
@@ -458,8 +470,18 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
 
         {showVectors &&
           vectors.map((v, i) => {
-            const labelX = v.start.x;
-            const labelY = v.start.y - 15;
+            const labelX = v.labelPos?.x ?? v.start.x;
+            const labelY = v.labelPos?.y ?? v.start.y - 15;
+            const markerUrl = `url(#${v.markerId ?? 'arrow-red'})`;
+            const hasLabelParts = !!v.labelParts;
+            const plainLabel = hasLabelParts
+              ? `${v.labelParts!.prefix}${v.labelParts!.sub ?? ''} ${v.labelParts!.valueText}`
+              : v.val !== undefined && v.val !== null && v.val !== ''
+              ? `E = ${String(v.val)}`
+              : '';
+            const pillW = hasLabelParts
+              ? Math.max(94, plainLabel.length * 6.0 + 18)
+              : 72;
 
             return (
               <g key={`vec-${i}`} pointerEvents="none">
@@ -471,11 +493,12 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                   stroke={v.color ?? '#ef4444'}
                   strokeWidth={v.strokeWidth ?? 2}
                   opacity={v.opacity ?? 1}
-                  markerEnd="url(#arrow-red)"
+                  strokeDasharray={v.dashed ? '5 3' : undefined}
+                  markerEnd={markerUrl}
                   vectorEffect="non-scaling-stroke"
                 />
 
-                {v.isResultant && (
+                {v.isResultant && !v.hideEndDot && (
                   <circle
                     cx={v.end.x}
                     cy={v.end.y}
@@ -487,29 +510,43 @@ export const SceneContainer: React.FC<SceneContainerProps> = ({
                   />
                 )}
 
-                {v.val !== undefined && v.val !== null && v.val !== '' && (
+                {plainLabel !== '' && (
                   <g transform={`translate(${labelX}, ${labelY})`}>
                     <rect
-                      x={-36}
+                      x={-pillW / 2}
                       y={-11}
-                      width={72}
+                      width={pillW}
                       height={22}
                       rx={11}
-                      fill="#ffffff"
-                      opacity={0.92}
-                      stroke="#fecaca"
-                      strokeWidth={1.2}
+                      fill={v.badgeBg ?? '#ffffff'}
+                      opacity={0.96}
+                      stroke={v.badgeBorder ?? '#fecaca'}
+                      strokeWidth={1.3}
                     />
                     <text
                       x={0}
                       y={0}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fill="#dc2626"
+                      fill={v.badgeTextColor ?? '#dc2626'}
                       fontSize={10.5}
                       fontWeight="bold"
                     >
-                      E = {String(v.val)}
+                      {hasLabelParts ? (
+                        <>
+                          {v.labelParts!.prefix}
+                          {v.labelParts!.sub && (
+                            <tspan dy="2.5" fontSize="7.8" fontWeight="700">
+                              {v.labelParts!.sub}
+                            </tspan>
+                          )}
+                          <tspan dy={v.labelParts!.sub ? '-2.5' : undefined}>
+                            {` ${v.labelParts!.valueText}`}
+                          </tspan>
+                        </>
+                      ) : (
+                        plainLabel
+                      )}
                     </text>
                   </g>
                 )}

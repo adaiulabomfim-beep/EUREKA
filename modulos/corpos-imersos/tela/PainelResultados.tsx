@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowDown, ArrowUp, EyeOff, Ruler, Calculator, Weight, Droplets, Scale, CheckCircle2, Box, Gauge } from 'lucide-react';
-import { ResultsPanel, ResultsCard } from '../../../interface/PainelResultados';
-import { MathTex } from '@/src/components/ui/MathTex';
+import { ResultsPanel, ResultsCard, Var } from '../../../interface/PainelResultados';
 
 interface PainelResultadosProps {
   physics: any;
@@ -11,10 +10,10 @@ interface PainelResultadosProps {
   showCalculations: boolean;
   onToggleCalculations: () => void;
   specialResult?: {
-    title: string;
-    value: string;
-    unit?: string;
-    description?: string;
+    title: React.ReactNode;
+    value: React.ReactNode;
+    unit?: React.ReactNode;
+    description?: React.ReactNode;
   } | null;
 }
 
@@ -58,7 +57,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
         {isAnchoredBuoyMode ? (
           <>
             <ResultsCard
-              title={<>Tração no Cabo (<MathTex tex="T" />)</>}
+              title="Tração no Cabo (T)"
               value={
                 isSimulating
                   ? isValidAnchoredBuoy
@@ -86,7 +85,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             )}
 
             <ResultsCard
-              title={<>Empuxo (<MathTex tex="E" />)</>}
+              title="Empuxo (E)"
               value={
                 isSimulating
                   ? `${(physics.buoyancyForce / 1000).toFixed(2).replace('.', ',')} kN`
@@ -97,13 +96,13 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               theme="green"
               secondaryValue={
                 isSimulating
-                  ? `E = γ_mar · V = ${physics.buoyancyForce.toFixed(1).replace('.', ',')} N`
+                  ? <>E = <Var base="γ" sub="mar" /> · V = {physics.buoyancyForce.toFixed(1).replace('.', ',')} N</>
                   : 'Aguardando análise'
               }
             />
 
             <ResultsCard
-              title={<>Peso Próprio da Boia (<MathTex tex="W" />)</>}
+              title="Peso Próprio da Boia (W)"
               value={`${physics.buoyWeightKN.toFixed(2).replace('.', ',')} kN`}
               leftIcon={Weight}
               icon={ArrowDown}
@@ -112,7 +111,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Volume Total e Submerso (<MathTex tex="V = V_{\text{sub}}" />)</>}
+              title={<>Volume Total e Submerso (V = <Var base="V" sub="sub" />)</>}
               value={
                 isSimulating
                   ? `${physics.volume.toFixed(4).replace('.', ',')} m³`
@@ -129,7 +128,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Diâmetro da Boia (<MathTex tex="D" />)</>}
+              title="Diâmetro da Boia (D)"
               value={`${physics.buoyDiameterM.toFixed(2).replace('.', ',')} m`}
               leftIcon={Ruler}
               theme="slate"
@@ -138,7 +137,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Peso Específico do Fluido (<MathTex tex="\gamma_{\text{mar}}" />)</>}
+              title={<>Peso Específico do Fluido (<Var base="γ" sub="mar" />)</>}
               value={
                 isSimulating
                   ? `${(physics.fluidSpecificWeight / 1000).toFixed(2).replace('.', ',')} kN/m³`
@@ -148,7 +147,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               theme="blue"
               secondaryValue={
                 isSimulating
-                  ? `Água do Mar (ρ = ${physics.rhoA.toFixed(0)} kg/m³): γ = ${physics.fluidSpecificWeight.toFixed(2).replace('.', ',')} N/m³ (ref. 10,05 kN/m³)`
+                  ? `Água do Mar (γ = ${(physics.fluidSpecificWeight / 1000).toFixed(2).replace('.', ',')} kN/m³ = ${physics.fluidSpecificWeight.toFixed(1).replace('.', ',')} N/m³ | ρ ≈ ${physics.rhoA.toFixed(1).replace('.', ',')} kg/m³)`
                   : 'Aguardando análise'
               }
             />
@@ -156,7 +155,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
         ) : isInterfaceMode ? (
           <>
             <ResultsCard
-              title={<>Razão entre Alturas (<MathTex tex="a / b" />)</>}
+              title="Razão entre Alturas (a / b)"
               value={
                 isSimulating
                   ? isValidInterface
@@ -170,14 +169,14 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               secondaryValue={
                 isSimulating
                   ? isValidInterface
-                    ? `Resultado Principal | a/b = (d_m − d_s)/(d_s − d_a) = ${physics.numeratorDiff.toFixed(2).replace('.', ',')}/${physics.denominatorDiff.toFixed(2).replace('.', ',')} = ${physics.ratioAtoB.toFixed(4).replace('.', ',')}`
-                    : 'Requer d_a < d_s < d_m para equilíbrio na interface'
+                    ? <>Resultado Principal | a/b = (<Var base="d" sub="m" /> − <Var base="d" sub="s" />)/(<Var base="d" sub="s" /> − <Var base="d" sub="a" />) = {physics.numeratorDiff.toFixed(2).replace('.', ',')}/{physics.denominatorDiff.toFixed(2).replace('.', ',')} = {physics.ratioAtoB.toFixed(4).replace('.', ',')}</>
+                    : <>Requer <Var base="d" sub="a" /> &lt; <Var base="d" sub="s" /> &lt; <Var base="d" sub="m" /> para equilíbrio na interface</>
                   : 'Clique em ANALISAR para calcular a razão a/b'
               }
             />
 
             <ResultsCard
-              title={<>Alturas Submersas (<MathTex tex="a" /> e <MathTex tex="b" />)</>}
+              title="Alturas Submersas (a e b)"
               value={
                 isSimulating
                   ? `a = ${(physics.fractionA * 100).toFixed(1).replace('.', ',')}% | b = ${(physics.fractionB * 100).toFixed(1).replace('.', ',')}%`
@@ -194,24 +193,29 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Peso Específico do Aço (<MathTex tex="\gamma_s" />)</>}
+              title={<>Peso Específico do Aço (<Var base="γ" sub="s" />)</>}
               value={isSimulating ? `${physics.bodySpecificWeight.toFixed(1).replace('.', ',')}` : '?'}
               unit={isSimulating ? 'N/m³' : undefined}
               leftIcon={Gauge}
               theme="amber"
-              badge={isSimulating ? `d_s = ${physics.bodyRelativeDensity.toFixed(2).replace('.', ',')}` : undefined}
+              badge={isSimulating ? <><Var base="d" sub="s" /> = {physics.bodyRelativeDensity.toFixed(2).replace('.', ',')}</> : undefined}
               secondaryValue={
                 isSimulating
-                  ? `ρ_s = ${physics.objectDensity.toFixed(0)} kg/m³ | ${(physics.bodySpecificWeight / 1000).toFixed(2).replace('.', ',')} kN/m³`
+                  ? (
+                    <>
+                      <span><Var base="ρ" sub="s" /> = {physics.objectDensity.toFixed(0)} kg/m³</span>
+                      <span>{(physics.bodySpecificWeight / 1000).toFixed(2).replace('.', ',')} kN/m³</span>
+                    </>
+                  )
                   : 'Aguardando análise'
               }
             />
 
             <ResultsCard
-              title={<>Pesos Específicos (<MathTex tex="\gamma_a" /> e <MathTex tex="\gamma_m" />)</>}
+              title={<>Pesos Específicos (<Var base="γ" sub="a" /> e <Var base="γ" sub="m" />)</>}
               value={
                 isSimulating
-                  ? `γ_a = ${physics.upperFluidSpecificWeight.toFixed(0)} | γ_m = ${physics.lowerFluidSpecificWeight.toFixed(1).replace('.', ',')}`
+                  ? <><Var base="γ" sub="a" /> = {physics.upperFluidSpecificWeight.toFixed(0)} | <Var base="γ" sub="m" /> = {physics.lowerFluidSpecificWeight.toFixed(1).replace('.', ',')}</>
                   : '?'
               }
               unit={isSimulating ? 'N/m³' : undefined}
@@ -219,16 +223,21 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               theme="blue"
               secondaryValue={
                 isSimulating
-                  ? `Água: d_a = ${physics.upperFluidRelativeDensity.toFixed(2).replace('.', ',')} | Mercúrio: d_m = ${physics.lowerFluidRelativeDensity.toFixed(2).replace('.', ',')}`
+                  ? (
+                    <>
+                      <span>Água: <Var base="d" sub="a" /> = {physics.upperFluidRelativeDensity.toFixed(2).replace('.', ',')}</span>
+                      <span>Mercúrio: <Var base="d" sub="m" /> = {physics.lowerFluidRelativeDensity.toFixed(2).replace('.', ',')}</span>
+                    </>
+                  )
                   : 'Aguardando análise'
               }
             />
 
             <ResultsCard
-              title={<>Empuxo da Água (<MathTex tex="E_{\text{água}}" />) e do Mercúrio (<MathTex tex="E_{\text{merc}}" />)</>}
+              title={<>Empuxo da Água (<Var base="E" sub="água" />) e do Mercúrio (<Var base="E" sub="merc" />)</>}
               value={
                 isSimulating
-                  ? `E_a = ${(physics.E_A / 1000).toFixed(2).replace('.', ',')} kN | E_m = ${(physics.E_B / 1000).toFixed(2).replace('.', ',')} kN`
+                  ? <><Var base="E" sub="a" /> = {(physics.E_A / 1000).toFixed(2).replace('.', ',')} kN | <Var base="E" sub="m" /> = {(physics.E_B / 1000).toFixed(2).replace('.', ',')} kN</>
                   : '?'
               }
               leftIcon={Droplets}
@@ -236,7 +245,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               theme="green"
               secondaryValue={
                 isSimulating
-                  ? `E_água = ${physics.E_A.toFixed(1).replace('.', ',')} N (${((physics.E_A / physics.buoyancyForce) * 100).toFixed(1).replace('.', ',')}%) | E_mercúrio = ${physics.E_B.toFixed(1).replace('.', ',')} N (${((physics.E_B / physics.buoyancyForce) * 100).toFixed(1).replace('.', ',')}%)`
+                  ? (
+                    <>
+                      <span><Var base="E" sub="água" /> = {physics.E_A.toFixed(1).replace('.', ',')} N ({((physics.E_A / physics.buoyancyForce) * 100).toFixed(1).replace('.', ',')}%)</span>
+                      <span><Var base="E" sub="mercúrio" /> = {physics.E_B.toFixed(1).replace('.', ',')} N ({((physics.E_B / physics.buoyancyForce) * 100).toFixed(1).replace('.', ',')}%)</span>
+                    </>
+                  )
                   : 'Aguardando análise'
               }
             />
@@ -244,7 +258,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             <ResultsCard
               title={
                 isSimulating ? (
-                  <>Equilíbrio Vertical (<MathTex tex="P = E_{\text{água}} + E_{\text{mercúrio}}" />)</>
+                  <>Equilíbrio Vertical (P = <Var base="E" sub="água" /> + <Var base="E" sub="mercúrio" />)</>
                 ) : (
                   <>Condição de Equilíbrio Vertical</>
                 )
@@ -256,10 +270,10 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               }
               leftIcon={CheckCircle2}
               theme="red"
-              badge={isSimulating ? 'ΣFy = 0' : undefined}
+              badge={isSimulating ? <>Σ<Var base="F" sub="y" /> = 0</> : undefined}
               secondaryValue={
                 isSimulating
-                  ? `P = ${physics.objectWeight.toFixed(1).replace('.', ',')} N = E_água + E_mercúrio = ${physics.buoyancyForce.toFixed(1).replace('.', ',')} N`
+                  ? <>P = {physics.objectWeight.toFixed(1).replace('.', ',')} N = <Var base="E" sub="água" /> + <Var base="E" sub="mercúrio" /> = {physics.buoyancyForce.toFixed(1).replace('.', ',')} N</>
                   : 'Aguardando análise'
               }
             />
@@ -267,7 +281,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
         ) : isFloatingMode ? (
           <>
             <ResultsCard
-              title={<>Peso da Lata (<MathTex tex="P" />)</>}
+              title="Peso da Lata (P)"
               value={
                 isSimulating
                   ? isValidFloating
@@ -288,13 +302,13 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Empuxo (<MathTex tex="E" />)</>}
+              title="Empuxo (E)"
               value={isSimulating ? physics.buoyancyForce.toFixed(2).replace('.', ',') : '?'}
               unit={isSimulating ? 'N' : ''}
               secondaryValue={
                 isSimulating
-                  ? `E = γ_água · V_sub = ${physics.buoyancyForce.toFixed(3).replace('.', ',')} N`
-                  : 'Princípio de Arquimedes (E = γ · V_sub)'
+                  ? <>E = <Var base="γ" sub="água" /> · <Var base="V" sub="sub" /> = {physics.buoyancyForce.toFixed(3).replace('.', ',')} N</>
+                  : <>Princípio de Arquimedes (E = γ · <Var base="V" sub="sub" />)</>
               }
               leftIcon={Droplets}
               icon={isSimulating ? ArrowUp : EyeOff}
@@ -302,11 +316,11 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Condição de Equilíbrio (<MathTex tex="P = E" />)</>}
+              title="Condição de Equilíbrio (P = E)"
               value={isSimulating ? 'P = E (Flutuando)' : 'Equilíbrio Estático'}
               leftIcon={CheckCircle2}
               theme="blue"
-              badge="ΣFy = 0"
+              badge={<>Σ<Var base="F" sub="y" /> = 0</>}
               secondaryValue={
                 isSimulating
                   ? `${physics.objectWeight.toFixed(2).replace('.', ',')} N = ${physics.buoyancyForce.toFixed(2).replace('.', ',')} N | Sem reação de fundo`
@@ -315,21 +329,21 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Volume Submerso (<MathTex tex="V_{sub}" />)</>}
+              title={<>Volume Submerso (<Var base="V" sub="sub" />)</>}
               value={isSimulating ? physics.vol_deslocado.toFixed(6).replace('.', ',') : '?'}
               unit={isSimulating ? 'm³' : ''}
               leftIcon={Box}
               theme="cyan"
-              badge={`h_sub = ${physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm`}
+              badge={<><Var base="h" sub="sub" /> = {physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm</>}
               secondaryValue={
                 isSimulating
                   ? `${(physics.vol_deslocado * 1e6).toFixed(2).replace('.', ',')} cm³ (${(physics.vol_deslocado * 1000).toFixed(3).replace('.', ',')} L) | A = ${(physics.baseArea * 1e4).toFixed(2).replace('.', ',')} cm²`
-                  : `V_sub = A · h_sub`
+                  : <><Var base="V" sub="sub" /> = A · <Var base="h" sub="sub" /></>
               }
             />
 
             <ResultsCard
-              title={<>Volume Total (<MathTex tex="V_{total}" />) e Emerso (<MathTex tex="V_{em}" />)</>}
+              title={<>Volume Total (<Var base="V" sub="total" />) e Emerso (<Var base="V" sub="em" />)</>}
               value={isSimulating ? physics.volume.toFixed(6).replace('.', ',') : '?'}
               unit={isSimulating ? 'm³' : ''}
               leftIcon={Box}
@@ -337,19 +351,30 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
               badge={`H = ${physics.totalHeightCm.toFixed(1).replace('.', ',')} cm`}
               secondaryValue={
                 isSimulating
-                  ? `V_total = ${(physics.volume * 1e6).toFixed(2).replace('.', ',')} cm³ | V_em = ${physics.vol_emerso.toFixed(6).replace('.', ',')} m³ (${(physics.vol_emerso * 1e6).toFixed(2).replace('.', ',')} cm³)`
-                  : `h_em = ${physics.emergedHeightCm.toFixed(1).replace('.', ',')} cm acima da superfície livre`
+                  ? (
+                    <>
+                      <span><Var base="V" sub="total" /> = {(physics.volume * 1e6).toFixed(2).replace('.', ',')} cm³</span>
+                      <span><Var base="V" sub="em" /> = {physics.vol_emerso.toFixed(6).replace('.', ',')} m³ ({(physics.vol_emerso * 1e6).toFixed(2).replace('.', ',')} cm³)</span>
+                    </>
+                  )
+                  : <><Var base="h" sub="em" /> = {physics.emergedHeightCm.toFixed(1).replace('.', ',')} cm acima da superfície livre</>
               }
             />
 
             <ResultsCard
-              title={<>Fração Submersa (<MathTex tex="h_{sub} / H" />)</>}
+              title={<>Fração Submersa (<Var base="h" sub="sub" /> / H)</>}
               value={isSimulating ? `${physics.submergedPercentage.toFixed(2).replace('.', ',')}%` : '?'}
               leftIcon={Ruler}
               theme="purple"
               secondaryValue={
                 isSimulating
-                  ? `h_sub = ${physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm | h_em = ${physics.emergedHeightCm.toFixed(1).replace('.', ',')} cm | ρ_eq ≈ ${physics.equivalentDensity.toFixed(1).replace('.', ',')} kg/m³`
+                  ? (
+                    <>
+                      <span><Var base="h" sub="sub" /> = {physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm</span>
+                      <span><Var base="h" sub="em" /> = {physics.emergedHeightCm.toFixed(1).replace('.', ',')} cm</span>
+                      <span><Var base="ρ" sub="eq" /> ≈ {physics.equivalentDensity.toFixed(1).replace('.', ',')} kg/m³</span>
+                    </>
+                  )
                   : `Razão submersa: ${physics.submergedHeightCm.toFixed(1).replace('.', ',')} cm / ${physics.totalHeightCm.toFixed(1).replace('.', ',')} cm`
               }
             />
@@ -357,7 +382,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
         ) : isInverseMode ? (
           <>
             <ResultsCard
-              title={<>Peso Específico Médio (<MathTex tex="\gamma_c" />)</>}
+              title={<>Peso Específico Médio (<Var base="γ" sub="c" />)</>}
               value={
                 isSimulating
                   ? isValidInverse
@@ -373,12 +398,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
                   ? isValidInverse
                     ? `Resultado Principal | ${(physics.objectSpecificWeight / 1000).toFixed(3).replace('.', ',')} kN/m³`
                     : 'Peso real deve superar o peso aparente'
-                  : 'Execute a análise para determinar γc'
+                  : <>Execute a análise para determinar <Var base="γ" sub="c" /></>
               }
             />
 
             <ResultsCard
-              title={<>Peso Real no Ar (<MathTex tex="P" />)</>}
+              title="Peso Real no Ar (P)"
               value={physics.objectWeight.toFixed(1).replace('.', ',')}
               unit="N"
               secondaryValue={`${(physics.objectWeight / 1000).toFixed(3).replace('.', ',')} kN | Dado do ensaio`}
@@ -388,7 +413,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Peso Aparente na Água (<MathTex tex="P_{ap}" />)</>}
+              title={<>Peso Aparente na Água (<Var base="P" sub="ap" />)</>}
               value={physics.apparentWeight.toFixed(1).replace('.', ',')}
               unit="N"
               secondaryValue={`${(physics.apparentWeight / 1000).toFixed(3).replace('.', ',')} kN | Resultante`}
@@ -398,13 +423,18 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Empuxo (<MathTex tex="E" />)</>}
+              title="Empuxo (E)"
               value={isSimulating ? physics.buoyancyForce.toFixed(1).replace('.', ',') : '?'}
               unit={isSimulating ? 'N' : ''}
               secondaryValue={
                 isSimulating
-                  ? `${(physics.buoyancyForce / 1000).toFixed(3).replace('.', ',')} kN | E = P − Pap`
-                  : 'E = P − Pap'
+                  ? (
+                    <>
+                      <span>{(physics.buoyancyForce / 1000).toFixed(3).replace('.', ',')} kN</span>
+                      <span>E = P − <Var base="P" sub="ap" /></span>
+                    </>
+                  )
+                  : <>E = P − <Var base="P" sub="ap" /></>
               }
               leftIcon={Droplets}
               icon={isSimulating ? ArrowUp : EyeOff}
@@ -412,12 +442,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Volume Deslocado (<MathTex tex="V_{desl}" />)</>}
+              title={<>Volume Deslocado (<Var base="V" sub="desl" />)</>}
               value={isSimulating ? physics.vol_deslocado.toFixed(5).replace('.', ',') : '?'}
               unit={isSimulating ? 'm³' : ''}
               leftIcon={Box}
               theme="amber"
-              badge="V = E / γf"
+              badge={<>V = E / <Var base="γ" sub="f" /></>}
               secondaryValue={
                 isSimulating
                   ? `${(physics.vol_deslocado * 1000).toFixed(2).replace('.', ',')} L | Corpo totalmente imerso`
@@ -426,14 +456,19 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title={<>Densidade do Material (<MathTex tex="\rho_c" />)</>}
+              title={<>Densidade do Material (<Var base="ρ" sub="c" />)</>}
               value={isSimulating ? Math.round(physics.objectDensity).toLocaleString('pt-BR') : '?'}
               unit={isSimulating ? 'kg/m³' : ''}
               leftIcon={CheckCircle2}
               theme="cyan"
               secondaryValue={
                 isSimulating
-                  ? `ρc = γc / g | ${physics.status}`
+                  ? (
+                    <>
+                      <span><Var base="ρ" sub="c" /> = <Var base="γ" sub="c" /> / g</span>
+                      <span>{physics.status}</span>
+                    </>
+                  )
                   : 'Informação complementar (g = 9,81 m/s²)'
               }
             />
@@ -461,7 +496,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title="Peso Aparente (Pap)"
+              title={<>Peso Aparente (<Var base="P" sub="ap" />)</>}
               value={isSimulating ? (physics.apparentWeight / 1000).toFixed(2) : '?'}
               unit={isSimulating ? 'kN' : ''}
               secondaryValue={
@@ -494,7 +529,7 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title="Altura Submersa (Hsub)"
+              title={<>Altura Submersa (<Var base="H" sub="sub" />)</>}
               value={isSimulating ? physics.h_sub_actual.toFixed(2) : '?'}
               unit={isSimulating ? 'cm' : ''}
               leftIcon={Droplets}
@@ -510,12 +545,12 @@ export const PainelResultados: React.FC<PainelResultadosProps> = ({
             />
 
             <ResultsCard
-              title="Volume Deslocado (Vdesl)"
+              title={<>Volume Deslocado (<Var base="V" sub="desl" />)</>}
               value={isSimulating ? physics.vol_deslocado.toFixed(4) : '?'}
               unit={isSimulating ? 'm³' : ''}
               leftIcon={Box}
               theme="amber"
-              badge="Vdesl = Vsub"
+              badge={<><Var base="V" sub="desl" /> = <Var base="V" sub="sub" /></>}
               secondaryValue={
                 isSimulating
                   ? `${(physics.vol_deslocado * 1000).toFixed(2)} L | Δh: ${physics.deltaH_cm.toFixed(2)} cm`

@@ -20,6 +20,12 @@ interface MemorialProps {
 const fmtForceTex = (valN: number) =>
   `${(valN / 1000).toFixed(2)}\\text{ kN}\\;(${valN.toFixed(1)}\\text{ N})`;
 
+const fmtGammaKN = (valKN: number) => {
+  if (Math.abs(valKN * 10 - Math.round(valKN * 10)) < 1e-6) return valKN.toFixed(1);
+  if (Math.abs(valKN * 100 - Math.round(valKN * 100)) < 1e-6) return valKN.toFixed(2);
+  return valKN.toFixed(3);
+};
+
 const toGeomTex = (expr?: string | React.ReactNode): React.ReactNode => {
   if (!expr) return expr;
   if (typeof expr !== 'string') return expr;
@@ -113,21 +119,21 @@ export const Memorial: React.FC<MemorialProps> = ({
                     unit=""
                   />
                   <CalculationLine
-                    theme="cyan"
-                    label="Fluido — Água do Mar (Biblioteca de Fluidos do EUREKA)"
-                    symbol={<MathTex tex="\rho_{\text{mar}},\; T_{\text{pad}}" />}
-                    formula={<MathTex tex="\rho_{\text{mar}} \text{ na temperatura padrão } T_{\text{pad}} = 15\,^\circ\text{C}" />}
-                    substitution={<MathTex tex={`\\rho_{\\text{mar}} = ${texNum(physics.fluidDensity.toFixed(0))}\\text{ kg/m}^3,\\; g = ${texNum(gravity.toFixed(2))}\\text{ m/s}^2`} />}
-                    result={<MathTex tex={`\\rho_{\\text{mar}} = ${texNum(physics.fluidDensity.toFixed(0))}\\text{ kg/m}^3\\;\\left(T_{\\text{pad}} = ${physics.standardTemperatureC}\\,^\\circ\\text{C}\\right)`} />}
-                    unit=""
-                  />
-                  <CalculationLine
                     theme="blue"
                     label="Peso Específico da Água do Mar"
                     symbol={<MathTex tex="\gamma_{\text{mar}}" />}
-                    formula={<MathTex tex="\gamma_{\text{mar}} = \rho_{\text{mar}} \cdot g" />}
-                    substitution={<MathTex tex={`${texNum(physics.fluidDensity.toFixed(0))} \\cdot ${texNum(gravity.toFixed(2))}`} />}
-                    result={<MathTex tex={`${texNum(physics.specificWeightKNm3.toFixed(3))}\\text{ kN/m}^3\\;\\left(${texNum(physics.specificWeightNm3.toFixed(2))}\\text{ N/m}^3\\right)`} />}
+                    formula={<MathTex tex="\gamma_{\text{mar}} = \text{parâmetro do fluido (Munson, Ex. 2.10)}" />}
+                    substitution={<MathTex tex={`${texNum(fmtGammaKN(physics.specificWeightKNm3))}\\text{ kN/m}^3`} />}
+                    result={<MathTex tex={`${texNum(fmtGammaKN(physics.specificWeightKNm3))}\\text{ kN/m}^3\\;\\left(${texNum(physics.specificWeightNm3.toFixed(1))}\\text{ N/m}^3\\right)`} />}
+                    unit=""
+                  />
+                  <CalculationLine
+                    theme="cyan"
+                    label="Massa Específica Equivalente da Água do Mar"
+                    symbol={<MathTex tex="\rho_{\text{mar}}" />}
+                    formula={<MathTex tex="\rho_{\text{mar}} = \frac{\gamma_{\text{mar}}}{g}" />}
+                    substitution={<MathTex tex={`\\frac{${texNum(physics.specificWeightNm3.toFixed(1))}}{${texNum(gravity.toFixed(2))}}`} />}
+                    result={<MathTex tex={`${texNum(physics.fluidDensity.toFixed(1))}\\text{ kg/m}^3\\;\\left(g = ${texNum(gravity.toFixed(2))}\\text{ m/s}^2\\right)`} />}
                     unit=""
                     isSubHeader
                   />
@@ -183,7 +189,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                     label="Força de Empuxo Hidrostático (Princípio de Arquimedes)"
                     symbol={<MathTex tex="E" />}
                     formula={<MathTex tex="E = \gamma_{\text{mar}} \cdot V_{\text{sub}}" />}
-                    substitution={<MathTex tex={`${texNum(physics.specificWeightKNm3.toFixed(3))}\\text{ kN/m}^3 \\cdot ${texNum(physics.submergedVolume.toFixed(4))}\\text{ m}^3`} />}
+                    substitution={<MathTex tex={`${texNum(fmtGammaKN(physics.specificWeightKNm3))}\\text{ kN/m}^3 \\cdot ${texNum(physics.submergedVolume.toFixed(4))}\\text{ m}^3`} />}
                     result={<MathTex tex={`${texNum(physics.buoyancyKN.toFixed(2))}\\text{ kN}\\;\\left(${texNum(physics.buoyancy.toFixed(1))}\\text{ N}\\right)`} />}
                     unit=""
                     isSubHeader
@@ -283,11 +289,11 @@ export const Memorial: React.FC<MemorialProps> = ({
                   />
                   <CalculationLine
                     theme="slate"
-                    label="Referência Bibliográfica (Munson, γ = 10,05 kN/m³)"
+                    label="Referência Bibliográfica (Munson, γ = 10,1 kN/m³)"
                     symbol={<MathTex tex="T_{\text{ref}}" />}
-                    formula={<MathTex tex="E_{\text{ref}} = 10,05 \cdot 1,7671 = 17,76\text{ kN}" />}
-                    substitution={<MathTex tex="T_{\text{ref}} = 17,76 - 8,50" />}
-                    result={<MathTex tex="9,26\text{ kN}\;\left(\Delta < 0,1\%\right)" />}
+                    formula={<MathTex tex="E_{\text{ref}} = 10{,}1 \cdot 1{,}7671 = 17{,}85\text{ kN}" />}
+                    substitution={<MathTex tex="T_{\text{ref}} = 17{,}85 - 8{,}50" />}
+                    result={<MathTex tex="9{,}35\text{ kN}\;\left(\Delta = 0{,}0\%\right)" />}
                     unit=""
                     isSubHeader
                   />
@@ -1113,7 +1119,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                     }
                     symbol={<MathTex tex="m" />}
                     formula={<MathTex tex="\rho \cdot V" />}
-                    substitution={<MathTex tex={`${objRhoDisplay} \cdot ${totalVolume.toFixed(4)}`} />}
+                    substitution={<MathTex tex={`${objRhoDisplay} \\cdot ${totalVolume.toFixed(4)}`} />}
                     result={<MathTex tex={(physics.objectMass1 ?? physics.objectMass).toFixed(2)} />}
                     unit={<MathTex tex="\text{kg}" />}
                   />
@@ -1174,10 +1180,10 @@ export const Memorial: React.FC<MemorialProps> = ({
                 substitution={
                   physics.extraWeight > 0 ? (
                     <MathTex
-                      tex={`${(physics.objectWeight - physics.extraWeight).toFixed(1)} + ${physics.extraWeight.toFixed(1)}\text{ N}`}
+                      tex={`${(physics.objectWeight - physics.extraWeight).toFixed(1)} + ${physics.extraWeight.toFixed(1)}\\text{ N}`}
                     />
                   ) : (
-                    <MathTex tex={`${physics.objectMass.toFixed(2)} \cdot ${gravity}`} />
+                    <MathTex tex={`${physics.objectMass.toFixed(2)} \\cdot ${gravity}`} />
                   )
                 }
                 result={<MathTex tex={fmtForceTex(physics.objectWeight)} />}
@@ -1206,7 +1212,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                 }
                 result={
                   <MathTex
-                    tex={`${physics.vol_deslocado.toFixed(6)}\text{ m}^3\\;(${(physics.vol_deslocado * 1000).toFixed(2)}\text{ L})`}
+                    tex={`${physics.vol_deslocado.toFixed(6)}\\text{ m}^3\\;(${(physics.vol_deslocado * 1000).toFixed(2)}\\text{ L})`}
                   />
                 }
                 unit=""
@@ -1217,7 +1223,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                 symbol={<MathTex tex="A_{\text{tanque}}" />}
                 formula={<MathTex tex="L \cdot P" />}
                 substitution={
-                  <MathTex tex={`${(tankWidth / 100).toFixed(2)} \cdot ${(tankDepth / 100).toFixed(2)}`} />
+                  <MathTex tex={`${(tankWidth / 100).toFixed(2)} \\cdot ${(tankDepth / 100).toFixed(2)}`} />
                 }
                 result={<MathTex tex={physics.tankBaseArea.toFixed(3)} />}
                 unit={<MathTex tex="\text{m}^2" />}
@@ -1236,7 +1242,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                 }
                 result={
                   <MathTex
-                    tex={`${physics.deltaH_cm.toFixed(2)}\text{ cm}\\;(${(physics.deltaH_cm / 100).toFixed(4)}\text{ m})`}
+                    tex={`${physics.deltaH_cm.toFixed(2)}\\text{ cm}\\;(${(physics.deltaH_cm / 100).toFixed(4)}\\text{ m})`}
                   />
                 }
                 unit=""
@@ -1252,7 +1258,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                 symbol={<MathTex tex="h_{\text{sub}}" />}
                 result={
                   <MathTex
-                    tex={`${physics.h_sub_actual.toFixed(2)}\text{ cm}\\;(${(physics.h_sub_actual / 100).toFixed(4)}\text{ m})`}
+                    tex={`${physics.h_sub_actual.toFixed(2)}\\text{ cm}\\;(${(physics.h_sub_actual / 100).toFixed(4)}\\text{ m})`}
                   />
                 }
                 unit=""
@@ -1283,7 +1289,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                 symbol={<MathTex tex="E_A" />}
                 formula={<MathTex tex="\rho_A \cdot g \cdot V_{\text{sub},A}" />}
                 substitution={
-                  <MathTex tex={`${physics.rhoA} \cdot ${gravity} \cdot ${physics.vol_sub_A.toFixed(4)}`} />
+                  <MathTex tex={`${physics.rhoA} \\cdot ${gravity} \\cdot ${physics.vol_sub_A.toFixed(4)}`} />
                 }
                 result={<MathTex tex={fmtForceTex(physics.E_A)} />}
                 unit=""
@@ -1315,7 +1321,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                     symbol={<MathTex tex="E_B" />}
                     formula={<MathTex tex="\rho_B \cdot g \cdot V_{\text{sub},B}" />}
                     substitution={
-                      <MathTex tex={`${physics.rhoB} \cdot ${gravity} \cdot ${physics.vol_sub_B.toFixed(4)}`} />
+                      <MathTex tex={`${physics.rhoB} \\cdot ${gravity} \\cdot ${physics.vol_sub_B.toFixed(4)}`} />
                     }
                     result={<MathTex tex={fmtForceTex(physics.E_B)} />}
                     unit=""
@@ -1328,7 +1334,7 @@ export const Memorial: React.FC<MemorialProps> = ({
                       formula={<MathTex tex="E_A + E_B" />}
                       substitution={
                         <MathTex
-                          tex={`${(physics.E_A / 1000).toFixed(2)} + ${(physics.E_B / 1000).toFixed(2)}\text{ kN}`}
+                          tex={`${(physics.E_A / 1000).toFixed(2)} + ${(physics.E_B / 1000).toFixed(2)}\\text{ kN}`}
                         />
                       }
                       result={<MathTex tex={fmtForceTex(physics.buoyancyForce)} />}

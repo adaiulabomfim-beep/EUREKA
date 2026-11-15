@@ -273,14 +273,18 @@ export function calculateNetForce(
 
   let y_cp_net = 0;
   let s_cp_net = 0;
-  const sinT = Math.sin((thetaUp * Math.PI) / 180);
+  const isRightDominant = down.FH > up.FH + 1e-6;
+  const domTheta = isRightDominant ? thetaDown : thetaUp;
+  const domLevel = isRightDominant ? downstreamLevel : upstreamLevel;
+  const domSurface = isRightDominant ? down : up;
+  const sinDom = Math.sin((domTheta * Math.PI) / 180);
 
   if (Math.abs(FH_net) > 1e-3) {
     y_cp_net = Math.max(0, Math.min(damHeight, moment_total / FH_net));
-    s_cp_net = Math.max(0, (Math.min(upstreamLevel, damHeight) - y_cp_net) / Math.max(EPS, sinT));
-  } else if (up.FH > 1e-3) {
-    y_cp_net = up.y_cp;
-    s_cp_net = up.s_cp;
+    s_cp_net = Math.max(0, (Math.min(domLevel, damHeight) - y_cp_net) / Math.max(EPS, sinDom));
+  } else if (domSurface.FH > 1e-3) {
+    y_cp_net = domSurface.y_cp;
+    s_cp_net = domSurface.s_cp;
   }
 
   const p_max_up = up.p_bot;
@@ -300,6 +304,80 @@ export function calculateNetForce(
     up,
     down,
   };
+}
+
+export type LadoFisicoBarragem = 'ESQUERDA' | 'DIREITA';
+
+export interface InfoLadoHidraulico {
+  lado: LadoFisicoBarragem;
+  ladoRotulo: 'Esquerda' | 'Direita';
+  ladoShort: 'Esq.' | 'Dir.';
+  nivelAgua: number;
+  theta: number;
+  res: ResultadoSuperficieRetangular;
+  sentidoHorizontal: '→' | '←';
+  sentidoTexto: 'para a direita' | 'para a esquerda';
+}
+
+export interface IdentificacaoLadosHidraulicos {
+  temDoisLados: boolean;
+  montante: InfoLadoHidraulico;
+  jusante: InfoLadoHidraulico | null;
+  esquerda: InfoLadoHidraulico;
+  direita: InfoLadoHidraulico;
+}
+
+/**
+ * Identifica dinamicamente qual face física (ESQUERDA ou DIREITA) atua como
+ * Montante (maior carga hidráulica / empuxo motor) e qual atua como Jusante
+ * (menor carga hidráulica / contraempuxo), sem depender de posição fixa na tela.
+ */
+export function identificarLadosHidraulicos(
+  forceData: ResultadoForcaLiquidaBarragem,
+  leftWaterLevel: number,
+  rightWaterLevel: number
+): IdentificacaoLadosHidraulicos {
+  const esquerda: InfoLadoHidraulico = {
+    lado: 'ESQUERDA',
+    ladoRotulo: 'Esquerda',
+    ladoShort: 'Esq.',
+    nivelAgua: Math.max(0, leftWaterLevel),
+    theta: forceData.thetaUp,
+    res: forceData.up,
+    sentidoHorizontal: '→',
+    sentidoTexto: 'para a direita',
+  };
+
+  const direita: InfoLadoHidraulico = {
+    lado: 'DIREITA',
+    ladoRotulo: 'Direita',
+    ladoShort: 'Dir.',
+    nivelAgua: Math.max(0, rightWaterLevel),
+    theta: forceData.thetaDown,
+    res: forceData.down,
+    sentidoHorizontal: '←',
+    sentidoTexto: 'para a esquerda',
+  };
+
+  const leftActive = esquerda.res.FR > 1e-3 && esquerda.nivelAgua > 1e-6;
+  const rightActive = direita.res.FR > 1e-3 && direita.nivelAgua > 1e-6;
+  const temDoisLados = leftActive && rightActive;
+
+  if (!leftActive && rightActive) {
+    return { temDoisLados: false, montante: direita, jusante: null, esquerda, direita };
+  }
+  if (!rightActive) {
+    return { temDoisLados: false, montante: esquerda, jusante: null, esquerda, direita };
+  }
+
+  const rightIsMontante =
+    direita.nivelAgua > esquerda.nivelAgua + 1e-6 ||
+    (Math.abs(direita.nivelAgua - esquerda.nivelAgua) <= 1e-6 &&
+      direita.res.FH > esquerda.res.FH + 1e-3);
+
+  return rightIsMontante
+    ? { temDoisLados: true, montante: direita, jusante: esquerda, esquerda, direita }
+    : { temDoisLados: true, montante: esquerda, jusante: direita, esquerda, direita };
 }
 
 export interface OpcoesEstabilidade {

@@ -15,6 +15,7 @@ export const simularCorposImersos = (props: any) => {
       buoyDiameterM = 1.5,
       buoyWeightKN = 8.5,
       rhoA = 1025,
+      buoyFluidSpecificWeightKN,
       gravity = 9.81,
       tankWidth = 320,
       tankDepth = 320,
@@ -25,6 +26,7 @@ export const simularCorposImersos = (props: any) => {
       diameterM: buoyDiameterM,
       weightKN: buoyWeightKN,
       fluidDensity: rhoA,
+      fluidSpecificWeightKN: buoyFluidSpecificWeightKN,
       gravity,
       tankWidthCm: tankWidth,
       tankDepthCm: tankDepth,
@@ -107,6 +109,10 @@ export const simularCorposImersos = (props: any) => {
       standardTemperatureC: 15,
       radiusM: ab.radiusM,
       diameterM: ab.diameterM,
+      weightKN: ab.weightKN,
+      weightN: ab.weightN,
+      fluidDensity: ab.fluidDensity,
+      cableTension: ab.cableTensionN,
     };
   }
 

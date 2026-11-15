@@ -1229,12 +1229,12 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             {/* Reação Horizontal Bx na articulação B */}
             {Math.abs(Bx_N) > 1e-3 && (() => {
               const bxRight = Bx_N >= 0;
-              const startX = bxRight ? P_bot.x + 10 : P_bot.x - 10;
-              const endX = bxRight ? P_bot.x + 76 : P_bot.x - 76;
+              const startX = bxRight ? P_bot.x - 66 : P_bot.x + 66;
+              const endX = bxRight ? P_bot.x - 10 : P_bot.x + 10;
               const bxLabel = `Bx = ${fmtForceVal(Bx_N)}`;
               const pillW = Math.max(88, bxLabel.length * 6.3 + 16);
-              const pillX = bxRight ? P_bot.x + 86 : P_bot.x - 86;
-              const pillY = P_bot.y + 18;
+              const pillX = bxRight ? P_bot.x - 64 : P_bot.x + 64;
+              const pillY = P_bot.y + 16;
               return (
                 <g>
                   <line
@@ -2471,18 +2471,18 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
 
     // 6. Ângulo de Inclinação (θ) e Cotas da Geometria
     if (hasVerticalWallAboveA) {
-      const arcR = 42;
+      const arcR = hasSmoothWallSupport ? 26 : 42;
       const arcEndX = P_bot.x + arcR * cosTheta;
       const arcEndY = P_bot.y - arcR * sinTheta;
       const midAng = thetaRad / 2;
-      const lblX = P_bot.x + (arcR + 20) * Math.cos(midAng);
-      const lblY = P_bot.y - (arcR + 16) * Math.sin(midAng);
+      const lblX = P_bot.x + (arcR + (hasSmoothWallSupport ? 17 : 20)) * Math.cos(midAng);
+      const lblY = P_bot.y - (arcR + (hasSmoothWallSupport ? 9 : 16)) * Math.sin(midAng);
       dims.push(
         <g key="angle-arc-indicator-B" stroke={CORES_MATERIAIS.anguloArco} strokeWidth="1.5" fill="none" opacity="0.92">
           <line
             x1={P_bot.x}
             y1={P_bot.y}
-            x2={P_bot.x + arcR + 24}
+            x2={P_bot.x + arcR + (hasSmoothWallSupport ? 18 : 24)}
             y2={P_bot.y}
             stroke={CORES_MATERIAIS.cotaLinha}
             strokeDasharray="3 3"
@@ -2495,7 +2495,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             textAnchor="middle"
             dominantBaseline="central"
             fill={CORES_MATERIAIS.anguloTexto}
-            fontSize="11.5"
+            fontSize={hasSmoothWallSupport ? '10.5' : '11.5'}
             fontWeight="bold"
             stroke="white"
             strokeWidth="2.5"
@@ -2685,7 +2685,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             </g>
           );
         } else {
-          const dimRightX = P_top.x + wallThick + 92;
+          const dimRightX = P_top.x + wallThick + 104;
           const dyPlain = `Δy = ${deltaYVal.toFixed(2)} m`;
           dims.push(
             drawVerticalDimAtX(
@@ -2699,7 +2699,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
             )
           );
 
-          const D_len = 54;
+          const D_len = 86;
           const lenPlain = `L = ${H.toFixed(2)} m`;
           dims.push(
             drawSlantedDim(
@@ -2710,9 +2710,32 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
               { x: P_bot.x + n_out.x * D_len, y: P_bot.y + n_out.y * D_len },
               <>L = {H.toFixed(2).replace('.', ',')} m</>,
               lenPlain.length,
-              0.48
+              0.32
             )
           );
+
+          // Após ANALISAR: representar a distância inclinada do CP até a articulação B (scp = 1,375 m)
+          if (props.isAnalyzed) {
+            const s_cp_B =
+              props.liveResults?.equilibrium?.d_cp_hinge ??
+              Math.max(0, H - (upData?.s_cp ?? (Y_CP - Y_top)));
+            const D_scp = 46;
+            const sCpPlain = `sCP = ${s_cp_B.toFixed(3)} m`;
+            dims.push(
+              drawSlantedDim(
+                'dim-scp-from-B-wall-support',
+                P_bot,
+                P_CP,
+                { x: P_bot.x + n_out.x * D_scp, y: P_bot.y + n_out.y * D_scp },
+                { x: P_CP.x + n_out.x * D_scp, y: P_CP.y + n_out.y * D_scp },
+                <>
+                  s<tspan baselineShift="sub" fontSize="8.5">CP</tspan> = {s_cp_B.toFixed(3).replace('.', ',')} m
+                </>,
+                sCpPlain.length,
+                0.5
+              )
+            );
+          }
         }
       }
     } else {
@@ -2853,8 +2876,16 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                 strokeWidth={1.8}
               />
               <text
-                x={P_CP.x + n_out.x * 18 + u_down.x * 12}
-                y={P_CP.y + n_out.y * 18 + u_down.y * 12}
+                x={
+                  hasSmoothWallSupport
+                    ? P_CP.x + n_out.x * 16 + u_down.x * 4
+                    : P_CP.x + n_out.x * 18 + u_down.x * 12
+                }
+                y={
+                  hasSmoothWallSupport
+                    ? P_CP.y + n_out.y * 16 + u_down.y * 4
+                    : P_CP.y + n_out.y * 18 + u_down.y * 12
+                }
                 textAnchor="middle"
                 dominantBaseline="central"
                 fill={CORES_MATERIAIS.pontoCPTexto}
@@ -2864,7 +2895,7 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
                 strokeWidth="2.5"
                 paintOrder="stroke"
               >
-                {hasVerticalWallHingeA ? 'CP' : 'E'}
+                {hasVerticalWallHingeA || hasSmoothWallSupport ? 'CP' : 'E'}
               </text>
             </g>
           )}
@@ -2902,7 +2933,14 @@ export const Vista2D: React.FC<Vista2DProps> = (props) => {
       tooltipX = P_CP.x + n_out.x * 55;
       tooltipY = P_CP.y + n_out.y * 20 - 45;
       title = 'Centro de Pressão (Ponto E / CP)';
-      line1 = (
+      const s_cp_B =
+        props.liveResults?.equilibrium?.d_cp_hinge ??
+        Math.max(0, H - (upData?.s_cp ?? (Y_CP - Y_top)));
+      line1 = (hasSmoothWallSupport || props.hingePosition === PosicaoDobradica.BOTTOM) ? (
+        <>
+          s<tspan baselineShift="sub" fontSize="7.5">CP</tspan> (de B) = {s_cp_B.toFixed(3)} m  |  y<tspan baselineShift="sub" fontSize="7.5">CP</tspan> = {Y_CP.toFixed(3)} m
+        </>
+      ) : (
         <>
           y<tspan baselineShift="sub" fontSize="7.5">CP</tspan> = {Y_CP.toFixed(3)} m  (Δy = +{delta_y.toFixed(4)} m)
         </>
