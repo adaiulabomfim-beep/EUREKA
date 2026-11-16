@@ -91,8 +91,8 @@ const renderFormattedText = (rawText: string, isUser: boolean) => {
 };
 
 const MAX_OUTBOUND_MESSAGES = 12; // Até 6 turnos enviados à API
-const SEND_COOLDOWN_MS = 3000;
-const DUPLICATE_WINDOW_MS = 15000;
+const SEND_COOLDOWN_MS = 1000;
+const DUPLICATE_WINDOW_MS = 5000;
 const SESSION_STORAGE_KEY = 'eureka_tutor_session_id';
 
 function getOrCreateSessionHint(): string {

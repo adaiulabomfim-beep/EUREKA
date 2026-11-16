@@ -59,6 +59,17 @@ function parsePositiveInt(raw, fallback) {
 
 const GEMINI_MODEL = (process.env.GEMINI_MODEL || '').trim() || 'gemini-3.8-flash';
 const GEMINI_THINKING_LEVEL = resolveThinkingLevel(process.env.GEMINI_THINKING_LEVEL);
+
+// Modelos de fallback caso o principal esteja indisponível (503/504)
+const GEMINI_FALLBACK_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.8-flash',
+].filter(m => m !== GEMINI_MODEL);
+
+// Modelos que NÃO suportam thinkingConfig
+const MODELS_WITHOUT_THINKING = new Set([
+  'gemini-3.5-flash-lite',
+]);
 const MAX_BODY_BYTES = 50 * 1024 * 1024; // 50 MB para uploads de imagem em Base64
 const MAX_CONTEXT_CHARS = 4000;
 const MAX_HISTORY_MESSAGES = 12; // Até 6 turnos completos
@@ -834,19 +845,33 @@ async function callGeminiSerialized({ ai, systemInstruction, contents }) {
     let rpmRetries = 0;
     let transientRetries = 0;
 
+    const modelsToTry = [GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
+    let lastError = null;
+
+    for (const currentModel of modelsToTry) {
+      let rpmRetries = 0;
+      let transientRetries = 0;
+
+      const supportsThinking = !MODELS_WITHOUT_THINKING.has(currentModel);
+      const modelConfig = {
+        systemInstruction,
+        abortSignal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
+      };
+      if (supportsThinking) {
+        modelConfig.thinkingConfig = { thinkingLevel: GEMINI_THINKING_LEVEL };
+      }
+
     while (true) {
       try {
-        return await ai.models.generateContent({
-          model: GEMINI_MODEL,
-          config: {
-            systemInstruction,
-            thinkingConfig: {
-              thinkingLevel: GEMINI_THINKING_LEVEL,
-            },
-            abortSignal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
-          },
+        const result = await ai.models.generateContent({
+          model: currentModel,
+          config: modelConfig,
           contents,
         });
+        if (currentModel !== GEMINI_MODEL) {
+          console.info(`[API /api/chat] Fallback: respondeu via modelo ${currentModel} (principal ${GEMINI_MODEL} indisponível)`);
+        }
+        return result;
       } catch (attemptError) {
         const status = Number(attemptError?.status || attemptError?.statusCode || attemptError?.code || 0);
         const msg = String(attemptError?.message || '').toUpperCase();
@@ -897,15 +922,26 @@ async function callGeminiSerialized({ ai, systemInstruction, contents }) {
           transientRetries += 1;
           const delayMs = 700 * transientRetries;
           console.warn(
-            `[API /api/chat] Erro transitório (${status || 'UNAVAILABLE'}), tentativa ${transientRetries}/2; aguardando ${delayMs}ms...`
+            `[API /api/chat] Erro transitório (${status || 'UNAVAILABLE'}) em ${currentModel}, tentativa ${transientRetries}/2; aguardando ${delayMs}ms...`
           );
           await new Promise((resolve) => setTimeout(resolve, delayMs));
           continue;
         }
 
+        // Se é erro transitório e há modelos de fallback, tenta o próximo
+        if (isTransient5xx) {
+          lastError = attemptError;
+          console.warn(`[API /api/chat] Modelo ${currentModel} indisponível, tentando fallback...`);
+          break; // sai do while, vai para o próximo modelo no for
+        }
+
         throw attemptError;
       }
     }
+    } // fim do for de modelos
+
+    // Se nenhum modelo funcionou, lança o último erro
+    if (lastError) throw lastError;
   });
 }
 
