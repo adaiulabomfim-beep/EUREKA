@@ -403,7 +403,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ simulationContext }) => {
               </div>
               <div>
                 <h3 className="font-black text-[10px] uppercase tracking-widest leading-tight">Tutor Inteligente</h3>
-                <p className="text-[9px] text-blue-100 dark:text-slate-400 font-bold uppercase tracking-wider">Powered by Gemini 3.8 Flash</p>
+                <p className="text-[9px] text-blue-100 dark:text-slate-400 font-bold uppercase tracking-wider">Powered by Gemini Flash</p>
               </div>
             </div>
             <button 

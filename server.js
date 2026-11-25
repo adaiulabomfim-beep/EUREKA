@@ -49,7 +49,7 @@ function resolveThinkingLevel(rawLevel) {
   ) {
     return normalized;
   }
-  return ThinkingLevel.MEDIUM;
+  return ThinkingLevel.LOW;
 }
 
 function parsePositiveInt(raw, fallback) {
@@ -57,7 +57,7 @@ function parsePositiveInt(raw, fallback) {
   return Number.isInteger(num) && num > 0 ? num : fallback;
 }
 
-const GEMINI_MODEL = (process.env.GEMINI_MODEL || '').trim() || 'gemini-3.8-flash';
+const GEMINI_MODEL = (process.env.GEMINI_MODEL || '').trim() || 'gemini-3.5-flash-lite';
 const GEMINI_THINKING_LEVEL = resolveThinkingLevel(process.env.GEMINI_THINKING_LEVEL);
 
 // Modelos de fallback caso o principal esteja indisponível (503/504)
@@ -73,21 +73,21 @@ const MODELS_WITHOUT_THINKING = new Set([
 const MAX_BODY_BYTES = 50 * 1024 * 1024; // 50 MB para uploads de imagem em Base64
 const MAX_CONTEXT_CHARS = 4000;
 const MAX_HISTORY_MESSAGES = 12; // Até 6 turnos completos
-const MAX_CONCURRENT_GEMINI = parsePositiveInt(process.env.GEMINI_MAX_CONCURRENT, 1);
-const MAX_QUEUE_SIZE = parsePositiveInt(process.env.GEMINI_MAX_QUEUE_SIZE, 15);
+const MAX_CONCURRENT_GEMINI = parsePositiveInt(process.env.GEMINI_MAX_CONCURRENT, 5);
+const MAX_QUEUE_SIZE = parsePositiveInt(process.env.GEMINI_MAX_QUEUE_SIZE, 50);
 const SESSION_RATE_WINDOW_MS = 60 * 1000;
-const SESSION_RATE_MAX = parsePositiveInt(process.env.GEMINI_SESSION_RPM, 6);
-const SESSION_MIN_INTERVAL_MS = parsePositiveInt(process.env.GEMINI_SESSION_MIN_INTERVAL_MS, 2500);
+const SESSION_RATE_MAX = parsePositiveInt(process.env.GEMINI_SESSION_RPM, 60);
+const SESSION_MIN_INTERVAL_MS = parsePositiveInt(process.env.GEMINI_SESSION_MIN_INTERVAL_MS, 500);
 const IP_RATE_WINDOW_MS = 60 * 1000;
-const IP_RATE_MAX = parsePositiveInt(process.env.GEMINI_IP_RPM, 24);
-const CACHE_MAX_ENTRIES = parsePositiveInt(process.env.GEMINI_CACHE_MAX_ENTRIES, 60);
-const CACHE_TTL_MS = parsePositiveInt(process.env.GEMINI_CACHE_TTL_MS, 30 * 60 * 1000);
+const IP_RATE_MAX = parsePositiveInt(process.env.GEMINI_IP_RPM, 120);
+const CACHE_MAX_ENTRIES = parsePositiveInt(process.env.GEMINI_CACHE_MAX_ENTRIES, 200);
+const CACHE_TTL_MS = parsePositiveInt(process.env.GEMINI_CACHE_TTL_MS, 60 * 60 * 1000);
 const DAILY_QUOTA_FALLBACK_COOLDOWN_MS = parsePositiveInt(
   process.env.GEMINI_DAILY_COOLDOWN_MS,
   15 * 60 * 1000
 );
 const MAX_RPM_429_RETRIES = 2;
-const GEMINI_REQUEST_TIMEOUT_MS = parsePositiveInt(process.env.GEMINI_REQUEST_TIMEOUT_MS, 50000);
+const GEMINI_REQUEST_TIMEOUT_MS = parsePositiveInt(process.env.GEMINI_REQUEST_TIMEOUT_MS, 25000);
 
 const SYSTEM_INSTRUCTION =
   'Você é o Tutor de Mecânica dos Fluidos (Hidrostática e Empuxo) do EUREKA. Explique como um professor universitário didático, claro e direto. Quando houver CONTEXTO DA SIMULAÇÃO ATIVA, baseie toda explicação exatamente nesses valores calculados pelo laboratório. PROIBIDO usar LaTeX ($...$, \\text{}, ^); escreva unidades em texto limpo (ex.: kg/m³, N, m², Pa).';
