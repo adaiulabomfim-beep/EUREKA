@@ -473,7 +473,6 @@ export const PainelControles: React.FC<PainelControlesProps> = ({
             <select className={selectClass} value={shape} onChange={(e) => onShapeChange(e.target.value as ObjectShape)}>
               <option value={ObjectShape.CUBE}>Cubo</option>
               <option value={ObjectShape.SPHERE}>Esfera</option>
-              <option value={ObjectShape.CYLINDER}>Cilindro</option>
             </select>
           </div>
 
